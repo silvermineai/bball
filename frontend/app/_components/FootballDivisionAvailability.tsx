@@ -18,6 +18,9 @@ export default function FootballDivisionAvailability({ division }: { division: L
         <Link className="button" href={`/football/matchups/?division=${availability.division}`}>
           Open D{availability.division} schedule and results →
         </Link>
+        <Link className="hero-link" href={`/football/players/?division=${availability.division}`}>
+          Open D{availability.division} player production →
+        </Link>
         <Link className="hero-link" href="/research/coverage/">
           View coverage details →
         </Link>

@@ -17,6 +17,21 @@ export type FootballLowerPlayerReadiness = {
   season: number;
   generated_at: string;
   status: "blocked" | "needs_review" | "ready";
+  event_archive?: {
+    status: "partial";
+    asset: string;
+    publisher: string;
+    season: number;
+    generated_at: string;
+    receipt_sha256: string;
+    games: number;
+    player_rows: number;
+    players: number;
+    teams: number;
+    rows_by_division: Record<string, number>;
+    players_by_division: Record<string, number>;
+    classification: string;
+  };
   source_contracts: FootballLowerPlayerSourceContract[];
   divisions: Record<"2" | "3", {
     status: "blocked" | "needs_review" | "ready";
@@ -105,6 +120,33 @@ export function validateFootballLowerPlayerReadiness(value: unknown): FootballLo
     season: row.season,
     generated_at: row.generated_at,
     status: row.status as FootballLowerPlayerReadiness["status"],
+    event_archive: (() => {
+      const value = row.event_archive;
+      if (!value || typeof value !== "object") return undefined;
+      const item = value as Record<string, unknown>;
+      if (item.status !== "partial" || typeof item.asset !== "string" || typeof item.publisher !== "string"
+        || typeof item.season !== "number" || !Number.isInteger(item.season) || typeof item.generated_at !== "string"
+        || typeof item.receipt_sha256 !== "string" || !/^[a-f0-9]{64}$/i.test(item.receipt_sha256)
+        || !["games", "player_rows", "players", "teams"].every((key) => typeof item[key] === "number" && Number.isInteger(item[key]) && (item[key] as number) >= 0)
+        || typeof item.rows_by_division !== "object" || typeof item.players_by_division !== "object" || typeof item.classification !== "string") {
+        throw new Error("Football lower-division event archive metadata is malformed.");
+      }
+      return {
+        status: "partial" as const,
+        asset: item.asset,
+        publisher: item.publisher,
+        season: item.season,
+        generated_at: item.generated_at,
+        receipt_sha256: item.receipt_sha256,
+        games: item.games as number,
+        player_rows: item.player_rows as number,
+        players: item.players as number,
+        teams: item.teams as number,
+        rows_by_division: item.rows_by_division as Record<string, number>,
+        players_by_division: item.players_by_division as Record<string, number>,
+        classification: item.classification,
+      };
+    })(),
     source_contracts: row.source_contracts as FootballLowerPlayerSourceContract[],
     divisions,
     classification_policy: row.classification_policy,

@@ -3,8 +3,29 @@
   "sport": "football",
   "gender": "men",
   "season": 2026,
-  "generated_at": "2026-09-21T09:58:31.441520Z",
+  "generated_at": "2026-09-21T10:28:32.329716Z",
   "status": "blocked",
+  "event_archive": {
+    "status": "partial",
+    "asset": "lower-division-player-stats-2026.json",
+    "publisher": "ESPN",
+    "season": 2026,
+    "generated_at": "2026-09-21T10:24:44.865886Z",
+    "receipt_sha256": "ba3a7f9c11bdce80319a9c1784c4818fd4887df5e69bdd80a14787108cadca0f",
+    "games": 616,
+    "player_rows": 1775,
+    "players": 1318,
+    "teams": 36,
+    "rows_by_division": {
+      "d2": 1680,
+      "d3": 95
+    },
+    "players_by_division": {
+      "d2": 1246,
+      "d3": 72
+    },
+    "classification": "Exact ESPN team groups 57 (D2) and 58 (D3); no name or conference joins."
+  },
   "source_contracts": [
     {
       "key": "ncaa_mfb_national_ranking",

@@ -17,6 +17,7 @@ from ncaa_scraper.source_contracts import discover_lower_division_sources
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "frontend/public/data/football/lower-division-player-readiness.json"
+EVENT_ARCHIVE = ROOT / "frontend/public/data/football/lower-division-player-stats-2026.json"
 
 
 def build_readiness(season: int = 2026) -> dict:
@@ -70,6 +71,29 @@ def build_readiness(season: int = 2026) -> dict:
             ),
         }
 
+    event_archive = None
+    if EVENT_ARCHIVE.exists():
+        try:
+            release = json.loads(EVENT_ARCHIVE.read_text(encoding="utf-8"))
+            coverage = release.get("coverage") or {}
+            event_archive = {
+                "status": "partial",
+                "asset": EVENT_ARCHIVE.name,
+                "publisher": "ESPN",
+                "season": int(release.get("season") or season),
+                "generated_at": release.get("generated_at"),
+                "receipt_sha256": (release.get("source") or {}).get("receipt_sha256"),
+                "games": int(coverage.get("games") or 0),
+                "player_rows": int(coverage.get("player_rows") or 0),
+                "players": int(coverage.get("players") or 0),
+                "teams": int(coverage.get("teams") or 0),
+                "rows_by_division": coverage.get("rows_by_division") or {},
+                "players_by_division": coverage.get("players_by_division") or {},
+                "classification": "Exact ESPN team groups 57 (D2) and 58 (D3); no name or conference joins.",
+            }
+        except (OSError, ValueError, TypeError):
+            event_archive = None
+
     return {
         "schema_version": 1,
         "sport": "football",
@@ -77,6 +101,7 @@ def build_readiness(season: int = 2026) -> dict:
         "season": season,
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "status": "blocked",
+        "event_archive": event_archive,
         "source_contracts": endpoint_contracts,
         "divisions": divisions,
         "classification_policy": (
