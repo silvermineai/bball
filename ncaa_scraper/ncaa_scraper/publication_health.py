@@ -146,6 +146,11 @@ def _catalog_health(
     seasons = payload.get("seasons")
     if not isinstance(seasons, list) or not seasons:
         raise ValueError(f"{relative} has no season entries")
+    # Historical source editions are immutable snapshots. They still need
+    # valid timestamps, but should not fail a daily freshness gate simply
+    # because the 2010--2025 files are older than the active season. The
+    # latest season remains a live freshness requirement.
+    season_timestamps: list[tuple[int, str, str]] = []
     timestamps: list[str] = []
     top_generated = payload.get("generated_at")
     if top_generated is not None:
@@ -162,11 +167,15 @@ def _catalog_health(
         if generated is not None:
             if not isinstance(generated, str):
                 raise ValueError(f"{relative} season {season} has an invalid timestamp")
+            _timestamp(generated)
+            season_timestamps.append((season, "generated_at", generated))
             timestamps.append(generated)
         fetched = entry.get("fetched_at")
         if fetched is not None:
             if not isinstance(fetched, str):
                 raise ValueError(f"{relative} season {season} has an invalid fetched_at timestamp")
+            _timestamp(fetched)
+            season_timestamps.append((season, "fetched_at", fetched))
             timestamps.append(fetched)
         path = entry.get("path")
         if path is not None:
@@ -180,8 +189,22 @@ def _catalog_health(
             raise ValueError(f"{relative} season {season} has no coverage object")
     if not timestamps:
         raise ValueError(f"{relative} has no freshness timestamp")
-    # Check each timestamp so one old season cannot hide behind a fresh catalog entry.
-    checked = [_freshness(f"{relative} season", {"generated_at": value}, now, max_age_hours) for value in timestamps]
+    latest_season = max(entry[0] for entry in season_timestamps) if season_timestamps else None
+    active_timestamps = []
+    if isinstance(top_generated, str):
+        active_timestamps.append(("catalog", top_generated))
+    active_timestamps.extend(
+        (f"season {season} {field}", value)
+        for season, field, value in season_timestamps
+        if season == latest_season
+    )
+    # Check the catalog and active-season timestamps. Older editions were
+    # already validated for timestamp shape above and remain attributable
+    # snapshots rather than refresh targets.
+    checked = [
+        _freshness(f"{relative} {label}", {"generated_at": value}, now, max_age_hours)
+        for label, value in active_timestamps
+    ]
     latest = max(checked, key=lambda value: value["generated_at"])
     return [{"release": relative, "generated_at": latest["generated_at"], "catalog_seasons": len(seasons), "age_hours": latest["age_hours"]}]
 

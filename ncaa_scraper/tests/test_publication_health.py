@@ -262,6 +262,26 @@ class PublicationHealthTest(unittest.TestCase):
                 )
             self.assertIn("hours old", str(error.exception))
 
+    def test_catalog_freshness_scopes_age_gate_to_active_season(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = {
+                "generated_at": "2026-09-08T01:00:00Z",
+                "seasons": [
+                    {"season": 2024, "rows": 10, "fetched_at": "2020-01-01T00:00:00Z"},
+                    {"season": 2026, "rows": 12, "fetched_at": "2026-09-08T00:30:00Z"},
+                ],
+            }
+            write_release(directory, "basketball", "ncaa-player-box-catalog.json", catalog)
+            report = _catalog_health(
+                root,
+                "basketball/ncaa-player-box-catalog.json",
+                catalog,
+                datetime(2026, 9, 8, 2, tzinfo=timezone.utc),
+                48,
+            )
+            self.assertEqual(report[0]["catalog_seasons"], 2)
+
     def test_basketball_inventory_rejects_missing_stat_layer(self):
         with tempfile.TemporaryDirectory() as directory:
             payload = self.payload()
