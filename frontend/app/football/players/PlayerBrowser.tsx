@@ -11,6 +11,7 @@ import {
   computeFcsEpaRanks,
   computeProvisionalProductionRanks,
   computeSourceBoxRanks,
+  compareFootballPlayers,
   footballCohortPercentiles,
   footballPlayerRankKey,
   footballPlayerCategories,
@@ -82,7 +83,9 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     [retry, setRetry] = useState(0),
     [copied, setCopied] = useState(""),
     [hydrated, setHydrated] = useState(false),
-    [scope, setScope] = useState<SportScope | null>(null);
+    [scope, setScope] = useState<SportScope | null>(null),
+    [compareKeys, setCompareKeys] = useState<string[]>([]),
+    [compareMessage, setCompareMessage] = useState("");
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
   const eventDataset = footballEventDataset(category);
   const sourceBoxMetric = footballSourceBoxMetric(category);
@@ -116,6 +119,10 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     });
     window.history.replaceState(window.history.state, "", url);
   }, [hydrated, scope, season, category, division, sort, query, qualified, page]);
+  useEffect(() => {
+    setCompareKeys([]);
+    setCompareMessage("");
+  }, [season, category, division]);
   useEffect(() => {
     const controller = new AbortController();
     setData(null);
@@ -241,6 +248,24 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
   });
   const minimum = data?.rankings[category]?.minimum_plays;
   const canQualify = Boolean(minimum || sourceBoxMetric);
+  const comparisonPlayers = compareFootballPlayers(
+    data?.season === +season ? data.players : [],
+    compareKeys,
+    category,
+  );
+  const comparisonKey = (player: Player) => `${player.id}:${player.team_id}`;
+  const toggleComparison = (player: Player) => {
+    const key = comparisonKey(player);
+    setCompareMessage("");
+    setCompareKeys((current) => {
+      if (current.includes(key)) return current.filter((value) => value !== key);
+      if (current.length >= 3) {
+        setCompareMessage("Choose up to three player/team rows for one comparison.");
+        return current;
+      }
+      return [...current, key];
+    });
+  };
   if (!scope) return <p className="empty" role="status">Reading the requested football player scope…</p>;
   if (!footballScopeAvailable(scope)) return <ScopeUnavailable sport="football" scope={scope} />;
   const exportRow = (p: Player) => {
@@ -403,6 +428,49 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           Show ranked players only ({sourceBoxMetric ? `source-box order by ${sourceBoxMetric}` : season === "2026" ? "observed EPA order (provisional)" : division === "fcs" ? "FCS Silvermine production order" : "FBS source rank"}{minimum && season !== "2026" ? `, at least ${minimum} plays` : ", numeric source total required"})
         </label>
       )}
+      {compareMessage && <p className="note" role="status">{compareMessage}</p>}
+      {comparisonPlayers.length > 0 && (
+        <section className="section paper-panel" aria-labelledby="football-player-comparison" style={{ marginTop: 18 }}>
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Exact-ID comparison / {season}</div>
+              <h2 id="football-player-comparison">Compare observed production.</h2>
+            </div>
+            <button className="button secondary" type="button" onClick={() => setCompareKeys([])}>Clear comparison</button>
+          </div>
+          <p className="note">These are source production rows for the selected category. Team-season affiliations stay separate, and unavailable values remain dashes.</p>
+          {comparisonPlayers.some((player) => [player.stats.games, player.stats.plays, player.stats.yards, player.stats.touchdowns, player.stats.epa, player.stats.epa_per_play].some((value) => value != null)) && <div className="table-scroll">
+            <table className="data-table">
+              <thead><tr><th>Player / team</th><th>Category</th><th className="numeric">Games</th><th className="numeric">Plays</th><th className="numeric">Yards</th><th className="numeric">Yards / play</th><th className="numeric">TD</th><th className="numeric">Success rate</th><th className="numeric">Total EPA</th><th className="numeric">EPA / play</th></tr></thead>
+              <tbody>{comparisonPlayers.map((player) => {
+                const stats = player.stats;
+                const yardsPerPlay = stats.yards_per_play ?? (stats.yards != null && stats.plays ? stats.yards / stats.plays : null);
+                return <tr key={`${player.id}-${player.team_id}`}>
+                  <th scope="row"><Link href={`/football/player/?id=${encodeURIComponent(player.id)}&season=${season}`}>{player.name}</Link><small>{player.team || "Team unavailable"} · {player.conference || "Conference unavailable"} · {player.division.toUpperCase()}</small></th>
+                  <td>{player.selectedCategory}</td>
+                  <td className="numeric">{fmt(stats.games, 0)}</td>
+                  <td className="numeric">{fmt(stats.plays, 0)}</td>
+                  <td className="numeric">{fmt(stats.yards, 0)}</td>
+                  <td className="numeric">{fmt(yardsPerPlay, 2)}</td>
+                  <td className="numeric">{fmt(stats.touchdowns, 0)}</td>
+                  <td className="numeric">{fmt(stats.success_rate == null ? null : stats.success_rate * 100, 1)}{stats.success_rate == null ? "" : "%"}</td>
+                  <td className="numeric">{fmt(stats.epa)}</td>
+                  <td className="numeric">{fmt(stats.epa_per_play, 2)}</td>
+                </tr>;
+              })}</tbody>
+            </table>
+          </div>}
+          {comparisonPlayers.some((player) => Object.keys(player.stats.metrics || {}).length > 0) && <div className="table-scroll" style={{ marginTop: 14 }}>
+            <table className="data-table">
+              <thead><tr><th>Player / team</th><th>Exact-ID source-box totals</th></tr></thead>
+              <tbody>{comparisonPlayers.filter((player) => Object.keys(player.stats.metrics || {}).length > 0).map((player) => <tr key={`${player.id}-${player.team_id}-metrics`}>
+                <th scope="row">{player.name}<small>{player.team || "Team unavailable"} · {player.selectedCategory}</small></th>
+                <td>{Object.entries(player.stats.metrics || {}).map(([key, value]) => <span className="table-subrow" key={key}><strong>{key.replaceAll("_", " ")}</strong><small>{fmt(value, 2)}</small></span>)}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>}
+        </section>
+      )}
       <p className="note" style={{ marginBottom: 20 }}>
         Ordered by {sourceBoxMetric ? `source-box order by ${sourceBoxMetric}` : division === "fcs" && sort === "rank" ? "FCS Silvermine production order" : sortLabels[sort].toLowerCase()} within{" "}
         {category === "all"
@@ -456,6 +524,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th>Compare</th>
                   <th>{sourceBoxMetric ? "Source-box rank" : season === "2026" ? "Provisional EPA rank" : division === "fcs" ? "FCS rank" : "EPA rank"}</th>
                   <th>Player / team</th>
                   <th>Category</th>
@@ -487,6 +556,16 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                     s = selected?.stats;
                   return (
                     <tr key={`${p.id}-${p.team_id}`}>
+                      <td>
+                        <label className="sr-only">
+                          <span>Select {p.name} for comparison</span>
+                          <input
+                            type="checkbox"
+                            checked={compareKeys.includes(comparisonKey(p))}
+                            onChange={() => toggleComparison(p)}
+                          />
+                        </label>
+                      </td>
                       <td className="rank-number">{selectedRank(p, selected) ?? "—"}</td>
                       <td>
                         <Link

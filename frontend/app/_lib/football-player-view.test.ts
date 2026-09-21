@@ -7,6 +7,7 @@ import {
   computeProvisionalProductionRanks,
   computeSourceBoxRanks,
   footballPlayerRankKey,
+  compareFootballPlayers,
   footballPlayerFilterSearch,
   hasRankedProduction,
   footballSourceBoxMetric,
@@ -14,6 +15,7 @@ import {
   parseFootballPlayerScope,
   productionForCategory,
   type FootballPlayerProduction,
+  type FootballRankablePlayer,
 } from "./football-player-view";
 
 const row = (rank: number | null, plays: number): FootballPlayerProduction => ({
@@ -47,6 +49,17 @@ describe("football player index scope boundary", () => {
 });
 
 describe("football player index category selection", () => {
+  it("compares only exact player/team rows with an available category", () => {
+    const players: FootballRankablePlayer[] = [
+      { id: "1", team_id: "a", name: "Alpha", division: "fbs", categories: ["passing"], production: { passing: { plays: 100, yards: 1000, epa: 20, epa_per_play: 0.2, touchdowns: 8, rank: 1 } } },
+      { id: "1", team_id: "b", name: "Alpha transfer", division: "fbs", categories: ["rushing"], production: { rushing: { plays: 50, yards: 300, epa: 4, epa_per_play: 0.08, touchdowns: 3, rank: null } } },
+      { id: "2", team_id: "c", name: "Beta", division: "fbs", categories: ["receiving"], production: { receiving: { plays: 30, yards: 400, epa: 7, epa_per_play: 0.23, touchdowns: 4, rank: 2 } } },
+    ];
+    expect(compareFootballPlayers(players, ["1:a", "1:b", "2:c", "missing:x"], "passing")).toEqual([
+      expect.objectContaining({ id: "1", team_id: "a", selectedCategory: "passing", stats: expect.objectContaining({ yards: 1000 }) }),
+    ]);
+    expect(compareFootballPlayers(players, ["1:b", "2:c"], "all").map((row) => row.selectedCategory)).toEqual(["rushing", "receiving"]);
+  });
   it("keeps efficiency percentiles descriptive and unavailable-safe", () => {
     expect(footballCohortPercentile(0.4, [0.1, 0.4, 0.4, null])).toBe(100);
     expect(footballCohortPercentile(0.1, [0.1, 0.4, 0.4, null])).toBe(33.3);

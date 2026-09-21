@@ -195,11 +195,41 @@ export type FootballRankablePlayer = FootballPlayerProduction & {
   id: string;
   team_id: string;
   name: string;
+  team?: string | null;
+  conference?: string | null;
   division: string;
+};
+
+export type FootballPlayerComparison = FootballRankablePlayer & {
+  selectedCategory: string;
+  stats: FootballProduction;
 };
 
 export function footballPlayerRankKey(playerId: string, teamId: string, category: string) {
   return `${playerId}:${teamId}:${category}`;
+}
+
+/**
+ * Resolve a small, exact-ID comparison set for the player board.  The board
+ * can contain multiple team-season rows for the same athlete, so callers pass
+ * the player/team key rather than an athlete ID alone.  Missing categories are
+ * omitted instead of being rendered as zeroes.
+ */
+export function compareFootballPlayers(
+  players: FootballRankablePlayer[],
+  keys: string[],
+  category: FootballPlayerCategory | string,
+) {
+  return keys.flatMap((key): FootballPlayerComparison[] => {
+    const separator = key.indexOf(":");
+    if (separator < 1) return [];
+    const id = key.slice(0, separator);
+    const teamId = key.slice(separator + 1);
+    const player = players.find((row) => row.id === id && row.team_id === teamId);
+    if (!player) return [];
+    const selected = productionForCategory(player, category);
+    return selected?.stats ? [{ ...player, selectedCategory: selected.category, stats: selected.stats }] : [];
+  });
 }
 
 /** Rank exact-ID source-box totals within the selected FBS/FCS cohort. */
