@@ -284,7 +284,19 @@ describe("live research scorecard", () => {
     expect(body.market_observations).toBe(7);
     expect(body.qualifying_market_observations).toBe(1);
     expect(body.unmatched_events).toBe(3);
-    expect(body.games[0]).toMatchObject({ home_name: "Home University", status: "scheduled", home_margin: 5, home_win_probability: 0.7, comparisons: [expect.objectContaining({ bookmaker: "Book 1", market: "spreads", model_difference: 1 })] });
+    expect(body.games[0]).toMatchObject({
+      home_name: "Home University",
+      status: "scheduled",
+      home_margin: 5,
+      home_win_probability: 0.7,
+      comparisons: [expect.objectContaining({
+        market_observation_id: "quote-bookmaker-alias",
+        market_game_id: "game-1",
+        bookmaker: "Book 1",
+        market: "spreads",
+        model_difference: 1,
+      })],
+    });
     expect(body.sports.basketball).toMatchObject({
       games: 1,
       registered_versions: 1,

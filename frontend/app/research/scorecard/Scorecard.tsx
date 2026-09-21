@@ -750,7 +750,7 @@ export default function Scorecard() {
                         {g.comparisons.map((c) => (
                           <p
                             className="note"
-                            key={c.provider + c.bookmaker + c.market}
+                            key={c.market_observation_id || `${c.provider}|${c.bookmaker}|${c.market}|${c.captured_at}`}
                           >
                             Verified line · {c.market}
                             <br />
@@ -762,6 +762,11 @@ export default function Scorecard() {
                             {c.market_overround == null
                               ? "Market margin unavailable"
                               : `Market margin ${fmt(c.market_overround * 100, 2)}%`}
+                            <br />
+                            Evidence ID{" "}
+                            <code>{c.market_observation_id || "not retained"}</code>
+                            {" · source game "}
+                            <code>{c.market_game_id || "not retained"}</code>
                             <br />
                             Captured {kick(c.captured_at)}
                             <br />

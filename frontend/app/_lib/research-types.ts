@@ -1,4 +1,8 @@
 export type Comparison = {
+  /** Immutable audit_markets row key retained with the derived comparison. */
+  market_observation_id?: string | null;
+  /** Source event key; kept separate from the forecast registration game ID. */
+  market_game_id?: string | null;
   provider: string;
   bookmaker: string;
   market: "spreads" | "totals" | "h2h";

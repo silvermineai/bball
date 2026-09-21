@@ -266,6 +266,12 @@ function compare(prediction: Json, quote: Json, state: Json): Json | null {
   const line = number(q.line);
   if (!first || !second || first <= 1 || second <= 1) return null;
   const output: Json = {
+    // Keep the immutable ledger keys beside the derived comparison so a UI or
+    // export can trace a model edge back to the exact retained observation.
+    // Never fall back to the forecast game ID here: a missing source key is
+    // missing lineage, not proof that the two records are the same event.
+    market_observation_id: quote.id == null ? null : String(quote.id),
+    market_game_id: quote.game_id == null ? null : String(quote.game_id),
     provider: quote.provider,
     bookmaker: quote.bookmaker,
     market,
