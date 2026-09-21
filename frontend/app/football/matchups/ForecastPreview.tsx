@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { Game, Overview } from "../../_lib/data";
 import { filterFootballMatchupGames, parseFootballMatchupDivision } from "../../_lib/football-matchup-view";
-import { footballModelFactors } from "../../_lib/football-model-factors";
+import { footballCalibrationSummary, footballModelFactors, type FootballModelCalibration } from "../../_lib/football-model-factors";
 import { fmt, kick, signed } from "../../_lib/format";
 
 type Props = {
   games: Game[];
-  model: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
+  model: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef"> & { calibration?: FootballModelCalibration };
 };
 
 /**
@@ -78,6 +78,7 @@ export default function ForecastPreview({ games, model }: Props) {
         </>
       )}
       <p className="note" style={{ marginTop: 12 }}>Scores, win probability, margin, total and the calibrated range come from the registered Silvermine model edition. Open the desk below to filter the full slate and compare qualifying market observations.</p>
+      {footballCalibrationSummary(model.calibration) && <p className="note" style={{ marginTop: 8 }}>{footballCalibrationSummary(model.calibration)}</p>}
     </section>
   );
 }

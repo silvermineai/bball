@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { footballModelFactors } from "./football-model-factors";
+import { footballCalibrationSummary, footballModelFactors } from "./football-model-factors";
 
 const model = {
   teams: ["away", "home", "other"],
@@ -8,6 +8,12 @@ const model = {
 };
 
 describe("football model factor decomposition", () => {
+  it("explains the registered probability and range calibration", () => {
+    expect(footballCalibrationSummary({ games: 120, binary_games: 118, logistic_coefficients: [-0.2, 0.08], margin_half_width: 14.25 }))
+      .toBe("Home-win probability is a logistic mapping of modeled margin, calibrated on 118 binary games; the published 80% margin range uses a 14.3-point half-width.");
+    expect(footballCalibrationSummary({ games: 0, binary_games: 0, logistic_coefficients: [], margin_half_width: 0 })).toBeNull();
+  });
+
   it("reconstructs margin and total from the registered feature order", () => {
     const factors = footballModelFactors(model, { home_id: "home", away_id: "away", neutral: 0 });
     expect(factors).toEqual({

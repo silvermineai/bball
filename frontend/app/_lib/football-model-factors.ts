@@ -13,6 +13,23 @@ export type FootballModelFactors = {
   total: FootballModelFactor;
 };
 
+export type FootballModelCalibration = {
+  games: number;
+  binary_games: number;
+  logistic_coefficients: number[];
+  margin_half_width: number;
+};
+
+/** Explain the registered probability/range mapping without adding a forecast input. */
+export function footballCalibrationSummary(calibration?: FootballModelCalibration | null): string | null {
+  if (!calibration || !Number.isFinite(calibration.games) || calibration.games <= 0
+    || !Number.isFinite(calibration.binary_games) || calibration.binary_games < 0
+    || !Array.isArray(calibration.logistic_coefficients) || calibration.logistic_coefficients.length !== 2
+    || !calibration.logistic_coefficients.every(finite)
+    || !Number.isFinite(calibration.margin_half_width) || calibration.margin_half_width <= 0) return null;
+  return `Home-win probability is a logistic mapping of modeled margin, calibrated on ${calibration.binary_games.toLocaleString()} binary games; the published 80% margin range uses a ${calibration.margin_half_width.toFixed(1)}-point half-width.`;
+}
+
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
 /** Decompose the published ridge estimate using its registered feature order. */
