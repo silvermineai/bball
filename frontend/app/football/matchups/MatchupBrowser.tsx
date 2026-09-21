@@ -486,6 +486,7 @@ export default function MatchupBrowser({
                 home: recruitingContext.get(g.home_id),
               } : undefined}
               model={model}
+              expectedModelId={modelId}
             />
             <button className="button secondary matchup-prep-toggle" type="button" aria-pressed={prepIds.includes(g.id)} onClick={() => togglePrep(g.id)}>
               {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}

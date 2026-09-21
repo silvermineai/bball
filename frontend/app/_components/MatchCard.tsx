@@ -5,6 +5,7 @@ import { footballModelFactors } from "../_lib/football-model-factors";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
+import { footballForecastEvidence } from "../_lib/football-forecast-evidence";
 const categoryLabel: Record<string, string> = {
   passing: "Pass",
   rushing: "Rush",
@@ -16,15 +17,18 @@ export default function MatchCard({
   intel,
   recruiting,
   model,
+  expectedModelId,
 }: {
   game: Game;
   efficiencyScenario?: FootballEfficiencyScenario;
   intel?: FootballCardIntel;
   recruiting?: { home?: FootballRecruitingTeam; away?: FootballRecruitingTeam };
   model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
+  expectedModelId?: string | null;
 }) {
   const p = g.prediction;
   const modelFactors = p && model ? footballModelFactors(model, g) : null;
+  const forecastEvidence = footballForecastEvidence(g, model, expectedModelId);
   return (
     <article className="match-card">
       <div className="meta">
@@ -69,6 +73,11 @@ export default function MatchCard({
             Model edition <code>{p.model_id || "unlabeled"}</code>
             {p.generated_at ? ` · registered ${date(p.generated_at)}` : " · registration clock unavailable"}
           </small>
+          <div className={`forecast-integrity forecast-integrity-${forecastEvidence.state}`} role="status">
+            <strong>{forecastEvidence.state === "verified" ? "Forecast record verified" : forecastEvidence.state === "review" ? "Forecast record needs review" : "Forecast unavailable"}</strong>
+            <small>{forecastEvidence.division ? `Exact ${forecastEvidence.division.toUpperCase()} scope` : "Division scope unresolved"}{forecastEvidence.reconstruction ? ` · coefficients reconcile within ${Math.max(Math.abs(forecastEvidence.reconstruction.margin_delta), Math.abs(forecastEvidence.reconstruction.total_delta)).toFixed(2)} pts` : ""}</small>
+            {forecastEvidence.reasons.length > 0 && <small>{forecastEvidence.reasons.join(" · ")}</small>}
+          </div>
           <details className="forecast-factor-disclosure">
             <summary>Explain estimate</summary>
             {modelFactors ? <dl className="raw-stat-grid">
