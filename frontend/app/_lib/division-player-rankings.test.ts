@@ -15,6 +15,9 @@ describe("division player rankings", () => {
     expect(divisionMetricLabel("bpg")).toBe("Blocks per game");
     expect(divisionMetricLabel("ast_to")).toBe("Assist-to-turnover ratio");
     expect(divisionMetricLabel("dbl_dbl")).toBe("Double-doubles");
+    expect(divisionMetricLabel("pts")).toBe("Recorded total points");
+    expect(divisionMetricLabel("fga")).toBe("Recorded field-goal attempts");
+    expect(divisionMetricLabel("o_poss")).toBe("Recorded offensive possessions");
   });
   it("filters to the requested division and keeps source rank separate from local rank", () => {
     const result = rankDivisionPlayers(players, { division: "2", metric: "ppg", minGames: 5 });
@@ -40,5 +43,15 @@ describe("division player rankings", () => {
     ], { division: "3", metric: "rpg" });
     expect(result.total).toBe(1);
     expect(result.rows[0].name).toBe("Recorded Rebounds");
+  });
+
+  it("ranks retained lower-division totals without converting missing fields to zero", () => {
+    const result = rankDivisionPlayers([
+      { player_id: 1, division: 2, name: "Volume Leader", games: 20, pts: 500, fga: 400 },
+      { player_id: 2, division: 2, name: "Missing Attempts", games: 20, pts: 450, fga: null },
+      { player_id: 3, division: 3, name: "Other Division", games: 20, pts: 900, fga: 700 },
+    ], { division: "2", metric: "fga" });
+    expect(result.total).toBe(1);
+    expect(result.rows[0]).toMatchObject({ name: "Volume Leader", value: 400, rank: 1 });
   });
 });
