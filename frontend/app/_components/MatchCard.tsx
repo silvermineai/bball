@@ -1,6 +1,7 @@
 import Link from "next/link";
-import type { FootballEfficiencyScenario, Game } from "../_lib/data";
+import type { FootballEfficiencyScenario, Game, Overview } from "../_lib/data";
 import type { FootballCardIntel } from "../_lib/football-brief";
+import { footballModelFactors } from "../_lib/football-model-factors";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
@@ -14,13 +15,16 @@ export default function MatchCard({
   efficiencyScenario,
   intel,
   recruiting,
+  model,
 }: {
   game: Game;
   efficiencyScenario?: FootballEfficiencyScenario;
   intel?: FootballCardIntel;
   recruiting?: { home?: FootballRecruitingTeam; away?: FootballRecruitingTeam };
+  model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
 }) {
   const p = g.prediction;
+  const modelFactors = p && model ? footballModelFactors(model, g) : null;
   return (
     <article className="match-card">
       <div className="meta">
@@ -65,6 +69,16 @@ export default function MatchCard({
             Model edition <code>{p.model_id || "unlabeled"}</code>
             {p.generated_at ? ` · registered ${date(p.generated_at)}` : " · registration clock unavailable"}
           </small>
+          <details className="forecast-factor-disclosure">
+            <summary>Explain estimate</summary>
+            {modelFactors ? <dl className="raw-stat-grid">
+              <div><dt>Margin components</dt><dd>{fmt(modelFactors.margin.intercept)} intercept · {modelFactors.margin.venue >= 0 ? "+" : ""}{fmt(modelFactors.margin.venue)} venue · {modelFactors.margin.home_team >= 0 ? "+" : ""}{fmt(modelFactors.margin.home_team)} home · {modelFactors.margin.away_team >= 0 ? "+" : ""}{fmt(modelFactors.margin.away_team)} away</dd></div>
+              <div><dt>Margin estimate</dt><dd>{modelFactors.margin.estimate >= 0 ? "+" : ""}{fmt(modelFactors.margin.estimate)} points</dd></div>
+              <div><dt>Total components</dt><dd>{fmt(modelFactors.total.intercept)} intercept · {modelFactors.total.venue >= 0 ? "+" : ""}{fmt(modelFactors.total.venue)} venue · {modelFactors.total.home_team >= 0 ? "+" : ""}{fmt(modelFactors.total.home_team)} home · {modelFactors.total.away_team >= 0 ? "+" : ""}{fmt(modelFactors.total.away_team)} away</dd></div>
+              <div><dt>Total estimate</dt><dd>{fmt(modelFactors.total.estimate)} points</dd></div>
+            </dl> : <p className="note">Registered coefficients are unavailable for this matchup, so the component terms are withheld.</p>}
+            <small className="factor-source">These terms reconstruct the registered score model for this exact matchup. They are model components, not independent forecasts or player availability claims.</small>
+          </details>
         </>
       ) : (
         <p className="note">

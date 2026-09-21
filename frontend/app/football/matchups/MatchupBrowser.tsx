@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import type { FootballEfficiencyScenario, Game } from "../../_lib/data";
+import type { FootballEfficiencyScenario, Game, Overview } from "../../_lib/data";
 import MatchCard from "../../_components/MatchCard";
 import { date, fmt, kick } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
@@ -33,6 +33,7 @@ export default function MatchupBrowser({
   matchupIntel,
   marketCoverage,
   modelId,
+  model,
 }: {
   games: Game[];
   generated: string;
@@ -43,6 +44,7 @@ export default function MatchupBrowser({
     pregame_market_observations: number;
   };
   modelId?: string;
+  model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
 }) {
   const params = useSearchParams();
   const requestedPicks = params.get("picks") || "";
@@ -449,6 +451,7 @@ export default function MatchupBrowser({
                 away: recruitingContext.get(g.away_id),
                 home: recruitingContext.get(g.home_id),
               } : undefined}
+              model={model}
             />
             <button className="button secondary matchup-prep-toggle" type="button" aria-pressed={prepIds.includes(g.id)} onClick={() => togglePrep(g.id)}>
               {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}

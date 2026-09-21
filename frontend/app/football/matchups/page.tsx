@@ -80,6 +80,7 @@ export default function Page() {
           efficiencyScenarios={efficiencyModel.scenarios}
           matchupIntel={matchupIntel}
           modelId={d.model.id}
+          model={d.model}
           marketCoverage={{
             market_observations: d.coverage.market_observations,
             pregame_market_observations: d.coverage.pregame_market_observations,
