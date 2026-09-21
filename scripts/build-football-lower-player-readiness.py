@@ -79,7 +79,7 @@ def build_readiness(season: int = 2026) -> dict:
             event_archive = {
                 "status": "partial",
                 "asset": EVENT_ARCHIVE.name,
-                "publisher": "ESPN",
+                "publisher": "Public game publisher",
                 "season": int(release.get("season") or season),
                 "generated_at": release.get("generated_at"),
                 "receipt_sha256": (release.get("source") or {}).get("receipt_sha256"),
@@ -89,7 +89,7 @@ def build_readiness(season: int = 2026) -> dict:
                 "teams": int(coverage.get("teams") or 0),
                 "rows_by_division": coverage.get("rows_by_division") or {},
                 "players_by_division": coverage.get("players_by_division") or {},
-                "classification": "Exact ESPN team groups 57 (D2) and 58 (D3); no name or conference joins.",
+                "classification": "Exact publisher team groups 57 (D2) and 58 (D3); no name or conference joins.",
             }
         except (OSError, ValueError, TypeError):
             event_archive = None

@@ -67,7 +67,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
       : "Women’s Division II and Division III source-native leaderboards are available for names and team slugs. The stable-ID player archive, rankings, and forecasts remain unavailable; no Division I rows are substituted."
     : sport === "football"
       ? lowerFootballPlayers
-        ? "The lower-division player desk aggregates exact ESPN athlete and team IDs from retained D2/D3 game summaries. It is an observed 2026 event archive; the canonical NCAA national-stat release remains separately gated."
+        ? "The lower-division player desk aggregates exact publisher athlete and team IDs from retained D2/D3 game summaries. It is an observed 2026 event archive; the canonical national-stat release remains separately gated."
         : "The current football archive is FBS/FCS. Division II and Division III rows are not substituted with another division."
       : "The current dashboard is published for men’s Division I. Retained Division II and III player and team-directory rows are available in their archive views; forecasts and unsupported fields remain unavailable.";
 
