@@ -8,7 +8,7 @@ describe("market archive metadata", () => {
       { results: [{ season: 2025 }] },
       { results: [{ total: 0, pregame: 0 }] },
       { results: [] },
-      { results: [{ payload_json: JSON.stringify({ provider: "ESPN Summary", sport: "basketball", season: 2027, summary_count: 20, summary_with_pickcenter: 0 }), captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [{ payload_json: JSON.stringify({ provider: "ESPN Summary", sport: "basketball", season: 2027, horizon_days: 90, summary_count: 20, summary_with_pickcenter: 0 }), captured_at: "2026-09-15T18:00:00Z" }] },
     ]);
     const response = await markets.request(
       "/?meta=1&sport=basketball&publication_check=unit",
@@ -27,7 +27,7 @@ describe("market archive metadata", () => {
       expect.objectContaining({ markets: ["h2h", "spreads", "totals"], provider_update_clock: false }),
     ]);
     expect(body.archive_receipts).toEqual([]);
-    expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, summary_count: 20, summary_with_pickcenter: 0, market_status: "no_quotes_published" });
+    expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, horizon_days: 90, summary_count: 20, summary_with_pickcenter: 0, market_status: "no_quotes_published" });
   });
 
   it("counts only market connector receipts in capture metadata", async () => {

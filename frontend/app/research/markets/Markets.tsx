@@ -24,6 +24,7 @@ type Meta = {
   research_capture_history?: Array<{
     captured_at: string;
     season?: number;
+    horizon_days?: number;
     summary_count?: number;
     summary_with_pickcenter?: number;
     summary_with_odds?: number;
@@ -37,6 +38,7 @@ type Meta = {
     provider?: string;
     captured_at?: string;
     season?: number;
+    horizon_days?: number;
     summary_count?: number;
     summary_with_pickcenter?: number;
     summary_with_odds?: number;
@@ -264,6 +266,7 @@ export default function Markets() {
               <tr><th scope="row">Capture receipts</th><td className="numeric">{(meta.research_receipts || 0).toLocaleString()}</td><td>Research capture attempts retained</td></tr>
               <tr><th scope="row">Validated capture attempts</th><td className="numeric">{(meta.research_capture_summary?.captures_with_validated_markets || 0).toLocaleString()}</td><td>Attempts that retained at least one timing-validated market</td></tr>
               <tr><th scope="row">Future summaries checked</th><td className="numeric">{(meta.research_capture?.summary_count || 0).toLocaleString()}</td><td>Scheduled games inspected by the capture</td></tr>
+              <tr><th scope="row">Capture window</th><td className="numeric">{meta.research_capture?.horizon_days != null ? `${meta.research_capture.horizon_days} days` : "—"}</td><td>Prospective schedule window requested by the connector</td></tr>
               <tr><th scope="row">Complete quotes</th><td className="numeric">{(meta.research_capture?.summary_with_pickcenter || 0).toLocaleString()}</td><td>Summaries containing a complete quote set</td></tr>
               <tr><th scope="row">Non-empty odds payloads</th><td className="numeric">{(meta.research_capture?.summary_with_odds || 0).toLocaleString()}</td><td>Summaries with provider odds data; these still require quote validation</td></tr>
               <tr><th scope="row">Validated markets</th><td className="numeric">{(meta.research_capture?.accepted_markets || 0).toLocaleString()}</td><td>Quotes passing exact-game and timing checks</td></tr>
@@ -277,10 +280,11 @@ export default function Markets() {
           <summary>Recent capture attempts</summary>
           <div className="table-scroll" style={{ marginTop: 12 }}>
             <table className="data-table">
-              <thead><tr><th>Captured (UTC)</th><th>Season</th><th>Status</th><th className="numeric">Summaries / rows</th><th className="numeric">Quotes accepted</th><th className="numeric">Rejected</th></tr></thead>
+              <thead><tr><th>Captured (UTC)</th><th>Season</th><th>Window</th><th>Status</th><th className="numeric">Summaries / rows</th><th className="numeric">Quotes accepted</th><th className="numeric">Rejected</th></tr></thead>
               <tbody>{meta.research_capture_history.map((capture, index) => <tr key={`${capture.captured_at}-${capture.season || "all"}-${index}`}>
                 <th scope="row">{clock(capture.captured_at)}</th>
                 <td>{capture.season ?? "—"}</td>
+                <td>{capture.horizon_days != null ? `${capture.horizon_days} days` : "—"}</td>
                 <td>{capture.market_status ? marketCaptureStatusLabel(capture.market_status) : "Unclassified"}</td>
                 <td className="numeric">{(capture.summary_count ?? capture.source_rows ?? 0).toLocaleString()}<small>{capture.summary_with_pickcenter != null ? `${capture.summary_with_pickcenter.toLocaleString()} complete quotes` : `${(capture.rows_with_lines ?? 0).toLocaleString()} rows with lines`}</small></td>
                 <td className="numeric">{(capture.accepted_markets ?? 0).toLocaleString()}</td>
@@ -332,7 +336,7 @@ export default function Markets() {
               {archiveUnavailable
                 ? "The warehouse did not answer within the read window. Retry later; this response is not a claim about feed coverage."
                 : <>{sport === "basketball" && meta?.research_receipts
-                  ? <>A connector capture has run{meta.research_latest_capture_at ? ` (latest ${clock(meta.research_latest_capture_at)})` : ""}{meta.research_capture?.summary_count != null ? ` and checked ${meta.research_capture.summary_count.toLocaleString()} future game summaries; ${(
+                  ? <>A connector capture has run{meta.research_latest_capture_at ? ` (latest ${clock(meta.research_latest_capture_at)})` : ""}{meta.research_capture?.summary_count != null ? ` and checked ${meta.research_capture.summary_count.toLocaleString()} future game summaries${meta.research_capture.horizon_days != null ? ` within a ${meta.research_capture.horizon_days}-day window` : ""}; ${(
                     meta.research_capture.summary_with_pickcenter || 0
                   ).toLocaleString()} included complete market quotes${meta.research_capture.summary_with_odds != null ? `; ${meta.research_capture.summary_with_odds.toLocaleString()} had a non-empty odds payload` : ""}${meta.research_capture.accepted_markets != null ? ` and ${meta.research_capture.accepted_markets.toLocaleString()} passed validation` : ""}${meta.research_capture.rejected_records != null ? `; ${meta.research_capture.rejected_records.toLocaleString()} were rejected` : ""}` : ""}. {marketCaptureStatusDetail(captureStatus)} This is unavailable evidence, not proof that a game had no line.</>
                     : <>The archive is empty for this sport because no authorized feed

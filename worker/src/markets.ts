@@ -83,6 +83,7 @@ type ResearchCapture = {
   provider: string;
   captured_at: string;
   season?: number;
+  horizon_days?: number;
   summary_count?: number;
   summary_with_pickcenter?: number;
   summary_with_odds?: number;
@@ -124,6 +125,9 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     if (typeof payload.sport !== "string") return null;
     const result: ResearchCapture = { provider, captured_at: row.captured_at };
     if (typeof payload.season === "number" && Number.isInteger(payload.season)) result.season = payload.season;
+    if (typeof payload.horizon_days === "number" && Number.isInteger(payload.horizon_days) && payload.horizon_days >= 1 && payload.horizon_days <= 90) {
+      result.horizon_days = payload.horizon_days;
+    }
     if (typeof payload.summary_count === "number" && Number.isInteger(payload.summary_count) && payload.summary_count >= 0) {
       result.summary_count = payload.summary_count;
     }
