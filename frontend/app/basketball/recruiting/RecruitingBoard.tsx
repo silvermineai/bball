@@ -118,7 +118,7 @@ export function validRecruitingRankDistribution(result: RecruitingBoardResult): 
 }
 type Result = RecruitingBoardResult;
 type CommitmentDestination = NonNullable<Result["commitment_destinations"]>[number];
-type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "edition" | "source_receipt" | "rank_movement"> & { season: string };
+type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "edition" | "source_receipt" | "rank_movement" | "rank_distribution"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
 
 export type RecruitingClassDestinationRow = CommitmentDestination & {
@@ -149,6 +149,18 @@ export type RecruitingClassMovement = {
   measurable: number;
   changed: number;
   changedShare: number | null;
+};
+
+export type RecruitingClassRankConcentration = {
+  season: string;
+  total: number;
+  ranked: number;
+  top25: number;
+  top100: number;
+  unranked: number;
+  rankedShare: number;
+  top25Share: number;
+  top100Share: number;
 };
 
 /**
@@ -294,6 +306,47 @@ export function classSnapshotCoverage(snapshot: ClassSnapshot) {
     graded: share(snapshot.cohort?.graded),
     committed: share(snapshot.cohort?.committed),
   };
+}
+
+/**
+ * Summarize the recorded rank bins only when the complete class release and
+ * its aggregate denominator reconcile. This is a source concentration view,
+ * not a Silvermine talent score, and it never treats an unavailable rank as
+ * a low rank.
+ */
+export function classRankConcentration(snapshots: ClassSnapshot[]): RecruitingClassRankConcentration[] {
+  return snapshots.flatMap((snapshot) => {
+    const receipt = classSnapshotReceipt(snapshot);
+    const distribution = validRecruitingRankDistribution({
+      season: Number(snapshot.season),
+      page: 0,
+      page_size: 0,
+      total: snapshot.total,
+      edition: snapshot.edition,
+      captured_at: snapshot.captured_at,
+      rows: [],
+      rank_distribution: snapshot.rank_distribution,
+    });
+    const cohortRanked = snapshot.cohort?.ranked;
+    if (!receipt || !distribution || !Number.isSafeInteger(cohortRanked)) return [];
+    const byKey = new Map(distribution.map((band) => [band.key, band.total]));
+    const unranked = byKey.get("unranked") || 0;
+    const ranked = snapshot.total - unranked;
+    if (cohortRanked !== ranked) return [];
+    const top25 = (byKey.get("top_10") || 0) + (byKey.get("ranks_11_25") || 0);
+    const top100 = top25 + (byKey.get("ranks_26_50") || 0) + (byKey.get("ranks_51_100") || 0);
+    return [{
+      season: snapshot.season,
+      total: snapshot.total,
+      ranked,
+      top25,
+      top100,
+      unranked,
+      rankedShare: ranked / snapshot.total,
+      top25Share: top25 / snapshot.total,
+      top100Share: top100 / snapshot.total,
+    }];
+  });
 }
 
 export function recruitingBoardRequestSearch(filters: {
@@ -565,7 +618,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     Promise.allSettled(["2025", "2026", "2027", "2028", "2029", "2030"].map(async (classYear) => {
       const value = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
       if (value.unavailable_reason) throw new Error(value.unavailable_reason);
-      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations, edition: value.edition, source_receipt: value.source_receipt, rank_movement: value.rank_movement } satisfies ClassSnapshot;
+      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations, edition: value.edition, source_receipt: value.source_receipt, rank_movement: value.rank_movement, rank_distribution: value.rank_distribution } satisfies ClassSnapshot;
     })).then((settled) => {
       if (controller.signal.aborted) return;
       setClassSnapshots(settled.flatMap((item) => item.status === "fulfilled" ? [item.value] : []).sort((a, b) => a.season.localeCompare(b.season)));
@@ -598,6 +651,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const destinationRows = classDestinationRows(classSnapshots, 5);
   const positionMixRows = classPositionMix(classSnapshots);
   const movementRows = classMovementRows(classSnapshots);
+  const rankConcentrationRows = classRankConcentration(classSnapshots);
   const positionColumns = Array.from(new Set(positionMixRows.flatMap((row) => row.positions.map((position) => position.position)))).sort((a, b) => {
     const order = ["PG", "SG", "SF", "PF", "C", "G", "F", "W", "UNKNOWN"];
     return (order.indexOf(a) < 0 ? order.length : order.indexOf(a)) - (order.indexOf(b) < 0 ? order.length : order.indexOf(b)) || a.localeCompare(b);
@@ -689,6 +743,25 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             </tr>;
           })}</tbody>
         </table></div>
+      </section>}
+      {rankConcentrationRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-rank-concentration-title" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Recorded rank concentration / verified class editions</div><h3 id="recruiting-rank-concentration-title">Learn how much of each class has a recorded rank.</h3></div>
+          <span className="note">{rankConcentrationRows.length} complete classes</span>
+        </div>
+        <p className="note">These counts come from mutually exclusive rank bins in the complete source release. Top 25 and top 100 are descriptive concentration measures, not a talent score; rank-unavailable rows remain visible and are excluded from those bins.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Class</th><th className="numeric">Ranked</th><th className="numeric">Top 25</th><th className="numeric">Top 100</th><th className="numeric">Rank unavailable</th><th>Evidence</th></tr></thead>
+          <tbody>{rankConcentrationRows.map((row) => <tr key={`rank-concentration-${row.season}`}>
+            <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(row.season); setPage(0); }}>{row.season}</button><small>{row.total.toLocaleString()} exact release rows</small></th>
+            <td className="numeric"><strong>{row.ranked.toLocaleString()}</strong><small>{(row.rankedShare * 100).toFixed(1)}% of class</small></td>
+            <td className="numeric"><strong>{row.top25.toLocaleString()}</strong><small>{(row.top25Share * 100).toFixed(1)}% of class</small></td>
+            <td className="numeric"><strong>{row.top100.toLocaleString()}</strong><small>{(row.top100Share * 100).toFixed(1)}% of class</small></td>
+            <td className="numeric"><strong>{row.unranked.toLocaleString()}</strong><small>{((row.unranked / row.total) * 100).toFixed(1)}% of class</small></td>
+            <td><small>Verified release digest</small><small>Edition-bound aggregate</small></td>
+          </tr>)}</tbody>
+        </table></div>
+        <p className="note" style={{ marginTop: 12 }}>The comparison is withheld for any class whose release receipt, rank bins or ranked-row count does not reconcile. No athlete identity is inferred from these aggregates.</p>
       </section>}
       {movementRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-movement-comparison-title" style={{ marginBottom: 24 }}>
         <div className="section-heading" style={{ marginBottom: 10 }}>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classDestinationRows,
+  classRankConcentration,
   classMovementRows,
   classPositionMix,
   classSnapshotCoverage,
@@ -137,6 +138,49 @@ describe("recruiting class coverage", () => {
     expect(classSnapshotReceipt(snapshot)).toEqual({ sourceRows: 2, sha256: "a".repeat(64) });
     expect(classSnapshotReceipt({ ...snapshot, source_receipt: { ...snapshot.source_receipt, source_rows: 1 } })).toBeNull();
     expect(classSnapshotReceipt({ ...snapshot, edition: "different" })).toBeNull();
+  });
+
+  it("summarizes rank concentration only for a reconciled release", () => {
+    const edition = "a".repeat(64);
+    const distribution = [
+      { key: "top_10" as const, label: "Top 10", min_rank: 1, max_rank: 10, total: 1 },
+      { key: "ranks_11_25" as const, label: "11–25", min_rank: 11, max_rank: 25, total: 1 },
+      { key: "ranks_26_50" as const, label: "26–50", min_rank: 26, max_rank: 50, total: 1 },
+      { key: "ranks_51_100" as const, label: "51–100", min_rank: 51, max_rank: 100, total: 1 },
+      { key: "ranks_101_plus" as const, label: "101+", min_rank: 101, max_rank: null, total: 1 },
+      { key: "unranked" as const, label: "Rank unavailable", min_rank: null, max_rank: null, total: 1 },
+    ];
+    const snapshot = {
+      season: "2027",
+      total: 6,
+      cohort: { ranked: 5, graded: 5, committed: 2 },
+      captured_at: "2026-09-18T00:00:00Z",
+      edition,
+      source_receipt: {
+        dataset: "recruiting_rankings",
+        captured_at: "2026-09-18T00:00:00Z",
+        source_rows: 6,
+        sha256: edition,
+        sha256_scope: "release_edition" as const,
+        integrity: "verified" as const,
+      },
+      position_breakdown: [],
+      commitment_destinations: [],
+      rank_distribution: distribution,
+    };
+    expect(classRankConcentration([snapshot])).toEqual([{
+      season: "2027",
+      total: 6,
+      ranked: 5,
+      top25: 2,
+      top100: 4,
+      unranked: 1,
+      rankedShare: 5 / 6,
+      top25Share: 2 / 6,
+      top100Share: 4 / 6,
+    }]);
+    expect(classRankConcentration([{ ...snapshot, rank_distribution: distribution.map((row, index) => index === 0 ? { ...row, total: 2 } : row) }])).toEqual([]);
+    expect(classRankConcentration([{ ...snapshot, source_receipt: null }])).toEqual([]);
   });
 });
 
