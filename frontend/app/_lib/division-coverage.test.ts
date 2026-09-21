@@ -23,7 +23,7 @@ describe("division coverage matrix", () => {
       teams: "recorded",
       matches: "recorded",
       rankings: "recorded",
-      predictions: "unavailable",
+      predictions: "recorded",
       recruiting: "unavailable",
     });
     expect(rows.find((row) => row.surface === "matches")?.note).toContain("completed score results");
@@ -33,5 +33,11 @@ describe("division coverage matrix", () => {
     expect(Object.values(states("basketball", "women", "2"))).toEqual([
       "unavailable", "unavailable", "unavailable", "unavailable", "unavailable", "unavailable",
     ]);
+  });
+
+  it("labels the women’s lower player boundary without hiding source-native leaderboards", () => {
+    const row = divisionCoverage("basketball", "women", "2").find((item) => item.surface === "players");
+    expect(row?.state).toBe("unavailable");
+    expect(row?.note).toContain("Source-native leaderboard rows are displayed separately");
   });
 });

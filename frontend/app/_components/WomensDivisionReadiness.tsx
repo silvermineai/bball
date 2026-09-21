@@ -71,8 +71,8 @@ export default function WomensDivisionReadiness({ division }: { division: "2" | 
       </div> : null}
       {publication.source_contracts?.length ? <div className="paper-panel" style={{ marginTop: 18 }} aria-label="Women&apos;s lower-division source contracts">
         <div className="eyebrow">LOWER-DIVISION SOURCE INTAKE</div>
-        <h3>Evidence required before D{division} rows can be published</h3>
-        <p className="note">A source candidate is a lead for a future capture, not evidence of current coverage. Counts stay at zero until the exact division, identity fields, and receipt pass validation.</p>
+        <h3>Evidence required before the D{division} player archive can be published</h3>
+        <p className="note">The source-native leaderboard below is current coverage for names and team slugs. A source candidate is a lead for the stable-ID archive; identity counts stay at zero until the exact division, identity fields, and receipt pass validation.</p>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Source</th><th>Status</th><th>Evidence</th><th>Required before import</th></tr></thead><tbody>{publication.source_contracts.map((contract) => <tr key={contract.key}><th scope="row">{contract.label}<small>{contract.scope}</small></th><td><span className={`readiness-state readiness-state-${contract.status === "ready" ? "ready" : "missing"}`}>{contract.status === "candidate_unverified" ? "Candidate · unverified" : contract.status === "ready" ? "Ready" : "Blocked"}</span></td><td>{contract.reason}<small>Capture: {contract.evidence.capture_present === true ? "present" : "none"} · verified receipt: {contract.evidence.receipt_verified === true ? "yes" : "no"}</small></td><td>{contract.required.join(" · ")}</td></tr>)}</tbody></table></div>
       </div> : null}
       {publication.retained_assets?.length ? (() => {

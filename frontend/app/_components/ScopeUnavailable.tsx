@@ -62,7 +62,7 @@ export default function ScopeUnavailable({ sport, scope }: Props) {
   const detail = isWomen
     ? scope.division === "1"
       ? "The women’s source-native edition includes observed player production, roster context, upcoming games and a separately validated women’s forecast model."
-      : "Women’s Division II and Division III rows are not imported yet. No Division I rows are substituted."
+      : "Women’s Division II and Division III source-native NCAA leaderboards are available for names and team slugs. The stable-ID player archive, rankings, and forecasts remain unavailable; no Division I rows are substituted."
     : sport === "football"
       ? "The current football archive is FBS/FCS. Division II and Division III rows are not substituted with another division."
       : "The current dashboard is published for men’s Division I. Retained Division II and III player and team-directory rows are available in their archive views; forecasts and unsupported fields remain unavailable.";

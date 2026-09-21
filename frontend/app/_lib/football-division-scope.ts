@@ -22,6 +22,8 @@ export function footballDivisionAvailability(division: LowerFootballDivision) {
     playerStats: false,
     teamStats: true,
     rankings: true,
-    predictions: false,
+    // The current retained lower-division release has independently gated
+    // exact-division ratings and upcoming forecasts for both D2 and D3.
+    predictions: true,
   } as const;
 }

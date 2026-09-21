@@ -92,7 +92,7 @@ describe("sport navigation", () => {
   it("makes women's basketball division boundaries visible in the shared nav", () => {
     expect(sportAvailabilityMessage("womens-basketball", "1")).toContain("D1 player, team, game, ranking and forecast tables are published");
     expect(sportAvailabilityMessage("womens-basketball", "2")).toBe(
-      "Women's basketball coverage: D2 rows are not imported yet. No D1 rows are substituted.",
+      "Women's basketball coverage: D2 source-native NCAA leaderboards are published for names and team slugs. Stable-ID player archives, rankings, and forecasts remain unavailable; no D1 rows are substituted.",
     );
   });
 });
