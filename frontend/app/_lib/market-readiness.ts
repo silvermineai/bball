@@ -9,6 +9,7 @@ export type MarketReadinessMetadata = {
   research_capture?: {
     captured_at?: string;
     season?: number;
+    horizon_days?: number;
     summary_count?: number;
     summary_with_pickcenter?: number;
     summary_with_odds?: number;
@@ -127,11 +128,12 @@ export function marketCaptureDiagnostic(metadata: MarketReadinessMetadata | null
   const failures = capture.summary_fetch_failures;
   const candidates = capture.candidate_games;
   const limit = capture.capture_limit;
+  const horizon = capture.horizon_days;
   const bounded = Boolean(capture.capture_truncated) && candidates != null && eligible != null && candidates >= eligible;
   const coverage = bounded
     ? ` from a bounded request of ${eligible.toLocaleString()} of ${candidates.toLocaleString()} eligible games${limit == null ? "" : ` (limit ${limit.toLocaleString()})`}`
     : eligible == null ? "" : ` of ${eligible.toLocaleString()} eligible games`;
-  return `Latest capture inspected ${capture.summary_count.toLocaleString()} future summaries${coverage}; ${quoteSets.toLocaleString()} contained complete quote sets${oddsPayloads == null ? "" : ` and ${oddsPayloads.toLocaleString()} had a non-empty odds payload`}${failures == null ? "" : `; ${failures.toLocaleString()} summary requests failed`}${accepted == null ? "" : `; ${accepted.toLocaleString()} markets passed validation`}${rejected == null ? "" : `; ${rejected.toLocaleString()} summaries were rejected`}.`;
+  return `Latest capture inspected ${capture.summary_count.toLocaleString()} future summaries${coverage}${horizon == null ? "" : ` within a ${horizon.toLocaleString()}-day window`}; ${quoteSets.toLocaleString()} contained complete quote sets${oddsPayloads == null ? "" : ` and ${oddsPayloads.toLocaleString()} had a non-empty odds payload`}${failures == null ? "" : `; ${failures.toLocaleString()} summary requests failed`}${accepted == null ? "" : `; ${accepted.toLocaleString()} markets passed validation`}${rejected == null ? "" : `; ${rejected.toLocaleString()} summaries were rejected`}.`;
 }
 
 type ComparisonReadiness = NonNullable<SportSummary["comparison_readiness"]>;
