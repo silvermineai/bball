@@ -5,7 +5,7 @@ import { footballModelFactors } from "../_lib/football-model-factors";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
-import { footballMatchupContextRows, type FootballMatchupContextRow } from "../_lib/football-matchup-context";
+import { footballMatchupContextEdgeLabel, footballMatchupContextRows, type FootballMatchupContextRow } from "../_lib/football-matchup-context";
 import { footballPersonnelReadinessRows, personnelReadinessStatusLabel, type FootballPersonnelReadinessGame } from "../_lib/football-personnel-readiness";
 import { footballForecastEvidence } from "../_lib/football-forecast-evidence";
 const categoryLabel: Record<string, string> = {
@@ -156,7 +156,7 @@ export default function MatchCard({
                   <th scope="row">{row.label}<small>{row.direction === "lower" ? "Lower is stronger" : "Higher is stronger"}</small></th>
                   <td className="numeric">{contextValue(row, row.away)}</td>
                   <td className="numeric">{contextValue(row, row.home)}</td>
-                  <td>{row.edge === "home" ? "Home higher" : row.edge === "away" ? "Away higher" : row.edge === "even" ? "Even" : "Unavailable"}</td>
+                  <td>{footballMatchupContextEdgeLabel(row)}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -181,7 +181,7 @@ export default function MatchCard({
                   <th scope="row">{row.label}<small>{row.direction === "lower" ? "Lower is stronger" : "Higher is stronger"}</small></th>
                   <td className="numeric">{contextValue(row, row.away)}</td>
                   <td className="numeric">{contextValue(row, row.home)}</td>
-                  <td>{row.edge === "home" ? "Home higher" : row.edge === "away" ? "Away higher" : row.edge === "even" ? "Even" : "Unavailable"}</td>
+                  <td>{footballMatchupContextEdgeLabel(row)}</td>
                 </tr>
               ))}</tbody>
             </table>

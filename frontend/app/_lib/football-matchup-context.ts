@@ -13,6 +13,16 @@ export type FootballMatchupContextRow = {
   edge: FootballMatchupContextEdge;
 };
 
+/** Render the directional read using the metric's actual better direction. */
+export function footballMatchupContextEdgeLabel(
+  row: Pick<FootballMatchupContextRow, "direction" | "edge">,
+): string {
+  if (row.edge === "even") return "Even";
+  if (row.edge === "unavailable") return "Unavailable";
+  const side = row.edge === "home" ? "Home" : "Away";
+  return `${side} ${row.direction === "lower" ? "lower · stronger" : "higher"}`;
+}
+
 const finite = (value: number | null | undefined) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 

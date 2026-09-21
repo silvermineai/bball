@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { footballMatchupContextRows } from "./football-matchup-context";
+import { footballMatchupContextEdgeLabel, footballMatchupContextRows } from "./football-matchup-context";
 import type { FootballRecruitingTeam } from "./football-recruiting-context";
 
 const team = (overrides: Partial<FootballRecruitingTeam>): FootballRecruitingTeam => ({
@@ -18,6 +18,12 @@ const team = (overrides: Partial<FootballRecruitingTeam>): FootballRecruitingTea
 });
 
 describe("football matchup context", () => {
+  it("labels lower-is-stronger ranks without reversing the read", () => {
+    expect(footballMatchupContextEdgeLabel({ direction: "lower", edge: "away" })).toBe("Away lower · stronger");
+    expect(footballMatchupContextEdgeLabel({ direction: "higher", edge: "home" })).toBe("Home higher");
+    expect(footballMatchupContextEdgeLabel({ direction: "lower", edge: "even" })).toBe("Even");
+  });
+
   it("compares exact-team personnel fields with metric-aware direction", () => {
     const rows = footballMatchupContextRows(
       team({ team_id: "10", talent_composite: 85, talent_rank: 12, overall_returning: 0.62 }),
