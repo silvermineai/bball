@@ -149,6 +149,7 @@ function finalStatus(state: Json | null, now: string): string {
 
 type MarketRejection =
   | "forecast_excluded"
+  | "ambiguous_quote"
   | "invalid_payload"
   | "participants_changed"
   | "schedule_changed"
@@ -213,6 +214,34 @@ function comparisonExclusion(prediction: Json, quote: Json): MarketRejection | n
   if (market === "spreads") return number(p.home_margin) !== null && number(q.line) !== null ? null : "missing_model_output";
   if (market === "totals") return number(p.total) !== null && number(q.line) !== null ? null : "missing_model_output";
   return probability(p.home_win_probability) !== null ? null : "missing_model_output";
+}
+
+/**
+ * Identify one provider/bookmaker/market observation at a capture clock.
+ * Provider feeds can occasionally repeat that key with two different prices;
+ * a scorecard must withhold the market rather than let row order pick one.
+ */
+export function marketQuoteIdentity(quote: { provider?: unknown; bookmaker?: unknown; market?: unknown; captured_at?: unknown }): string {
+  return [
+    String(quote.provider ?? ""),
+    marketBookmakerKey(quote.bookmaker),
+    String(quote.market ?? ""),
+    String(quote.captured_at ?? ""),
+  ].join("|");
+}
+
+function marketQuoteSignature(quote: Json): string {
+  const payload = parse(quote.payload_json) || {};
+  // Normalize numeric encodings so an API's `1.91` and `"1.91"` are the same
+  // observation, while preserving every field that can change the comparison.
+  return JSON.stringify([
+    String(quote.updated_at ?? ""),
+    number(payload.line),
+    number(payload.home_price),
+    number(payload.away_price),
+    number(payload.over_price),
+    number(payload.under_price),
+  ]);
 }
 
 function compare(prediction: Json, quote: Json, state: Json): Json | null {
@@ -599,6 +628,8 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     comparisonReadiness.selected_game_observations += gameQuotes.length;
     if (!exclusion && effectiveState) {
       const chosen = new Map<string, Json>();
+      const seenQuoteSignatures = new Map<string, string>();
+      const ambiguousQuoteKeys = new Set<string>();
       for (const quote of gameQuotes) {
         const marketReason = marketExclusion(quote, { ...effectiveRow, payload_json: row.payload_json }, effectiveState, now);
         if (marketReason) {
@@ -611,8 +642,23 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
           reject(comparisonReason);
           continue;
         }
+        const identity = marketQuoteIdentity(quote);
+        const signature = marketQuoteSignature(quote);
+        const priorSignature = seenQuoteSignatures.get(identity);
+        const selectionKey = `${quote.provider}|${marketBookmakerKey(quote.bookmaker)}|${quote.market}`;
+        if (ambiguousQuoteKeys.has(identity)) continue;
+        if (priorSignature !== undefined && priorSignature !== signature) {
+          // Remove the previously selected row too. The market is ambiguous
+          // at this capture clock, so retaining either price would create a
+          // false comparison and make the result depend on SQL row order.
+          reject("ambiguous_quote");
+          ambiguousQuoteKeys.add(identity);
+          chosen.delete(selectionKey);
+          continue;
+        }
+        seenQuoteSignatures.set(identity, signature);
         comparisonReadiness.comparable_observations += 1;
-        chosen.set(`${quote.provider}|${marketBookmakerKey(quote.bookmaker)}|${quote.market}`, quote);
+        chosen.set(selectionKey, quote);
       }
       item.comparisons = [...chosen.values()].map((quote) => compare({ ...effectiveRow, payload_json: row.payload_json }, quote, effectiveState)).filter((quote): quote is Json => quote !== null);
       comparisonReadiness.selected_comparisons += (item.comparisons as Json[]).length;

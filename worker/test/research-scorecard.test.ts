@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { marketBookmakerKey, researchScorecard, winnerPickCorrect } from "../src/research-scorecard";
+import { marketBookmakerKey, marketQuoteIdentity, researchScorecard, winnerPickCorrect } from "../src/research-scorecard";
 
 describe("live research scorecard", () => {
   it("normalizes bookmaker presentation aliases without losing the source label", () => {
@@ -15,6 +15,88 @@ describe("live research scorecard", () => {
     expect(winnerPickCorrect(0.7, false)).toBe(false);
     expect(winnerPickCorrect(0.5, true)).toBeNull();
     expect(winnerPickCorrect(null, false)).toBeNull();
+  });
+
+  it("normalizes market identity by provider, bookmaker, market and capture clock", () => {
+    expect(marketQuoteIdentity({
+      provider: "licensed-feed",
+      bookmaker: "Draft Kings",
+      market: "spreads",
+      captured_at: "2027-01-01T12:00:00Z",
+    })).toBe("licensed-feed|draftkings|spreads|2027-01-01T12:00:00Z");
+  });
+
+  it("withholds a market when one capture clock has conflicting prices", async () => {
+    const selected = {
+      id: "registration-ambiguous-market",
+      sport: "basketball",
+      game_id: "game-ambiguous-market",
+      model_id: "model-ambiguous-market",
+      generated_at: "2026-09-19T00:00:00.000000Z",
+      registered_at: "2026-09-19T00:01:00.000000Z",
+      starts_at: "2027-01-02T00:00:00.000000Z",
+      time_tbd: 0,
+      payload_json: JSON.stringify({
+        home_id: "home-ambiguous", away_id: "away-ambiguous", home_name: "Home", away_name: "Away", season: 2027,
+        prediction: { home_margin: 4, total: 140, home_win_probability: 0.65, margin_low: -6, margin_high: 14 },
+      }),
+      state_json: JSON.stringify({
+        home_id: "home-ambiguous", away_id: "away-ambiguous", starts_at: "2027-01-02T00:00:00.000000Z",
+        time_tbd: 0, completed: 0, home_score: null, away_score: null,
+      }),
+      exclusion: null,
+    };
+    const quote = {
+      sport: "basketball",
+      game_id: "game-ambiguous-market",
+      provider: "licensed-feed",
+      bookmaker: "Draft Kings",
+      market: "spreads",
+      captured_at: "2026-09-20T12:00:00.000000Z",
+      updated_at: "2026-09-20T11:59:00.000000Z",
+      payload_json: JSON.stringify({
+        home_id: "home-ambiguous", away_id: "away-ambiguous", starts_at: "2027-01-02T00:00:00.000000Z",
+        line: -3.5, home_price: 1.91, away_price: 1.91,
+      }),
+    };
+    const conflicting = {
+      ...quote,
+      payload_json: JSON.stringify({
+        home_id: "home-ambiguous", away_id: "away-ambiguous", starts_at: "2027-01-02T00:00:00.000000Z",
+        line: -4.5, home_price: 1.91, away_price: 1.91,
+      }),
+    };
+    const prepare = vi.fn((sql: string) => {
+      const first = async () => {
+        if (sql.includes("MAX(CAST")) return { season: 2027 };
+        if (sql.includes("audit_predictions")) return { total: 1 };
+        return { total: 0 };
+      };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => sql.includes("FROM audit_predictions p")
+            ? { results: [selected] }
+            : sql.includes("SELECT id,sport,game_id,provider")
+              ? { results: [{ ...quote, id: "quote-a" }, { ...conflicting, id: "quote-b" }] }
+              : { results: [] },
+        }),
+      };
+    });
+    const response = await researchScorecard.request(
+      "/?sport=basketball&season=2027&model=model-ambiguous-market&limit=5000",
+      {},
+      { RESEARCH_DB: { prepare } as never },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { games: Array<Record<string, unknown>>; sports: { basketball: { comparison_readiness: { selected_comparisons: number; rejection_counts: Record<string, number> } } } };
+    expect(body.games[0].comparisons).toEqual([]);
+    expect(body.sports.basketball.comparison_readiness).toMatchObject({
+      comparable_observations: 1,
+      selected_comparisons: 0,
+      rejection_counts: { ambiguous_quote: 1 },
+    });
   });
 
   it("publishes model and market winner accuracy for settled moneylines", async () => {
