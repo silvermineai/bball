@@ -72,6 +72,14 @@ type Career = {
   seasons: number[];
   source_records: number;
   box_games: Record<string, number>;
+  box_totals?: {
+    season: number;
+    category: string;
+    team_id: string | null;
+    records: number;
+    games: number;
+    totals: Record<string, number>;
+  }[];
   rows: CareerRow[];
 };
 const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -410,6 +418,24 @@ function FootballCareerPanel({
           </tbody>
         </table>
       </div>
+      {(career.box_totals || []).length > 0 && (
+        <div className="table-scroll" style={{ marginTop: 18 }}>
+          <div className="eyebrow">Exact-ID career box totals</div>
+          <p className="note">Additive source fields across retained game rows. Categories remain separate; missing fields are omitted.</p>
+          <table className="data-table">
+            <thead><tr><th>Season / category</th><th className="numeric">Games</th><th>Source totals</th></tr></thead>
+            <tbody>{(career.box_totals || []).map((row) => (
+              <tr key={`${row.season}-${row.category}-${row.team_id || "unknown"}`} className={row.season === selectedSeason ? "career-selected-row" : ""}>
+                <td><strong>{row.season} · {label(row.category)}</strong><small>{row.team_id || "team ID unavailable"} · {row.records.toLocaleString()} retained rows</small></td>
+                <td className="numeric">{row.games.toLocaleString()}</td>
+                <td>{Object.entries(row.totals).map(([key, value]) => (
+                  <span className="table-subrow" key={key}><strong>{label(key)}</strong><small>{Number.isInteger(value) ? fmt(value, 0) : fmt(value, 2)}</small></span>
+                ))}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
       <p className="note">The selected season is highlighted. Values are source-attributed aggregates for this athlete ID and team-season; no transfer, eligibility, role or future performance claim is inferred.</p>
     </section>
   );

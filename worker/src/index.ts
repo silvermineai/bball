@@ -379,6 +379,11 @@ type FootballBoxTotals = {
   totals: Record<string, number>;
 };
 
+type FootballCareerBoxTotals = FootballBoxTotals & {
+  season: number;
+  team_id: string | null;
+};
+
 /**
  * Derive a small set of rate stats only when both the source numerator and
  * denominator survived the retained box rows.  These are descriptive season
@@ -474,15 +479,47 @@ app.get("/api/football/players/:id/career", async (c) => {
   // underlying source rows.
   if (!result.results.length) return c.json({ error: "No career records found" }, 404);
   const boxGames = new Map<number, Set<string>>();
+  const careerBoxTotals = new Map<string, FootballCareerBoxTotals & { game_ids: Set<string> }>();
   for (const row of result.results) {
     if (row.dataset !== "box") continue;
     try {
       const stats = JSON.parse(row.stats_json) as Record<string, unknown>;
       const game = String(stats.game_id || "");
-      if (!game) continue;
-      const games = boxGames.get(row.season) || new Set<string>();
-      games.add(game);
-      boxGames.set(row.season, games);
+      if (game) {
+        const games = boxGames.get(row.season) || new Set<string>();
+        games.add(game);
+        boxGames.set(row.season, games);
+      }
+
+      const category = String(row.category || stats.category || "");
+      const metrics = FOOTBALL_BOX_METRICS[category] || [];
+      if (!category || !metrics.length) continue;
+      const key = `${row.season}|${category}|${row.team_id || ""}`;
+      const aggregate = careerBoxTotals.get(key) || {
+        season: row.season,
+        category,
+        team_id: row.team_id,
+        records: 0,
+        games: 0,
+        totals: {},
+        game_ids: new Set<string>(),
+      };
+      aggregate.records += 1;
+      if (game) aggregate.game_ids.add(game);
+      for (const metric of metrics) {
+        const sources = metric.source == null
+          ? [metric.key]
+          : Array.isArray(metric.source) ? metric.source : [metric.source];
+        const source = sources.find((candidate) => stats[candidate] != null && stats[candidate] !== "");
+        if (!source) continue;
+        const raw = stats[source];
+        const value = metric.part != null ? String(raw).split("/")[metric.part ?? 0] : raw;
+        const parsed = number(value);
+        if (parsed == null) continue;
+        aggregate.totals[metric.key] = (aggregate.totals[metric.key] || 0) + parsed;
+      }
+      aggregate.games = aggregate.game_ids.size;
+      careerBoxTotals.set(key, aggregate);
     } catch {
       // A malformed source row is omitted while valid career rows remain usable.
     }
@@ -494,6 +531,10 @@ app.get("/api/football/players/:id/career", async (c) => {
     seasons,
     source_records: rows.length,
     box_games: Object.fromEntries([...boxGames.entries()].map(([season, games]) => [season, games.size])),
+    box_totals: [...careerBoxTotals.values()]
+      .map(({ game_ids, ...row }) => ({ ...row, games: game_ids.size }))
+      .filter((row) => Object.keys(row.totals).length > 0)
+      .sort((left, right) => right.season - left.season || left.category.localeCompare(right.category) || (left.team_id || "").localeCompare(right.team_id || "")),
     rows,
   });
 });

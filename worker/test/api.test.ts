@@ -212,7 +212,7 @@ describe("bball api", () => {
                   dataset: "box",
                   category: "rushing",
                   team_id: "10",
-                  stats_json: JSON.stringify({ game_id: "401" }),
+                  stats_json: JSON.stringify({ game_id: "401", rushingAttempts: "10", rushingYards: "65", rushingTouchdowns: "1" }),
                 },
               ]
             : [],
@@ -221,9 +221,10 @@ describe("bball api", () => {
     }));
     const response = await app.request("/api/football/players/123/career", {}, { DB: { prepare } });
     expect(response.status).toBe(200);
-    const body = await response.json() as { player_id: string; seasons: number[]; source_records: number; box_games: Record<string, number>; rows: Array<Record<string, unknown>> };
+    const body = await response.json() as { player_id: string; seasons: number[]; source_records: number; box_games: Record<string, number>; box_totals: Array<Record<string, unknown>>; rows: Array<Record<string, unknown>> };
     expect(body).toMatchObject({ player_id: "123", seasons: [2025, 2024], source_records: 2, box_games: { "2025": 1 } });
     expect(body.rows[0]).toMatchObject({ season: 2025, team: "Example U", plays: 100, epa: 12.5 });
+    expect(body.box_totals).toEqual([{ season: 2025, category: "rushing", team_id: "10", records: 1, games: 1, totals: { rushingAttempts: 10, rushingTouchdowns: 1, rushingYards: 65 } }]);
   });
 
   it("accepts a 2010 football player log from the expanded archive", async () => {
