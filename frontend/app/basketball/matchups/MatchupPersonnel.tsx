@@ -6,6 +6,7 @@ import type { BBGame } from "../../_lib/basketball-types";
 import {
   loadMatchupPersonnel,
   matchupPersonnelLeaders,
+  matchupPlayerFileHref,
   matchupPersonnelRows,
   personnelStatusLabel,
   type MatchupPersonnel,
@@ -66,7 +67,7 @@ function PersonnelTable({ side, priorSeason }: { side: MatchupPersonnelSide; pri
           <tbody>{rows.map((row) => {
             const player = side.players.find((candidate) => candidate.athlete_id === row.athlete_id);
             return <tr key={row.key}>
-              <td><Link href={`/basketball/player/?id=${encodeURIComponent(row.athlete_id)}&season=${priorSeason}`}><strong>{row.player}</strong></Link><small>{[row.position || "Position unavailable", player?.class_year, player?.height].filter(Boolean).join(" · ")} · Profile ID {row.athlete_id}</small><small>FG {row.field_goals || "—"} · 3P {row.three_pointers || "—"} · FT {row.free_throws || "—"}</small></td>
+              <td><Link href={matchupPlayerFileHref(row.athlete_id, priorSeason)}><strong>{row.player}</strong></Link><small>{[row.position || "Position unavailable", player?.class_year, player?.height].filter(Boolean).join(" · ")} · Profile ID {row.athlete_id}</small><small><Link href={matchupPlayerFileHref(row.athlete_id, priorSeason)}>Open exact player file + shot map →</Link></small><small>FG {row.field_goals || "—"} · 3P {row.three_pointers || "—"} · FT {row.free_throws || "—"}</small></td>
               <td><span className={`personnel-status ${row.status}`}>{personnelStatusLabel(row.status)}</span></td>
               <td>{recruitingEvidenceLabel(player?.recruiting || null)}<small>{player?.recruiting?.status || "Exact ID not in current recruiting release"}</small>{player?.recruiting && <small>{player.recruiting.source_sha256 ? "Current-edition digest verified" : "Recruiting digest unavailable"}</small>}</td>
               <td>{row.prior_team || <span className="muted">—</span>}</td>

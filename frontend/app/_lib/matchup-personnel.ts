@@ -126,6 +126,11 @@ export type MatchupPersonnelLeader = {
   share: number;
 };
 
+/** Link an exact matchup athlete ID to the player card's retained shot map. */
+export function matchupPlayerFileHref(athleteId: string, season: number) {
+  return `/basketball/ncaa-player/?id=${encodeURIComponent(athleteId)}&season=${encodeURIComponent(String(season))}#shot-profile`;
+}
+
 const statuses = new Set(["returning", "incoming", "new_to_dataset", "ambiguous"]);
 const statKeys: Array<keyof MatchupPersonnelStats> = [
   "ppg", "rpg", "apg", "spg", "bpg", "mpg", "fg_pct", "three_pct", "ft_pct",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchupPersonnelLeaders, matchupPersonnelRows, parseMatchupPersonnel, personnelStatusLabel } from "./matchup-personnel";
+import { matchupPersonnelLeaders, matchupPersonnelRows, matchupPlayerFileHref, parseMatchupPersonnel, personnelStatusLabel } from "./matchup-personnel";
 
 function payload() {
   const stats = { ppg: 12.4, rpg: null, apg: 3.1, spg: 1.4, bpg: 0.7, mpg: 28, fg_pct: null, three_pct: null, ft_pct: null, field_goals: null, three_pointers: null, free_throws: null };
@@ -25,6 +25,10 @@ function payload() {
 }
 
 describe("matchup personnel client", () => {
+  it("links the exact athlete ID to the retained player shot profile", () => {
+    expect(matchupPlayerFileHref("athlete/10", 2026)).toBe("/basketball/ncaa-player/?id=athlete%2F10&season=2026#shot-profile");
+  });
+
   it("validates exact matchup identity and keeps multi-team stat lines separate", () => {
     const parsed = parseMatchupPersonnel(payload(), { gameId: "401", season: 2027, homeId: "1", awayId: "2" });
     expect(matchupPersonnelRows(parsed.home)).toEqual([
