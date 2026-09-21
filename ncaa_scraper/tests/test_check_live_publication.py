@@ -14,6 +14,7 @@ from scripts.check_live_publication import (
     market_metadata,
     matchup_personnel_coverage,
     player_box_field_metadata,
+    womens_forecast_metadata,
     validate_recruiting_destinations,
     validate_coverage_audit,
     validate_reviewed_recruiting_release,
@@ -71,6 +72,74 @@ class LivePublicationCheckTest(unittest.TestCase):
         row["prediction"]["away_efficiency"] = 89
         with self.assertRaisesRegex(ValueError, "away efficiency"):
             validate_forecast_prediction(row)
+
+    @staticmethod
+    def womens_forecast_payload():
+        return {
+            "model_id": "womens-model-1",
+            "sport": "basketball",
+            "gender": "women",
+            "target_season": 2027,
+            "generated_at": "2026-09-10T18:00:00Z",
+            "model_status": "published",
+            "validation_season": 2026,
+            "validation": {
+                "games": 50,
+                "margin_mae": 14.2,
+                "win_accuracy": 0.69,
+                "brier_score": 0.20,
+                "log_loss": 0.59,
+                "interval_games": 50,
+                "interval_coverage": 0.73,
+            },
+            "calibration": {
+                "games": 100,
+                "logistic_coefficients": [-0.6, 0.15],
+                "margin_half_width": 19.2,
+                "interval_games": 100,
+                "interval_target": 0.8,
+                "evaluated_season": 2026,
+                "brier": 0.2,
+                "log_loss": 0.59,
+            },
+            "coverage": {"forecast_rows": 1, "primary_rows": 1, "cold_start_rows": 0, "rated_teams": 2},
+            "forecasts": [{
+                "game_id": "401902275",
+                "home_id": "1",
+                "away_id": "2",
+                "prediction": {
+                    "home_win_probability": 0.7,
+                    "away_win_probability": 0.3,
+                    "predicted_margin": 5.5,
+                    "predicted_home_score": 70,
+                    "predicted_away_score": 64.5,
+                    "estimate_type": "primary",
+                    "margin_low": -13.7,
+                    "margin_high": 24.7,
+                },
+            }],
+        }
+
+    def test_womens_forecast_requires_published_scope_and_evidence(self):
+        payload = self.womens_forecast_payload()
+        self.assertEqual(
+            womens_forecast_metadata(payload),
+            {
+                "model_id": "womens-model-1",
+                "forecast_rows": 1,
+                "primary_rows": 1,
+                "cold_start_rows": 0,
+                "validation_games": 50,
+                "calibration_games": 100,
+            },
+        )
+        payload["gender"] = "men"
+        with self.assertRaisesRegex(ValueError, "wrong scope or status"):
+            womens_forecast_metadata(payload)
+        payload = self.womens_forecast_payload()
+        payload["forecasts"][0]["prediction"]["home_win_probability"] = 1.2
+        with self.assertRaisesRegex(ValueError, "home win probability"):
+            womens_forecast_metadata(payload)
 
     def test_roster_challenger_requires_the_exact_forecast_edition(self):
         payload = {
@@ -218,6 +287,8 @@ class LivePublicationCheckTest(unittest.TestCase):
                 }
             if path.startswith("/api/basketball/research/matchup-personnel?"):
                 return LivePublicationCheckTest.matchup_personnel_payload()
+            if path == "/data/basketball/womens-forecast.json":
+                return LivePublicationCheckTest.womens_forecast_payload()
             candidates = (
                 canonical,
                 canonical.replace("&publication_check=1", ""),
@@ -486,6 +557,10 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["forecast_model"], "model-1")
         self.assertEqual(report["forecast_upcoming_rows"], 100)
         self.assertEqual(report["forecast_roster_scenario_rows"], 100)
+        self.assertEqual(report["womens_forecast_model"], "womens-model-1")
+        self.assertEqual(report["womens_forecast_rows"], 1)
+        self.assertEqual(report["womens_forecast_validation_games"], 50)
+        self.assertEqual(report["womens_forecast_calibration_games"], 100)
         self.assertEqual(report["matchup_personnel_game_id"], "401902275")
         self.assertEqual(report["matchup_personnel_listed_players"], 2)
         self.assertEqual(report["matchup_personnel_players_with_prior_minutes"], 1)

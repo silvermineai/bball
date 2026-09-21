@@ -227,6 +227,123 @@ def validate_forecast_prediction(row: dict) -> dict:
     return {"estimate_type": prediction.get("estimate_type", "primary"), "pace": values["pace"]}
 
 
+def womens_forecast_metadata(payload: dict) -> dict:
+    """Validate the source-native published women's forecast asset.
+
+    This intentionally reads the static edition rather than the men's D1
+    warehouse. A women-specific model must advertise its scope, publication
+    status, held-out evaluation and calibration evidence, and every forecast
+    row must retain finite probabilities and interval margins.
+    """
+    if not isinstance(payload, dict):
+        raise ValueError("women's basketball forecast asset is malformed")
+    if (
+        payload.get("sport") != "basketball"
+        or payload.get("gender") != "women"
+        or payload.get("target_season") != 2027
+        or payload.get("model_status") != "published"
+        or not isinstance(payload.get("model_id"), str)
+        or not payload["model_id"].strip()
+        or not isinstance(payload.get("generated_at"), str)
+    ):
+        raise ValueError("women's basketball forecast asset has the wrong scope or status")
+    try:
+        timestamp(payload["generated_at"])
+    except (TypeError, ValueError):
+        raise ValueError("women's basketball forecast asset has an invalid generation time") from None
+
+    validation_season = payload.get("validation_season")
+    if validation_season != 2026:
+        raise ValueError("women's basketball forecast asset has no held-out 2026 validation")
+    validation = payload.get("validation")
+    calibration = payload.get("calibration")
+    if not isinstance(validation, dict) or not isinstance(calibration, dict):
+        raise ValueError("women's basketball forecast asset is missing validation or calibration")
+
+    def positive_int(value: object, label: str) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(f"women's basketball forecast {label} is malformed")
+        return value
+
+    def finite(value: object, label: str, *, lower: float | None = None, upper: float | None = None) -> float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value):
+            raise ValueError(f"women's basketball forecast {label} is malformed")
+        numeric = float(value)
+        if lower is not None and numeric < lower or upper is not None and numeric > upper:
+            raise ValueError(f"women's basketball forecast {label} is out of range")
+        return numeric
+
+    validation_games = positive_int(validation.get("games"), "validation games")
+    positive_int(validation.get("interval_games"), "validation interval games")
+    finite(validation.get("margin_mae"), "validation margin MAE", lower=0)
+    finite(validation.get("win_accuracy"), "validation win accuracy", lower=0, upper=1)
+    finite(validation.get("brier_score"), "validation Brier score", lower=0, upper=1)
+    finite(validation.get("log_loss"), "validation log loss", lower=0)
+    finite(validation.get("interval_coverage"), "validation interval coverage", lower=0, upper=1)
+
+    calibration_games = positive_int(calibration.get("games"), "calibration games")
+    if calibration.get("evaluated_season") != 2026:
+        raise ValueError("women's basketball forecast calibration has the wrong evaluation season")
+    coefficients = calibration.get("logistic_coefficients")
+    if (
+        not isinstance(coefficients, list)
+        or len(coefficients) != 2
+        or any(not isinstance(value, (int, float)) or isinstance(value, bool) or not isfinite(value) for value in coefficients)
+    ):
+        raise ValueError("women's basketball forecast calibration coefficients are malformed")
+    finite(calibration.get("margin_half_width"), "calibration margin half-width", lower=0)
+    positive_int(calibration.get("interval_games"), "calibration interval games")
+    finite(calibration.get("interval_target"), "calibration interval target", lower=0, upper=1)
+    finite(calibration.get("brier"), "calibration Brier score", lower=0, upper=1)
+    finite(calibration.get("log_loss"), "calibration log loss", lower=0)
+
+    forecasts = payload.get("forecasts")
+    if not isinstance(forecasts, list) or not forecasts:
+        raise ValueError("women's basketball forecast asset has no forecast rows")
+    counts = {"primary": 0, "cold_start": 0}
+    for row in forecasts:
+        if not isinstance(row, dict) or not isinstance(row.get("game_id"), str) or not re.fullmatch(r"\d{1,30}", row["game_id"]):
+            raise ValueError("women's basketball forecast row has an invalid game identity")
+        prediction = row.get("prediction")
+        if not isinstance(prediction, dict):
+            raise ValueError("women's basketball forecast row has no prediction")
+        estimate_type = prediction.get("estimate_type")
+        if estimate_type not in counts:
+            raise ValueError("women's basketball forecast row has an invalid estimate type")
+        counts[estimate_type] += 1
+        home_probability = finite(prediction.get("home_win_probability"), "home win probability", lower=0, upper=1)
+        away_probability = finite(prediction.get("away_win_probability"), "away win probability", lower=0, upper=1)
+        if abs(home_probability + away_probability - 1) > 0.002:
+            raise ValueError("women's basketball forecast probabilities do not reconcile")
+        margin = finite(prediction.get("predicted_margin"), "predicted margin")
+        finite(prediction.get("predicted_home_score"), "predicted home score", lower=0)
+        finite(prediction.get("predicted_away_score"), "predicted away score", lower=0)
+        low = finite(prediction.get("margin_low"), "margin low")
+        high = finite(prediction.get("margin_high"), "margin high")
+        if low > high or not low <= margin <= high:
+            raise ValueError("women's basketball forecast margin interval is malformed")
+
+    coverage = payload.get("coverage")
+    if not isinstance(coverage, dict):
+        raise ValueError("women's basketball forecast coverage is malformed")
+    forecast_rows = positive_int(coverage.get("forecast_rows"), "coverage forecast rows")
+    primary_rows = positive_int(coverage.get("primary_rows"), "coverage primary rows")
+    cold_start_rows = coverage.get("cold_start_rows")
+    if isinstance(cold_start_rows, bool) or not isinstance(cold_start_rows, int) or cold_start_rows < 0:
+        raise ValueError("women's basketball forecast coverage cold-start rows are malformed")
+    positive_int(coverage.get("rated_teams"), "coverage rated teams")
+    if forecast_rows != len(forecasts) or primary_rows != counts["primary"] or cold_start_rows != counts["cold_start"] or primary_rows + cold_start_rows != forecast_rows:
+        raise ValueError("women's basketball forecast coverage does not reconcile")
+    return {
+        "model_id": payload["model_id"],
+        "forecast_rows": forecast_rows,
+        "primary_rows": primary_rows,
+        "cold_start_rows": cold_start_rows,
+        "validation_games": validation_games,
+        "calibration_games": calibration_games,
+    }
+
+
 def roster_forecast_alignment(payload: dict, expected_model_id: str) -> int:
     """Require the roster challenger to name the exact primary forecast edition."""
     model = payload.get("roster_model")
@@ -783,6 +900,9 @@ def check_live(
     if not isinstance(game_id, str) or not re.fullmatch(r"\d{1,20}", game_id):
         raise ValueError("latest basketball model has an invalid game identity")
     forecast_prediction = validate_forecast_prediction(personnel_game)
+    womens_forecast = womens_forecast_metadata(
+        get_json(base_url, "/data/basketball/womens-forecast.json")
+    )
     matchup_personnel = get_json(
         base_url,
         f"/api/basketball/research/matchup-personnel?season=2027&gameId={quote(game_id, safe='')}&publication_check={probe_key}",
@@ -943,6 +1063,10 @@ def check_live(
         "forecast_roster_scenario_rows": roster_scenario_rows,
         "forecast_prediction_estimate_type": forecast_prediction["estimate_type"],
         "forecast_prediction_pace": forecast_prediction["pace"],
+        "womens_forecast_model": womens_forecast["model_id"],
+        "womens_forecast_rows": womens_forecast["forecast_rows"],
+        "womens_forecast_validation_games": womens_forecast["validation_games"],
+        "womens_forecast_calibration_games": womens_forecast["calibration_games"],
         "matchup_personnel_game_id": game_id,
         "matchup_personnel_listed_players": matchup_personnel_summary["listed_players"],
         "matchup_personnel_players_with_prior_minutes": matchup_personnel_summary["players_with_prior_minutes"],
