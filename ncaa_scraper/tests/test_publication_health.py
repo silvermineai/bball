@@ -8,6 +8,7 @@ from pathlib import Path
 from ncaa_scraper.publication_health import (
     _catalog_health,
     _evaluation_health,
+    _ncaa_player_box_catalog_health,
     _ncaa_individual_health,
     _roster_snapshot_health,
     _unresolved_coverage_health,
@@ -261,6 +262,58 @@ class PublicationHealthTest(unittest.TestCase):
                     48,
                 )
             self.assertIn("hours old", str(error.exception))
+
+    def test_national_player_catalog_reconciles_rows_and_receipt_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = {
+                "generated_at": "2026-09-08T01:00:00Z",
+                "total_rows": 12,
+                "seasons": [
+                    {
+                        "season": 2025,
+                        "rows": 5,
+                        "sha256": "a" * 64,
+                        "source_url": "https://example.test/ncaa-2025.parquet",
+                        "fetched_at": "2026-09-08T00:30:00Z",
+                    },
+                    {
+                        "season": 2026,
+                        "rows": 7,
+                        "sha256": "b" * 64,
+                        "source_url": "https://example.test/ncaa-2026.parquet",
+                        "fetched_at": "2026-09-08T00:45:00Z",
+                    },
+                ],
+            }
+            write_release(directory, "basketball", "ncaa-player-box-catalog.json", catalog)
+            report = _ncaa_player_box_catalog_health(
+                root,
+                catalog,
+                datetime(2026, 9, 8, 2, tzinfo=timezone.utc),
+                48,
+            )
+            self.assertEqual(report["source_receipts"], 2)
+            self.assertEqual(report["source_rows"], 12)
+
+            catalog["total_rows"] = 11
+            with self.assertRaisesRegex(ValueError, "does not match season rows"):
+                _ncaa_player_box_catalog_health(
+                    root,
+                    catalog,
+                    datetime(2026, 9, 8, 2, tzinfo=timezone.utc),
+                    48,
+                )
+
+            catalog["total_rows"] = 12
+            catalog["seasons"][1]["sha256"] = "not-a-digest"
+            with self.assertRaisesRegex(ValueError, "invalid source receipt"):
+                _ncaa_player_box_catalog_health(
+                    root,
+                    catalog,
+                    datetime(2026, 9, 8, 2, tzinfo=timezone.utc),
+                    48,
+                )
 
     def test_catalog_freshness_scopes_age_gate_to_active_season(self):
         with tempfile.TemporaryDirectory() as directory:

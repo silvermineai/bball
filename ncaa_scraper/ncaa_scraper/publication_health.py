@@ -209,6 +209,78 @@ def _catalog_health(
     return [{"release": relative, "generated_at": latest["generated_at"], "catalog_seasons": len(seasons), "age_hours": latest["age_hours"]}]
 
 
+def _ncaa_player_box_catalog_health(
+    root: Path,
+    payload: dict,
+    now: datetime,
+    max_age_hours: float,
+) -> dict:
+    """Validate the row ledger and source receipt for every NCAA box edition.
+
+    The public catalog is the index for the long player-game archive.  A
+    freshness check that only examines its timestamps can still publish a
+    truncated season, duplicate season, or an unverifiable source hash.  Keep
+    this gate source-native: it validates the receipt and row ledger without
+    attempting to infer player identity from names.
+    """
+    relative = "basketball/ncaa-player-box-catalog.json"
+    seasons = payload.get("seasons")
+    total_rows = payload.get("total_rows")
+    if (
+        not isinstance(seasons, list)
+        or not seasons
+        or not isinstance(total_rows, int)
+        or isinstance(total_rows, bool)
+        or total_rows < 0
+    ):
+        raise ValueError(f"{relative} has an invalid row ledger")
+
+    seen_seasons: set[int] = set()
+    row_total = 0
+    for entry in seasons:
+        if not isinstance(entry, dict):
+            raise ValueError(f"{relative} has a malformed season entry")
+        season = entry.get("season")
+        rows = entry.get("rows")
+        source_hash = entry.get("sha256")
+        source_url = entry.get("source_url")
+        fetched_at = entry.get("fetched_at")
+        if (
+            not isinstance(season, int)
+            or isinstance(season, bool)
+            or season in seen_seasons
+            or not isinstance(rows, int)
+            or isinstance(rows, bool)
+            or rows < 0
+            or not isinstance(source_hash, str)
+            or not re.fullmatch(r"[a-f0-9]{64}", source_hash)
+            or not isinstance(source_url, str)
+            or not re.match(r"^https://[^\s]+$", source_url)
+            or not isinstance(fetched_at, str)
+        ):
+            raise ValueError(f"{relative} has an invalid source receipt for season {season!r}")
+        try:
+            _timestamp(fetched_at)
+        except ValueError as exc:
+            raise ValueError(f"{relative} season {season} has an invalid fetched_at timestamp") from exc
+        seen_seasons.add(season)
+        row_total += rows
+
+    if row_total != total_rows:
+        raise ValueError(
+            f"{relative} total_rows {total_rows} does not match season rows {row_total}"
+        )
+
+    # Historical editions remain attributable snapshots, but the active
+    # season receipt must still be inside the normal freshness window.
+    catalog = _catalog_health(root, relative, payload, now, max_age_hours)
+    return {
+        **catalog[0],
+        "source_receipts": len(seasons),
+        "source_rows": total_rows,
+    }
+
+
 def _player_catalog_health(
     root: Path,
     now: datetime,
@@ -454,7 +526,14 @@ def check_freshness(
                     "basketball/ncaa-player-box-catalog.json",
                 ):
                     catalog = _read(root, str(Path("frontend/public/data") / relative))
-                    releases.extend(_catalog_health(root, relative, catalog, now, max_age_hours))
+                    if relative == "basketball/ncaa-player-box-catalog.json":
+                        releases.append(
+                            _ncaa_player_box_catalog_health(
+                                root, catalog, now, max_age_hours
+                            )
+                        )
+                    else:
+                        releases.extend(_catalog_health(root, relative, catalog, now, max_age_hours))
                 releases.append(_roster_snapshot_health(root))
                 releases.append(_evaluation_health(root))
                 releases.append(_ncaa_individual_health(ncaa))
