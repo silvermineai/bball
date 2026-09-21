@@ -2,6 +2,49 @@ import { describe, expect, it, vi } from "vitest";
 import { recruitingRankings } from "../src/recruiting-rankings";
 
 describe("ESPN recruiting rankings", () => {
+  it("publishes a reconciled position opportunity aggregate for the active cohort", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("WITH cohort_rows")
+            ? { tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 }
+            : sql.includes("count(*)")
+              ? { total: 8, committed_total: 3, ranked_total: 6, grade_total: 7 }
+              : { edition: "edition-1", captured_at: "2026-09-18T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: sql.includes("AS uncommitted_top100_total")
+            ? [{
+                position: "PG", total: 8, committed_total: 3, uncommitted_total: 5,
+                ranked_total: 6, top100_total: 4, uncommitted_ranked_total: 4,
+                uncommitted_top100_total: 3, best_uncommitted_rank: 12,
+                average_uncommitted_grade: 93.25,
+              }]
+            : [] })),
+        })),
+      };
+    });
+    const response = await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { position_opportunity: Array<Record<string, unknown>> };
+    expect(body.position_opportunity).toEqual([{
+      position: "PG",
+      total: 8,
+      committed_total: 3,
+      uncommitted_total: 5,
+      ranked_total: 6,
+      top100_total: 4,
+      uncommitted_ranked_total: 4,
+      uncommitted_top100_total: 3,
+      best_uncommitted_rank: 12,
+      average_uncommitted_grade: 93.25,
+    }]);
+    const query = sqlCalls.find((sql) => sql.includes("AS uncommitted_top100_total"));
+    expect(query).toContain("r.edition=c.edition");
+    expect(query).toContain("r.committed_team_id IS NULL");
+    expect(query).toContain("r.grade IS NOT NULL AND r.grade>0");
+  });
+
   it("returns an edition-bound, mutually exclusive rank landscape", async () => {
     const sqlCalls: string[] = [];
     const prepare = vi.fn((sql: string) => {

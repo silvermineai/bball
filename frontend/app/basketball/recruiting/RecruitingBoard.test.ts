@@ -11,10 +11,46 @@ import {
   currentRecruitingBoardResult,
   recruitingBoardRequestSearch,
   recruitingExportCsv,
+  recruitingPositionOpportunityRows,
   validRecruitingRankDistribution,
   validateRecruitingExportPage,
   type RecruitingBoardResult,
 } from "./RecruitingBoard";
+
+describe("recruiting position opportunity", () => {
+  const result = (overrides: Partial<RecruitingBoardResult> = {}): RecruitingBoardResult => ({
+    season: 2027,
+    page: 0,
+    page_size: 50,
+    total: 10,
+    edition: "edition-1",
+    captured_at: "2026-09-18T00:00:00Z",
+    rows: [],
+    position_opportunity: [
+      { position: "PG", total: 4, committed_total: 1, uncommitted_total: 3, ranked_total: 4, top100_total: 3, uncommitted_ranked_total: 3, uncommitted_top100_total: 2, best_uncommitted_rank: 12, average_uncommitted_grade: 94.5 },
+      { position: " C ", total: 6, committed_total: 3, uncommitted_total: 3, ranked_total: 5, top100_total: 2, uncommitted_ranked_total: 2, uncommitted_top100_total: 1, best_uncommitted_rank: 28, average_uncommitted_grade: 91.2 },
+    ],
+    ...overrides,
+  });
+
+  it("orders reconciled positions by remaining top-100 supply", () => {
+    expect(recruitingPositionOpportunityRows(result()).map((row) => ({ position: row.position, top100: row.uncommitted_top100_total }))).toEqual([
+      { position: "PG", top100: 2 },
+      { position: "C", top100: 1 },
+    ]);
+  });
+
+  it("withholds partial or contradictory position aggregates", () => {
+    expect(recruitingPositionOpportunityRows(result({ total: 9 }))).toEqual([]);
+    expect(recruitingPositionOpportunityRows(result({
+      position_opportunity: [{ position: "PG", total: 10, committed_total: 8, uncommitted_total: 3, ranked_total: 8, top100_total: 3, uncommitted_ranked_total: 2, uncommitted_top100_total: 1, best_uncommitted_rank: 12, average_uncommitted_grade: 94 }],
+    }))).toEqual([]);
+    expect(recruitingPositionOpportunityRows(result({
+      position_opportunity: [{ position: "PG", total: 10, committed_total: 8, uncommitted_total: 2, ranked_total: 8, top100_total: 3, uncommitted_ranked_total: 2, uncommitted_top100_total: 1, best_uncommitted_rank: null, average_uncommitted_grade: 94 }],
+    }))).toEqual([]);
+    expect(recruitingPositionOpportunityRows(result({ edition: null }))).toEqual([]);
+  });
+});
 
 describe("recruiting board export pagination", () => {
   const row = {

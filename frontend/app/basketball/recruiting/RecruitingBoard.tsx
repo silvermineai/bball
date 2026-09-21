@@ -69,6 +69,7 @@ export type RecruitingBoardResult = {
     duplicate_school_id_rows: number;
   };
   position_breakdown?: Array<{ position: string; total: number }>;
+  position_opportunity?: RecruitingPositionOpportunity[];
   commitment_destinations?: Array<{ team_id: string | null; team: string; total: number; ranked_total: number; top100_total: number; source_rank_points: number; best_rank: number | null; average_rank: number | null; position_breakdown?: Array<{ position: string; total: number }> }>;
   recorded_school_programs?: RecordedSchoolProgramRow[];
   rank_movement?: { total: number; new_to_release: number; moved_up: number; moved_down: number; unchanged: number; rank_unavailable: number };
@@ -136,6 +137,19 @@ export type RecruitingClassPositionMix = {
   season: string;
   total: number;
   positions: Array<{ position: string; total: number; share: number }>;
+};
+
+export type RecruitingPositionOpportunity = {
+  position: string;
+  total: number;
+  committed_total: number;
+  uncommitted_total: number;
+  ranked_total: number;
+  top100_total: number;
+  uncommitted_ranked_total: number;
+  uncommitted_top100_total: number;
+  best_uncommitted_rank: number | null;
+  average_uncommitted_grade: number | null;
 };
 
 export type RecruitingClassMovement = {
@@ -264,6 +278,43 @@ export function classPositionMix(snapshots: ClassSnapshot[]): RecruitingClassPos
         .map((row) => ({ ...row, share: row.total / snapshot.total })),
     }];
   });
+}
+
+/**
+ * Admit the position opportunity board only when its mutually exclusive
+ * commitment counts reconcile to the exact active cohort. This keeps missing
+ * or partial aggregates from becoming a false claim about available talent.
+ */
+export function recruitingPositionOpportunityRows(result: RecruitingBoardResult): RecruitingPositionOpportunity[] {
+  if (!result.edition?.trim() || !nonNegativeInteger(result.total) || result.total <= 0 || !Array.isArray(result.position_opportunity)) return [];
+  const rows = result.position_opportunity.map((row) => ({
+    ...row,
+    position: typeof row.position === "string" ? row.position.trim().toUpperCase() : "",
+  }));
+  const valid = rows.length > 0
+    && new Set(rows.map((row) => row.position)).size === rows.length
+    && rows.every((row) => {
+      const counts = [row.total, row.committed_total, row.uncommitted_total, row.ranked_total, row.top100_total, row.uncommitted_ranked_total, row.uncommitted_top100_total];
+      return Boolean(row.position)
+        && counts.every(nonNegativeInteger)
+        && row.committed_total + row.uncommitted_total === row.total
+        && row.ranked_total <= row.total
+        && row.top100_total <= row.ranked_total
+        && row.uncommitted_ranked_total <= row.uncommitted_total
+        && row.uncommitted_top100_total <= row.uncommitted_ranked_total
+        && row.uncommitted_top100_total <= row.top100_total
+        && (row.uncommitted_ranked_total === 0
+          ? row.best_uncommitted_rank == null
+          : Number.isSafeInteger(row.best_uncommitted_rank) && Number(row.best_uncommitted_rank) > 0)
+        && (row.average_uncommitted_grade == null || (Number.isFinite(row.average_uncommitted_grade) && row.average_uncommitted_grade > 0));
+    })
+    && rows.reduce((sum, row) => sum + row.total, 0) === result.total;
+  if (!valid) return [];
+  return rows.sort((left, right) =>
+    right.uncommitted_top100_total - left.uncommitted_top100_total
+    || (left.best_uncommitted_rank ?? Number.MAX_SAFE_INTEGER) - (right.best_uncommitted_rank ?? Number.MAX_SAFE_INTEGER)
+    || right.uncommitted_ranked_total - left.uncommitted_ranked_total
+    || left.position.localeCompare(right.position));
 }
 
 /**
@@ -611,6 +662,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const schoolPrograms = recordedSchoolPrograms(result?.recorded_school_programs, result?.edition, programs);
   const evidenceGuide = result ? recruitingEvidenceGuide(result, schoolPrograms) : [];
   const rankDistribution = result ? validRecruitingRankDistribution(result) : null;
+  const positionOpportunity = result ? recruitingPositionOpportunityRows(result) : [];
   const error = loadError?.request === boardRequest ? loadError.message : "";
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1081,6 +1133,26 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               })}</tbody>
             </table></div>
             <p className="note" style={{ marginTop: 12 }}>An unavailable rank remains in its own band. A filtered view changes the denominator, so compare landscapes only when the season, filters and edition match.</p>
+          </section>}
+          {committed !== "yes" && positionOpportunity.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-position-opportunity-title" style={{ marginBottom: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 10 }}>
+              <div><div className="eyebrow">Position availability / active cohort</div><h3 id="recruiting-position-opportunity-title">Find the remaining ranked supply.</h3></div>
+              <span className="note">{result.total.toLocaleString()} rows reconciled</span>
+            </div>
+            <p className="note">“Uncommitted” means the committed-team field is empty in this exact edition and filter set. Top-100 and best-rank values preserve the recorded national rank. They do not establish availability, contact, an offer, enrollment or eligibility.</p>
+            <div className="table-scroll"><table className="data-table">
+              <thead><tr><th>Position</th><th className="numeric">Prospects</th><th className="numeric">Uncommitted</th><th className="numeric">Uncommitted ranked</th><th className="numeric">Uncommitted top 100</th><th className="numeric">Best uncommitted rank</th><th className="numeric">Average uncommitted grade</th><th className="numeric">Committed</th></tr></thead>
+              <tbody>{positionOpportunity.map((row) => <tr key={`position-opportunity-${row.position}`}>
+                <th scope="row">{["PG", "SG", "SF", "PF", "C"].includes(row.position) ? <button className="text-link" type="button" onClick={() => { setPosition(row.position); setPage(0); }}>{row.position}</button> : row.position}</th>
+                <td className="numeric">{row.total.toLocaleString()}</td>
+                <td className="numeric"><strong>{row.uncommitted_total.toLocaleString()}</strong></td>
+                <td className="numeric">{row.uncommitted_ranked_total.toLocaleString()}</td>
+                <td className="numeric"><strong>{row.uncommitted_top100_total.toLocaleString()}</strong></td>
+                <td className="numeric">{row.best_uncommitted_rank == null ? "—" : `#${row.best_uncommitted_rank}`}</td>
+                <td className="numeric">{row.average_uncommitted_grade == null ? "—" : row.average_uncommitted_grade.toFixed(1)}</td>
+                <td className="numeric">{row.committed_total.toLocaleString()}</td>
+              </tr>)}</tbody>
+            </table></div>
           </section>}
           {evidenceGuide.length > 0 && <section className="paper-panel" aria-labelledby="recruiting-evidence-guide-title" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 10 }}>

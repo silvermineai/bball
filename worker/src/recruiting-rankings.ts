@@ -279,7 +279,16 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       unranked: number | null;
     }>(), DB_TIMEOUT_MS);
     const positions = await withTimeout(db.prepare(
-      `SELECT COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position, count(*) AS total
+      `SELECT COALESCE(NULLIF(upper(r.position),''),'Unknown') AS position,
+              count(*) AS total,
+              sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_total,
+              sum(CASE WHEN r.committed_team_id IS NULL THEN 1 ELSE 0 END) AS uncommitted_total,
+              sum(CASE WHEN ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS ranked_total,
+              sum(CASE WHEN ${currentRank} IS NOT NULL AND ${currentRank}<=100 THEN 1 ELSE 0 END) AS top100_total,
+              sum(CASE WHEN r.committed_team_id IS NULL AND ${currentRank} IS NOT NULL THEN 1 ELSE 0 END) AS uncommitted_ranked_total,
+              sum(CASE WHEN r.committed_team_id IS NULL AND ${currentRank} IS NOT NULL AND ${currentRank}<=100 THEN 1 ELSE 0 END) AS uncommitted_top100_total,
+              min(CASE WHEN r.committed_team_id IS NULL THEN ${currentRank} END) AS best_uncommitted_rank,
+              avg(CASE WHEN r.committed_team_id IS NULL AND r.grade IS NOT NULL AND r.grade>0 THEN r.grade END) AS average_uncommitted_grade
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}
         GROUP BY COALESCE(NULLIF(upper(r.position),''),'Unknown')
@@ -500,6 +509,18 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       position_breakdown: positions.results.map((row) => ({
         position: String((row as { position?: string }).position || "Unknown"),
         total: Number((row as { total?: number }).total || 0),
+      })),
+      position_opportunity: positions.results.map((row) => ({
+        position: String((row as { position?: string }).position || "Unknown"),
+        total: Number((row as { total?: number }).total || 0),
+        committed_total: Number((row as { committed_total?: number }).committed_total || 0),
+        uncommitted_total: Number((row as { uncommitted_total?: number }).uncommitted_total || 0),
+        ranked_total: Number((row as { ranked_total?: number }).ranked_total || 0),
+        top100_total: Number((row as { top100_total?: number }).top100_total || 0),
+        uncommitted_ranked_total: Number((row as { uncommitted_ranked_total?: number }).uncommitted_ranked_total || 0),
+        uncommitted_top100_total: Number((row as { uncommitted_top100_total?: number }).uncommitted_top100_total || 0),
+        best_uncommitted_rank: row.best_uncommitted_rank == null ? null : Number(row.best_uncommitted_rank),
+        average_uncommitted_grade: row.average_uncommitted_grade == null ? null : Number(row.average_uncommitted_grade),
       })),
       commitment_destinations: destinations.results.map((row) => ({
         team_id: row.team_id == null || String(row.team_id).trim() === "" ? null : String(row.team_id),
