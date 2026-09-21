@@ -269,7 +269,27 @@ export function parseForecastPrediction(value: unknown): { prediction: Record<st
   if ("estimate_type" in row && row.estimate_type !== "primary" && row.estimate_type !== "cold_start") {
     return { prediction: null, integrity: "invalid" };
   }
-  return { prediction: row, integrity: "valid" };
+  // Older D1 editions predate the explicit efficiency fields. Derive the
+  // descriptive points-per-100-possession view from the same published score
+  // and pace so the response remains useful without changing the model score
+  // or pretending this is an observed stat.
+  const normalized = { ...row };
+  const pace = normalized.pace;
+  const homeScore = normalized.home_score;
+  const awayScore = normalized.away_score;
+  if (
+    typeof pace === "number" && Number.isFinite(pace) && pace > 0
+    && typeof homeScore === "number" && Number.isFinite(homeScore)
+    && typeof awayScore === "number" && Number.isFinite(awayScore)
+  ) {
+    if (!(typeof normalized.home_efficiency === "number" && Number.isFinite(normalized.home_efficiency))) {
+      normalized.home_efficiency = Math.round((100 * homeScore / pace) * 100) / 100;
+    }
+    if (!(typeof normalized.away_efficiency === "number" && Number.isFinite(normalized.away_efficiency))) {
+      normalized.away_efficiency = Math.round((100 * awayScore / pace) * 100) / 100;
+    }
+  }
+  return { prediction: normalized, integrity: "valid" };
 }
 
 async function publishedForecastFallback(

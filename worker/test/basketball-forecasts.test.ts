@@ -54,6 +54,17 @@ describe("basketball forecast availability", () => {
     expect(parseForecastMatchupFactors(null)).toEqual({ factors: null, integrity: "unavailable" });
   });
 
+  it("derives efficiency for older score-and-pace editions without changing the forecast", () => {
+    expect(parseForecastPrediction({ home_score: 80, away_score: 64, pace: 70, home_margin: 16 })).toEqual({
+      prediction: { home_score: 80, away_score: 64, pace: 70, home_margin: 16, home_efficiency: 114.29, away_efficiency: 91.43 },
+      integrity: "valid",
+    });
+    expect(parseForecastPrediction({ home_score: 80, away_score: 64, pace: 0 })).toEqual({
+      prediction: { home_score: 80, away_score: 64, pace: 0 },
+      integrity: "valid",
+    });
+  });
+
   it("adds published four-factor context to a live D1 forecast row", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {
