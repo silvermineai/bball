@@ -167,6 +167,7 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
   const programSummary = summarizeRecruitingPrograms(allRows);
   const activity = summarizeRecruitingActivity(release);
   const latestActivity = activity.events.slice(0, 8);
+  const ledgerActivity = activity.events.slice(0, 12);
   const latestPublication = activity.events[0]?.source.published_on || null;
   const activePrograms = new Set(activity.events.map((event) => event.team_id)).size;
   const additionEvents = activity.events.filter((event) => event.kind === "addition").length;
@@ -341,15 +342,20 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                     downloadCsv(
                       "basketball-recruiting-activity.csv",
                       toCsv(
-                        ["Published date", "Event", "Player", "Program", "Program ID", "Summary", "Record title", "Checked at"],
+                        ["Published date", "Event ID", "Person record key", "Source record ID", "Source player ID", "Event", "Player", "Program", "Program ID", "Summary", "Record title", "Record SHA-256", "Checked at"],
                         activity.events.map((event) => [
                           event.source.published_on,
+                          event.id,
+                          event.person_key,
+                          event.source_id,
+                          event.athlete_id,
                           eventLabels[event.kind],
                           event.person_name,
                           event.program_name,
                           event.team_id,
                           event.summary,
                           event.source.title,
+                          event.source.source_sha256,
                           event.source.checked_at,
                         ]),
                       ),
@@ -416,6 +422,24 @@ export default function Announcements({ data }: { data: RecruitingRelease }) {
                   </article>
                 ))}
               </div>
+            </div>
+            <div className="table-scroll" style={{ marginTop: 20 }}>
+              <div className="eyebrow">Evidence ledger / exact retained IDs</div>
+              <p className="note">The ledger preserves the event ID, person record key, source record ID and source player ID when a reviewed prior stat profile exists. These are joins inside the retained release; a missing player ID stays unavailable and is never inferred from a name.</p>
+              <table className="data-table">
+                <thead><tr><th>Event</th><th>Player record</th><th>Source record</th><th>Player file</th><th>Published</th><th>Receipt</th></tr></thead>
+                <tbody>{ledgerActivity.map((event) => (
+                  <tr key={`ledger-${event.id}`}>
+                    <th scope="row"><code>{event.id}</code><small>{eventLabels[event.kind]}</small></th>
+                    <td><strong>{event.person_name}</strong><small><code>{event.person_key}</code></small></td>
+                    <td><code>{event.source_id}</code><small>{event.source.title}</small></td>
+                    <td>{event.athlete_id ? <Link href={`/basketball/player/?id=${encodeURIComponent(event.athlete_id)}&season=${sourceSeason}`}>{event.athlete_id} ↗</Link> : <span className="note">Unavailable</span>}</td>
+                    <td>{publicationDate(event.source.published_on)}</td>
+                    <td><code>{event.source.source_sha256 ? `${event.source.source_sha256.slice(0, 12)}…` : "unavailable"}</code><small>checked {publicationDate(event.source.checked_at)}</small></td>
+                  </tr>
+                ))}</tbody>
+              </table>
+              {activity.events.length > ledgerActivity.length && <p className="note" style={{ marginTop: 8 }}>Showing the 12 latest events here; the activity CSV contains all {activity.events.length} retained events with the same IDs and receipts.</p>}
             </div>
           </section>
           <section className="paper-panel recruiting-national">

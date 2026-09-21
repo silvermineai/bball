@@ -96,6 +96,22 @@ describe("school announcement histories", () => {
     expect(activity.months.reduce((total, month) => total + month.events, 0)).toBe(data.coverage.events);
     expect(activity.months.every((month) => month.players > 0 && month.programs > 0)).toBe(true);
   });
+  it("keeps each activity row tied to its exact person, source and player records", () => {
+    const activity = summarizeRecruitingActivity(data);
+    const people = new Map(data.people.map((person) => [person.key, person]));
+    const sources = new Map(data.sources.map((source) => [source.id, source]));
+    expect(new Set(activity.events.map((event) => event.id)).size).toBe(activity.events.length);
+    for (const event of activity.events) {
+      const person = people.get(event.person_key);
+      const source = sources.get(event.source_id);
+      expect(person).toBeDefined();
+      expect(source).toBeDefined();
+      expect(person?.team_id).toBe(event.team_id);
+      expect(source?.team_id).toBe(event.team_id);
+      expect(event.athlete_id).toBe(person?.stats?.id ?? null);
+      expect(event.source.id).toBe(event.source_id);
+    }
+  });
   it("preserves a publication calendar date in every local timezone", () => {
     expect(publicationDate("2026-04-28")).toBe("Apr 28, 2026");
   });

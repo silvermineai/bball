@@ -533,6 +533,9 @@ export function recruitingRows(data: RecruitingRelease) {
 
 export type RecruitingActivityEvent = {
   id: string;
+  person_key: string;
+  source_id: string;
+  athlete_id: string | null;
   kind: AnnouncementEvent["kind"];
   summary: string;
   person_name: string;
@@ -555,6 +558,9 @@ export function summarizeRecruitingActivity(data: RecruitingRelease) {
     .flatMap((person) =>
       person.timeline.map((event) => ({
         id: event.id,
+        person_key: event.person_key,
+        source_id: event.source_id,
+        athlete_id: person.stats?.id ?? null,
         kind: event.kind,
         summary: event.summary,
         person_name: person.name,
