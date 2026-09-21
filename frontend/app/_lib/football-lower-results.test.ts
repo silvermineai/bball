@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lowerForecastCsvRows, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, validateLowerFootballResults } from "./football-lower-results";
+import { lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, validateLowerFootballResults } from "./football-lower-results";
 
 const row = (division: "d2" | "d3", score_complete = true) => ({
   game_id: `${division}-1`, kickoff: "2026-09-01T00:00:00Z", week: 1,
@@ -59,5 +59,32 @@ describe("lower-division football results", () => {
       "d2", "d2-1", "2026-09-01T00:00:00Z", "d2 Away", "d2 Home", "home field", "model-d2",
       22, 26, 48, 3, 0.6, -10, 14, 24,
     ]);
+  });
+
+  it("explains a forecast with the retained exact-division rating gap and venue", () => {
+    const item = forecast("d2", "d2-1", "2026-09-01T00:00:00Z", 0.6, -10, 14);
+    const model = {
+      id: "model-d2", version: "ridge", division: "d2" as const, target_season: 2026,
+      cutoff: "2026-09-21T00:00:00Z", training_seasons: [2022, 2023, 2024], training_games: 300,
+      calibration_season: 2024, calibration: { games: 100, margin_half_width: 20 }, limitations: [],
+      ratings: [
+        { team_id: "d2-home", team: "Home", division: "d2" as const, rating: 4.25, rank: 1 },
+        { team_id: "d2-away", team: "Away", division: "d2" as const, rating: -1.5, rank: 2 },
+      ],
+    };
+    expect(lowerForecastExplanation(item, model)).toEqual({
+      home_rating: 4.25,
+      away_rating: -1.5,
+      rating_gap: 5.75,
+      venue: "home_field",
+    });
+    expect(lowerForecastExplanation({ ...item, neutral: true }, model).venue).toBe("neutral");
+  });
+
+  it("keeps rating evidence unavailable for an unseen team", () => {
+    const item = forecast("d3", "d3-1", "2026-09-01T00:00:00Z", 0.6, -10, 14);
+    const explanation = lowerForecastExplanation(item, null);
+    expect(explanation.rating_gap).toBeNull();
+    expect(explanation.venue).toBe("home_field");
   });
 });

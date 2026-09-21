@@ -34,6 +34,13 @@ export type LowerFootballForecast = Omit<LowerFootballResult, "home_division" | 
 
 export type LowerFootballForecastSort = "kickoff" | "home_win_probability" | "home_margin" | "uncertainty";
 
+export type LowerFootballForecastExplanation = {
+  home_rating: number | null;
+  away_rating: number | null;
+  rating_gap: number | null;
+  venue: "home_field" | "neutral";
+};
+
 export type LowerFootballTeam = {
   team_id: string;
   team: string;
@@ -234,6 +241,26 @@ export function lowerForecastsForDivision(
 /** The interval width is the model's published uncertainty signal in points. */
 export function lowerForecastUncertainty(row: LowerFootballForecast) {
   return row.prediction.margin_high - row.prediction.margin_low;
+}
+
+/**
+ * Expose the retained model inputs behind a lower-division forecast.
+ * Ratings are source-derived model coefficients, not player or publisher
+ * rankings. Missing team coefficients remain unavailable rather than being
+ * replaced with zero.
+ */
+export function lowerForecastExplanation(
+  row: LowerFootballForecast,
+  model: LowerFootballModel | null | undefined,
+): LowerFootballForecastExplanation {
+  const homeRating = model?.ratings.find((rating) => rating.team_id === row.home_id)?.rating ?? null;
+  const awayRating = model?.ratings.find((rating) => rating.team_id === row.away_id)?.rating ?? null;
+  return {
+    home_rating: homeRating,
+    away_rating: awayRating,
+    rating_gap: homeRating != null && awayRating != null ? Number((homeRating - awayRating).toFixed(2)) : null,
+    venue: row.neutral ? "neutral" : "home_field",
+  };
 }
 
 export function lowerForecastCsvRows(rows: LowerFootballForecast[]) {
