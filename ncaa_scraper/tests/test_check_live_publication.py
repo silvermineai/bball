@@ -419,6 +419,16 @@ class LivePublicationCheckTest(unittest.TestCase):
                             "away_efficiency": 91.43,
                             "estimate_type": "primary",
                         },
+                        # The monitor now probes matchup-factor provenance
+                        # separately from the roster challenger.  Keep the
+                        # shared fixture explicit about an unavailable factor
+                        # asset so tests exercise later checks instead of
+                        # failing on an omitted field.
+                        "matchup_factors_integrity": "unavailable",
+                        "matchup_factors": None,
+                        "matchup_factors_source": None,
+                        "matchup_factors_model_id": None,
+                        "matchup_factors_same_edition": None,
                     }],
                 }
             if path.startswith("/api/basketball/research/matchup-personnel?"):
