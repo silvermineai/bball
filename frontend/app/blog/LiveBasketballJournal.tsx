@@ -10,6 +10,7 @@ import { fetchJson } from "../_lib/fetch-json";
 import { comparisonQuoteSummary } from "../_lib/market-display";
 import { marketReadinessDetail, marketReadinessLabel, marketReadinessState, marketCaptureDiagnostic, type MarketReadinessMetadata } from "../_lib/market-readiness";
 import { downloadCsv, toCsv } from "../_lib/csv";
+import { journalScheduleEvidence } from "./journal-game-evidence";
 import {
   forecastModelId,
   loadLiveBasketballForecasts,
@@ -196,6 +197,7 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
             if (!p) return null;
             const lens = basketballEditorialLens(g);
             const sourceClock = g.source_time_valid && g.source_start ? ` · schedule clock ${kick(g.source_start)}` : "";
+            const scheduleEvidence = journalScheduleEvidence(g);
             const awayRating = ratingsById.get(g.away_id);
             const homeRating = ratingsById.get(g.home_id);
             const factorEdges = Object.entries(g.matchup_factors?.edges || {})
@@ -214,6 +216,13 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
               <p className="note">
                 {p.margin_low.toFixed(1)} to {p.margin_high.toFixed(1)} home-margin range · {p.pace.toFixed(1)} possessions per 40 minutes.
               </p>
+              <div className="analysis-readiness" aria-label="Schedule evidence">
+                <div className="analysis-readiness-heading">
+                  <strong>Schedule evidence</strong>
+                  <span className={scheduleEvidence.confirmed ? "" : "status-warn"}>{scheduleEvidence.label}</span>
+                </div>
+                <small className="analysis-readiness-note">{scheduleEvidence.detail}</small>
+              </div>
               {p.estimate_type === "cold_start" && <p className="note">
                 Exploratory estimate: at least one program is outside the trained field, so use the wider range as the main context.
               </p>}
