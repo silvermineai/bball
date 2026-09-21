@@ -103,7 +103,7 @@ describe("sport navigation", () => {
   it("describes football lower-division coverage without overstating the archive", () => {
     expect(sportAvailabilityMessage("football", "1")).toContain("D2 and D3 schedules and score-derived record boards are available");
     expect(sportAvailabilityMessage("football", "2")).toBe(
-      "Football coverage: D2 schedule rows, score-derived team records, exact-division ratings and validated forecasts are published. Lower-division player tables and player rankings remain unavailable; no D1 rows are substituted.",
+      "Football coverage: D2 schedule rows, score-derived team records, exact-division ratings, validated forecasts, and an observed player production archive are published. The player archive covers retained game summaries; national player rankings remain separately gated, and no D1 rows are substituted.",
     );
     expect(sportAvailabilityMessage("mens-basketball", "3")).toBeNull();
   });
