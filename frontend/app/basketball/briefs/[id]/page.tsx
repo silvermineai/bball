@@ -34,6 +34,7 @@ import BriefLineupEvidence from "../BriefLineupEvidence";
 import { buildFactorPersonnelQuestions } from "../../../_lib/factor-personnel-questions";
 import { buildPreparationChecklist } from "../../../_lib/preparation-checklist";
 import { explainBasketballPrediction } from "../../../_lib/basketball-prediction-explanation";
+import MatchupRecruitingContext from "./MatchupRecruitingContext";
 
 const emptySplit = () => ({
   games: 0,
@@ -477,6 +478,12 @@ export default async function Page({
           </p>
         )}
       </section>
+      <MatchupRecruitingContext
+        homeId={g.home_id}
+        homeName={g.home_name}
+        awayId={g.away_id}
+        awayName={g.away_name}
+      />
       <section className="brief-readiness" aria-label="Pre-tip readiness">
         <div className="section-heading">
           <div>
