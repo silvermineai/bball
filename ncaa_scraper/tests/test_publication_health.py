@@ -13,6 +13,7 @@ from ncaa_scraper.publication_health import (
     _player_catalog_health,
     _roster_snapshot_health,
     _unresolved_coverage_health,
+    _womens_box_player_health,
     check_freshness,
 )
 
@@ -428,6 +429,79 @@ class PublicationHealthTest(unittest.TestCase):
             with self.assertRaises(ValueError) as error:
                 _unresolved_coverage_health(root, overview)
             self.assertIn("does not match basketball overview edition", str(error.exception))
+
+    def test_womens_box_archive_reconciles_exact_ids_and_multi_team_context(self):
+        payload = {
+            "schema_version": 1,
+            "sport": "basketball",
+            "gender": "women",
+            "season": 2026,
+            "generated_at": "2026-09-08T01:00:00Z",
+            "source": "player_box",
+            "receipt": {
+                "sha256": "a" * 64,
+                "url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_womens_college_basketball_player_boxscores/player_box_2026.parquet",
+            },
+            "coverage": {
+                "rows": 5,
+                "players": 2,
+                "games": 3,
+                "played_rows": 3,
+                "dnp_rows": 1,
+                "skipped_rows": 1,
+                "teams": 1,
+                "players_multiple_teams": 1,
+            },
+            "players": [
+                {
+                    "player_id": "101",
+                    "name": "Single Team",
+                    "team": "Alpha",
+                    "team_id": "1",
+                    "teams": [{"team_id": "1", "team": "Alpha"}],
+                    "box_rows": 2,
+                    "dnp_rows": 1,
+                    "games_played": 1,
+                    "starts": 1,
+                    "totals": {"points": 10.0},
+                    "per_game": {"points": 10.0},
+                    "shooting": {"field_goal_pct": 50.0, "three_point_pct": None, "free_throw_pct": 100.0},
+                },
+                {
+                    "player_id": "202",
+                    "name": "Transfer",
+                    "team": "Multiple teams",
+                    "team_id": "",
+                    "teams": [
+                        {"team_id": "2", "team": "Beta"},
+                        {"team_id": "3", "team": "Gamma"},
+                    ],
+                    "box_rows": 2,
+                    "dnp_rows": 0,
+                    "games_played": 2,
+                    "starts": 1,
+                    "totals": {"points": 12.0},
+                    "per_game": {"points": 6.0},
+                    "shooting": {"field_goal_pct": 40.0, "three_point_pct": 20.0, "free_throw_pct": None},
+                },
+            ],
+        }
+        report = _womens_box_player_health(
+            payload,
+            datetime(2026, 9, 8, 2, tzinfo=timezone.utc),
+            48,
+        )
+        self.assertEqual(report["players"], 2)
+        self.assertEqual(report["multi_team_players"], 1)
+        self.assertEqual(report["played_rows"], 3)
+
+        payload["players"][1]["team_id"] = "3"
+        with self.assertRaisesRegex(ValueError, "inconsistent multi-team identity"):
+            _womens_box_player_health(
+                payload,
+                datetime(2026, 9, 8, 2, tzinfo=timezone.utc),
+                48,
+            )
 
 
 if __name__ == "__main__":

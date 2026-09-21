@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import math
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -395,6 +396,174 @@ def _player_catalog_health(
     }
 
 
+def _womens_box_player_health(
+    payload: dict,
+    now: datetime,
+    max_age_hours: float,
+) -> dict:
+    """Validate the exact-ID women's player box archive.
+
+    The box archive intentionally keeps players who appear only in game rows,
+    including transfers.  Validate its aggregate ledger against the retained
+    player rows so a malformed release cannot silently turn a multi-team
+    player into a single-team record or make a DNP look like an appearance.
+    Names are display fields only; every player and team join in this check is
+    keyed by the source IDs carried by the archive.
+    """
+    relative = "basketball/womens-box-player-stats.json"
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != 1
+        or payload.get("sport") != "basketball"
+        or payload.get("gender") != "women"
+        or payload.get("source") != "player_box"
+        or not isinstance(payload.get("season"), int)
+        or isinstance(payload.get("season"), bool)
+        or payload["season"] <= 0
+    ):
+        raise ValueError(f"{relative} has an invalid exact-ID publication contract")
+
+    checked = _freshness(relative, payload, now, max_age_hours)
+    receipt = payload.get("receipt")
+    if (
+        not isinstance(receipt, dict)
+        or not isinstance(receipt.get("sha256"), str)
+        or not re.fullmatch(r"[a-f0-9]{64}", receipt["sha256"])
+        or not isinstance(receipt.get("url"), str)
+        or not receipt["url"].startswith(
+            "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/"
+        )
+        or not receipt["url"].endswith(".parquet")
+    ):
+        raise ValueError(f"{relative} has an invalid source receipt")
+
+    coverage = payload.get("coverage")
+    coverage_keys = (
+        "rows", "players", "games", "played_rows", "dnp_rows", "skipped_rows",
+        "teams", "players_multiple_teams",
+    )
+    if (
+        not isinstance(coverage, dict)
+        or any(
+            not isinstance(coverage.get(key), int)
+            or isinstance(coverage.get(key), bool)
+            or coverage[key] < 0
+            for key in coverage_keys
+        )
+        or coverage["players"] <= 0
+    ):
+        raise ValueError(f"{relative} has invalid coverage totals")
+
+    players = payload.get("players")
+    if not isinstance(players, list) or len(players) != coverage["players"]:
+        raise ValueError(f"{relative} player count does not match coverage")
+
+    numeric_fields: set[str] = set()
+    seen_player_ids: set[str] = set()
+    sum_rows = sum_dnp = sum_played = 0
+    single_team_ids: set[str] = set()
+    multi_team_players = 0
+    for player in players:
+        if not isinstance(player, dict):
+            raise ValueError(f"{relative} has a malformed player row")
+        player_id = player.get("player_id")
+        if (
+            not isinstance(player_id, str)
+            or not player_id.strip()
+            or player_id in seen_player_ids
+        ):
+            raise ValueError(f"{relative} has duplicate or missing source player IDs")
+        seen_player_ids.add(player_id)
+        if not isinstance(player.get("name"), str) or not player["name"].strip():
+            raise ValueError(f"{relative} has a player without a display name")
+
+        teams = player.get("teams")
+        if not isinstance(teams, list) or not teams:
+            raise ValueError(f"{relative} player {player_id} has no source team IDs")
+        seen_team_ids: set[str] = set()
+        for team in teams:
+            if (
+                not isinstance(team, dict)
+                or not isinstance(team.get("team_id"), str)
+                or not team["team_id"].strip()
+                or team["team_id"] in seen_team_ids
+                or not isinstance(team.get("team"), str)
+                or not team["team"].strip()
+            ):
+                raise ValueError(f"{relative} player {player_id} has malformed team identity")
+            seen_team_ids.add(team["team_id"])
+        if len(teams) == 1:
+            if player.get("team_id") != teams[0]["team_id"] or player.get("team") != teams[0]["team"]:
+                raise ValueError(f"{relative} player {player_id} has inconsistent single-team identity")
+            single_team_ids.add(teams[0]["team_id"])
+        else:
+            multi_team_players += 1
+            if player.get("team_id") != "" or player.get("team") != "Multiple teams":
+                raise ValueError(f"{relative} player {player_id} has inconsistent multi-team identity")
+
+        counters = {key: player.get(key) for key in ("box_rows", "dnp_rows", "games_played", "starts")}
+        if any(
+            not isinstance(value, int) or isinstance(value, bool) or value < 0
+            for value in counters.values()
+        ) or counters["dnp_rows"] > counters["box_rows"] or counters["games_played"] + counters["dnp_rows"] > counters["box_rows"] or counters["starts"] > counters["games_played"]:
+            raise ValueError(f"{relative} player {player_id} has invalid appearance counters")
+        sum_rows += counters["box_rows"]
+        sum_dnp += counters["dnp_rows"]
+        sum_played += counters["games_played"]
+
+        totals = player.get("totals")
+        per_game = player.get("per_game")
+        if not isinstance(totals, dict) or not isinstance(per_game, dict) or set(totals) != set(per_game):
+            raise ValueError(f"{relative} player {player_id} has inconsistent aggregate fields")
+        for field, total in totals.items():
+            if (
+                not isinstance(field, str)
+                or not isinstance(total, (int, float))
+                or isinstance(total, bool)
+                or not math.isfinite(total)
+                or total < 0
+                or not isinstance(per_game[field], (int, float))
+                or isinstance(per_game[field], bool)
+                or not math.isfinite(per_game[field])
+                or per_game[field] < 0
+            ):
+                raise ValueError(f"{relative} player {player_id} has invalid numeric aggregates")
+            numeric_fields.add(field)
+            expected = round(total / counters["games_played"], 4) if counters["games_played"] else None
+            if expected is None or abs(per_game[field] - expected) > 0.0001:
+                raise ValueError(f"{relative} player {player_id} has an invalid per-game aggregate")
+
+        shooting = player.get("shooting")
+        if not isinstance(shooting, dict) or set(shooting) != {"field_goal_pct", "three_point_pct", "free_throw_pct"}:
+            raise ValueError(f"{relative} player {player_id} has malformed shooting fields")
+        for value in shooting.values():
+            if value is not None and (
+                not isinstance(value, (int, float))
+                or isinstance(value, bool)
+                or not math.isfinite(value)
+                or value < 0
+                or value > 100
+            ):
+                raise ValueError(f"{relative} player {player_id} has an invalid shooting percentage")
+
+    if (
+        sum_rows + coverage["skipped_rows"] != coverage["rows"]
+        or sum_dnp != coverage["dnp_rows"]
+        or sum_played != coverage["played_rows"]
+        or multi_team_players != coverage["players_multiple_teams"]
+        or len(single_team_ids) != coverage["teams"]
+    ):
+        raise ValueError(f"{relative} coverage totals do not reconcile with exact-ID player rows")
+    return {
+        **checked,
+        "season": payload["season"],
+        "players": len(players),
+        "played_rows": sum_played,
+        "multi_team_players": multi_team_players,
+        "numeric_fields": len(numeric_fields),
+    }
+
+
 def _unresolved_coverage_health(
     root: Path,
     overview: dict,
@@ -621,6 +790,10 @@ def check_freshness(
                 releases.append(_roster_snapshot_health(root))
                 releases.append(_evaluation_health(root))
                 releases.append(_ncaa_individual_health(ncaa))
+                womens_box = _read(root, str(prefix / "womens-box-player-stats.json"))
+                releases.append(
+                    _womens_box_player_health(womens_box, now, max_age_hours)
+                )
         except ValueError as exc:
             errors.append(str(exc))
     report = {
