@@ -10,6 +10,7 @@ from ncaa_scraper.publication_health import (
     _evaluation_health,
     _ncaa_player_box_catalog_health,
     _ncaa_individual_health,
+    _player_catalog_health,
     _roster_snapshot_health,
     _unresolved_coverage_health,
     check_freshness,
@@ -32,13 +33,37 @@ class PublicationHealthTest(unittest.TestCase):
             "ratings": [{"id": "1"}],
         }
 
-    def football_catalog(self):
+    def football_catalog(self, root):
+        seasons = []
+        datasets = ("box", "passing", "receiving", "rushing", "teams", "schedule")
+        for year in range(2018, 2027):
+            filename = f"players-{year}.json"
+            board = {"season": year, "players": [{"id": str(year)}]}
+            board_path = root / "frontend/public/data/football" / filename
+            board_path.parent.mkdir(parents=True, exist_ok=True)
+            board_path.write_text(json.dumps(board))
+            seasons.append(
+                {
+                    "season": year,
+                    "file": filename,
+                    "sha256": hashlib.sha256(board_path.read_bytes()).hexdigest(),
+                    "player_team_records": 1,
+                    "box_rows": 10,
+                    "sources": [
+                        {
+                            "dataset": dataset,
+                            "season": year,
+                            "sha256": (str(index + 1) * 64)[:64],
+                            "url": f"https://example.test/{dataset}-{year}.csv",
+                            "fetched_at": "2026-09-07T12:00:00Z",
+                        }
+                        for index, dataset in enumerate(datasets)
+                    ],
+                }
+            )
         return {
             "latest_source_retrieved_at": "2026-09-07T12:00:00Z",
-            "seasons": [
-                {"season": year, "box_rows": 10}
-                for year in range(2018, 2027)
-            ],
+            "seasons": seasons,
         }
 
     def test_roster_snapshot_health_requires_three_consecutive_editions(self):
@@ -56,7 +81,7 @@ class PublicationHealthTest(unittest.TestCase):
     def test_selected_sport_passes_timestamp_and_shape_checks(self):
         with tempfile.TemporaryDirectory() as directory:
             write_release(directory, "football", "overview.json", self.payload(2026))
-            write_release(directory, "football", "player-catalog.json", self.football_catalog())
+            write_release(directory, "football", "player-catalog.json", self.football_catalog(Path(directory)))
             report = check_freshness(
                 Path(directory),
                 "football",
@@ -65,6 +90,25 @@ class PublicationHealthTest(unittest.TestCase):
             )
             self.assertTrue(report["ok"])
             self.assertEqual(report["releases"][0]["release"], "football/overview.json")
+
+    def test_football_player_catalog_rejects_changed_board_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = self.football_catalog(root)
+            write_release(directory, "football", "player-catalog.json", catalog)
+            board = root / "frontend/public/data/football/players-2026.json"
+            board.write_text(board.read_text() + "\n")
+            with self.assertRaisesRegex(ValueError, "board hash mismatch"):
+                _player_catalog_health(root, datetime(2026, 9, 8, tzinfo=timezone.utc), 48)
+
+    def test_football_player_catalog_rejects_duplicate_source_dataset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = self.football_catalog(root)
+            catalog["seasons"][0]["sources"][1]["dataset"] = "box"
+            write_release(directory, "football", "player-catalog.json", catalog)
+            with self.assertRaisesRegex(ValueError, "invalid source receipt"):
+                _player_catalog_health(root, datetime(2026, 9, 8, tzinfo=timezone.utc), 48)
 
     def test_evaluation_manifest_covers_each_transition_bundle(self):
         with tempfile.TemporaryDirectory() as directory:

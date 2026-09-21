@@ -286,7 +286,15 @@ def _player_catalog_health(
     now: datetime,
     max_age_hours: float,
 ) -> dict:
-    """Validate the long football player archive separately from the model snapshot."""
+    """Validate the long football player archive and its source receipts.
+
+    The football player catalog is the public index for the multi-season
+    player archive.  Checking only ``latest_source_retrieved_at`` lets a
+    broken release (duplicate seasons, a missing board file, or a changed
+    board hash) pass the publication gate.  Keep this check source-native:
+    receipt hashes identify the upstream downloads, while the season hash
+    identifies the derived player board served by the browser.
+    """
     relative = "football/player-catalog.json"
     payload = _read(root, str(Path("frontend/public/data") / relative))
     seasons = payload.get("seasons")
@@ -294,21 +302,97 @@ def _player_catalog_health(
         raise ValueError(f"{relative} has no season entries")
     years = []
     rows = 0
+    seen_years: set[int] = set()
+    expected_datasets = {"box", "passing", "receiving", "rushing", "teams", "schedule"}
+    source_clocks: list[str] = []
     for entry in seasons:
-        if not isinstance(entry, dict) or not isinstance(entry.get("season"), int):
+        if not isinstance(entry, dict) or not isinstance(entry.get("season"), int) or isinstance(entry.get("season"), bool):
             raise ValueError(f"{relative} has a malformed season entry")
-        years.append(entry["season"])
+        year = entry["season"]
+        if year in seen_years:
+            raise ValueError(f"{relative} has duplicate season {year}")
+        seen_years.add(year)
+        years.append(year)
+        filename = entry.get("file")
+        digest = entry.get("sha256")
+        if (
+            not isinstance(filename, str)
+            or Path(filename).name != filename
+            or filename != f"players-{year}.json"
+            or not isinstance(digest, str)
+            or not re.fullmatch(r"[a-f0-9]{64}", digest)
+        ):
+            raise ValueError(f"{relative} has an invalid board receipt for season {year}")
+        board_path = root / "frontend/public/data/football" / filename
+        if not board_path.exists():
+            raise ValueError(f"{relative} season {year} references missing board {filename}")
+        if hashlib.sha256(board_path.read_bytes()).hexdigest() != digest:
+            raise ValueError(f"{relative} season {year} board hash mismatch")
+        try:
+            board = json.loads(board_path.read_text())
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"{relative} season {year} board is invalid JSON") from exc
+        if not isinstance(board, dict) or board.get("season") != year:
+            raise ValueError(f"{relative} season {year} board has the wrong season")
+        players = board.get("players")
+        if not isinstance(players, list):
+            raise ValueError(f"{relative} season {year} board has no player rows")
+        if entry.get("player_team_records") != len(players):
+            raise ValueError(f"{relative} season {year} player row count does not match board")
+
+        sources = entry.get("sources")
+        if not isinstance(sources, list) or len(sources) != len(expected_datasets):
+            raise ValueError(f"{relative} season {year} has incomplete source receipts")
+        seen_datasets: set[str] = set()
+        for receipt in sources:
+            if not isinstance(receipt, dict):
+                raise ValueError(f"{relative} season {year} has a malformed source receipt")
+            dataset = receipt.get("dataset")
+            source_hash = receipt.get("sha256")
+            source_url = receipt.get("url")
+            fetched_at = receipt.get("fetched_at")
+            if (
+                not isinstance(dataset, str)
+                or dataset not in expected_datasets
+                or dataset in seen_datasets
+                or receipt.get("season") != year
+                or not isinstance(source_hash, str)
+                or not re.fullmatch(r"[a-f0-9]{64}", source_hash)
+                or not isinstance(source_url, str)
+                or not re.match(r"^https://[^\s]+$", source_url)
+                or not isinstance(fetched_at, str)
+            ):
+                raise ValueError(f"{relative} season {year} has an invalid source receipt")
+            try:
+                _timestamp(fetched_at)
+            except ValueError as exc:
+                raise ValueError(f"{relative} season {year} has an invalid source clock") from exc
+            seen_datasets.add(dataset)
+            source_clocks.append(fetched_at)
+        if seen_datasets != expected_datasets:
+            raise ValueError(f"{relative} season {year} is missing a source dataset")
         box_rows = entry.get("box_rows")
         if not isinstance(box_rows, int) or isinstance(box_rows, bool) or box_rows < 0:
             raise ValueError(f"{relative} has invalid box_rows")
         rows += box_rows
+    latest_retrieved = payload.get("latest_source_retrieved_at")
+    if not isinstance(latest_retrieved, str) or not source_clocks:
+        raise ValueError(f"{relative} has no latest_source_retrieved_at timestamp")
+    try:
+        latest_dt = _timestamp(latest_retrieved)
+    except ValueError as exc:
+        raise ValueError(f"{relative} has an invalid latest_source_retrieved_at timestamp") from exc
+    if latest_retrieved != max(source_clocks):
+        raise ValueError(f"{relative} latest_source_retrieved_at does not match source receipts")
     if min(years) > 2018 or max(years) < 2026 or rows <= 0:
         raise ValueError(f"{relative} does not cover the published 2018–2026 archive")
-    retrieved = payload.get("latest_source_retrieved_at")
-    if not isinstance(retrieved, str):
-        raise ValueError(f"{relative} has no latest_source_retrieved_at timestamp")
-    checked = _freshness(relative, {"generated_at": retrieved}, now, max_age_hours)
-    return {**checked, "archive_seasons": len(seasons), "box_rows": rows}
+    checked = _freshness(relative, {"generated_at": latest_dt.isoformat()}, now, max_age_hours)
+    return {
+        **checked,
+        "archive_seasons": len(seasons),
+        "box_rows": rows,
+        "source_receipts": len(source_clocks),
+    }
 
 
 def _unresolved_coverage_health(
