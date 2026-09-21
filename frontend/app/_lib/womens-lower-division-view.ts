@@ -11,6 +11,22 @@ export const LOWER_DIVISION_PAGE_SIZE = 25;
 
 const text = (value: unknown) => value == null ? "" : String(value);
 
+/**
+ * Return the value for a published column without guessing at its meaning.
+ *
+ * NCAA table headers are not stable object keys (for example, `FG%` is
+ * published as `fg` by the capture normalizer).  The retained source_fields
+ * map is therefore authoritative for rendering.  The normalized-key fallback
+ * keeps this helper useful for older releases that predate source_fields.
+ */
+export const lowerDivisionCellValue = (row: LowerDivisionRow, header: string): unknown => {
+  const sourceFields = row.source_fields;
+  if (sourceFields && Object.prototype.hasOwnProperty.call(sourceFields, header)) return sourceFields[header];
+  const key = header.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (Object.prototype.hasOwnProperty.call(row, key)) return row[key];
+  return row[header];
+};
+
 const number = (value: unknown): number | null => {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value !== "string" || !value.trim()) return null;

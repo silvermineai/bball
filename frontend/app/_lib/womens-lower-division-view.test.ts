@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   filterWomensLowerDivisionRows,
+  lowerDivisionCellValue,
   lowerDivisionGames,
   paginateWomensLowerDivisionRows,
 } from "./womens-lower-division-view";
@@ -21,6 +22,13 @@ describe("women's lower-division source row view", () => {
     expect(filterWomensLowerDivisionRows(rows, "", 10).map((row) => row.rank)).toEqual([1, 3]);
     expect(lowerDivisionGames({ team: "A", gm: "12", source_fields: { GM: "12" } })).toBe(12);
     expect(lowerDivisionGames({ team: "A", source_fields: { GM: "—" } })).toBeNull();
+  });
+
+  it("renders the retained source value for headers whose normalized key differs", () => {
+    const row = { fg: 50.41, source_fields: { "FG%": "50.41", "Points Per Game": "18.2" } };
+    expect(lowerDivisionCellValue(row, "FG%")).toBe("50.41");
+    expect(lowerDivisionCellValue(row, "Points Per Game")).toBe("18.2");
+    expect(lowerDivisionCellValue(row, "FGM")).toBeUndefined();
   });
 
   it("paginates without changing the source row objects", () => {
