@@ -25,6 +25,15 @@ export type WomensLowerDivisionTeamSummary = {
   best_source_rank: number | null;
 };
 
+export type WomensLowerDivisionPlayerSummary = {
+  source_player: string;
+  team: string;
+  team_source_path: string;
+  appearances: number;
+  statistics: WomensLowerDivisionTeamSummaryStat[];
+  best_source_rank: number | null;
+};
+
 export type WomensLowerDivisionCoverage = {
   individual_statistics: number;
   team_statistics: number;
@@ -39,6 +48,75 @@ export type WomensLowerIndividualExport = {
 };
 
 export const LOWER_DIVISION_PAGE_SIZE = 25;
+
+/**
+ * Group repeated source leaderboard rows by the publisher's exact player
+ * label and team path. This is a coverage index only: it does not assert a
+ * stable athlete identity or create a cross-provider player ranking.
+ */
+export function summarizeWomensLowerDivisionPlayers(
+  statistics: ReadonlyArray<{
+    statistic: string;
+    label: string;
+    source_url: string;
+    rows: readonly LowerDivisionRow[];
+  }>,
+  minimumGames = 0,
+): WomensLowerDivisionPlayerSummary[] {
+  const minimum = Number.isFinite(minimumGames) && minimumGames > 0 ? minimumGames : 0;
+  type Mutable = {
+    source_player: string;
+    team: string;
+    team_source_path: string;
+    appearances: number;
+    best_source_rank: number | null;
+    stats: Map<string, WomensLowerDivisionTeamSummaryStat>;
+  };
+  const byKey = new Map<string, Mutable>();
+  for (const statistic of statistics) {
+    for (const row of statistic.rows) {
+      const games = lowerDivisionGames(row);
+      if (minimum && (games == null || games < minimum)) continue;
+      const sourcePlayer = text(row.name || row.source_fields?.Name).trim();
+      const team = sourceTeamName(row);
+      const teamSourcePath = text(row.team_source_path).trim();
+      if (!sourcePlayer || !teamSourcePath) continue;
+      const key = teamSourcePath + "::" + sourcePlayer;
+      const rank = sourceRank(row);
+      const entry = byKey.get(key) || {
+        source_player: sourcePlayer,
+        team,
+        team_source_path: teamSourcePath,
+        appearances: 0,
+        best_source_rank: null,
+        stats: new Map<string, WomensLowerDivisionTeamSummaryStat>(),
+      };
+      entry.appearances += 1;
+      if (rank != null && (entry.best_source_rank == null || rank < entry.best_source_rank)) entry.best_source_rank = rank;
+      const prior = entry.stats.get(statistic.statistic);
+      if (!prior) {
+        entry.stats.set(statistic.statistic, {
+          statistic: statistic.statistic,
+          label: statistic.label,
+          source_url: statistic.source_url,
+          rows: 1,
+          best_source_rank: rank,
+        });
+      } else {
+        prior.rows += 1;
+        if (rank != null && (prior.best_source_rank == null || rank < prior.best_source_rank)) prior.best_source_rank = rank;
+      }
+      byKey.set(key, entry);
+    }
+  }
+  return Array.from(byKey.values())
+    .map((entry) => ({ ...entry, statistics: Array.from(entry.stats.values()).sort((left, right) => left.label.localeCompare(right.label)) }))
+    .sort((left, right) => right.appearances - left.appearances
+      || right.statistics.length - left.statistics.length
+      || (left.best_source_rank ?? Number.POSITIVE_INFINITY) - (right.best_source_rank ?? Number.POSITIVE_INFINITY)
+      || left.source_player.localeCompare(right.source_player)
+      || left.team_source_path.localeCompare(right.team_source_path));
+}
 
 /**
  * Export every source-native individual leaderboard in one exact division.

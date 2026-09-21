@@ -6,6 +6,7 @@ import {
   paginateWomensLowerDivisionRows,
   summarizeWomensLowerDivisionCoverage,
   summarizeWomensLowerDivisionTeams,
+  summarizeWomensLowerDivisionPlayers,
   womensLowerIndividualExport,
 } from "./womens-lower-division-view";
 
@@ -122,5 +123,29 @@ describe("women's lower-division source row view", () => {
       ["scoring", "Scoring", "https://www.ncaa.com/stats/basketball-women/d2/current/individual/101", 1, "/schools/north", "1", "Ari Jones", "20.0", null],
       ["assists", "Assists", "https://www.ncaa.com/stats/basketball-women/d2/current/individual/102", 2, null, "2", "Ari Jones", null, "100"],
     ]);
+  });
+
+  it("builds a source-label player coverage index without joining names across teams", () => {
+    const summary = summarizeWomensLowerDivisionPlayers([
+      {
+        statistic: "scoring",
+        label: "Scoring",
+        source_url: "https://www.ncaa.com/stats/basketball-women/d2/current/individual/101",
+        rows: [
+          { rank: 4, name: "Ari Jones", team: "North College", team_source_path: "/schools/north", g: 18 },
+          { rank: 1, name: "Ari Jones", team: "South College", team_source_path: "/schools/south", g: 18 },
+        ],
+      },
+      {
+        statistic: "assists",
+        label: "Assists",
+        source_url: "https://www.ncaa.com/stats/basketball-women/d2/current/individual/102",
+        rows: [{ rank: 2, name: "Ari Jones", team: "North College", team_source_path: "/schools/north", g: 20 }],
+      },
+    ]);
+    expect(summary).toHaveLength(2);
+    expect(summary[0]).toMatchObject({ source_player: "Ari Jones", team: "North College", team_source_path: "/schools/north", appearances: 2, best_source_rank: 2 });
+    expect(summary[0].statistics.map((stat) => stat.statistic)).toEqual(["assists", "scoring"]);
+    expect(summary[1].team_source_path).toBe("/schools/south");
   });
 });
