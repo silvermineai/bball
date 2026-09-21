@@ -116,6 +116,12 @@ export function marketBookmakerKey(value: unknown): string {
   return normalized || raw;
 }
 
+/** Return a winner-pick result, leaving an exactly even probability unscored. */
+export function winnerPickCorrect(probabilityValue: number | null, homeWon: boolean): boolean | null {
+  if (probabilityValue === null || probabilityValue === 0.5) return null;
+  return (probabilityValue > 0.5) === homeWon;
+}
+
 function eligibility(row: Json, state: Json | null): string | null {
   if (!state) return "missing_schedule";
   const payload = parse(row.payload_json) || {};
@@ -257,6 +263,10 @@ function compare(prediction: Json, quote: Json, state: Json): Json | null {
       const outcome = margin > 0 ? 1 : 0;
       output.model_brier = (modelWin - outcome) ** 2;
       output.market_brier = (Number(output.market_home_probability) - outcome) ** 2;
+      const modelPick = winnerPickCorrect(modelWin, outcome === 1);
+      const marketPick = winnerPickCorrect(Number(output.market_home_probability), outcome === 1);
+      if (modelPick !== null) output.model_winner_correct = modelPick;
+      if (marketPick !== null) output.market_winner_correct = marketPick;
     }
   }
   return output;
@@ -343,6 +353,8 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
       market_mae: mean(quotes.flatMap((q) => number(q.market_absolute_error) === null ? [] : [Number(q.market_absolute_error)])),
       model_brier: mean(quotes.flatMap((q) => number(q.model_brier) === null ? [] : [Number(q.model_brier)])),
       market_brier: mean(quotes.flatMap((q) => number(q.market_brier) === null ? [] : [Number(q.market_brier)])),
+      model_winner_accuracy: mean(quotes.flatMap((q) => typeof q.model_winner_correct === "boolean" ? [q.model_winner_correct ? 1 : 0] : [])),
+      market_winner_accuracy: mean(quotes.flatMap((q) => typeof q.market_winner_correct === "boolean" ? [q.market_winner_correct ? 1 : 0] : [])),
     };
   });
   };

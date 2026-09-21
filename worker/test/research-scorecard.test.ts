@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { marketBookmakerKey, researchScorecard } from "../src/research-scorecard";
+import { marketBookmakerKey, researchScorecard, winnerPickCorrect } from "../src/research-scorecard";
 
 describe("live research scorecard", () => {
   it("normalizes bookmaker presentation aliases without losing the source label", () => {
@@ -7,6 +7,76 @@ describe("live research scorecard", () => {
     expect(marketBookmakerKey("DraftKings")).toBe("draftkings");
     expect(marketBookmakerKey("  BOOK-1 ")).toBe("book1");
     expect(marketBookmakerKey("   ")).toBe("");
+  });
+
+  it("scores only decisive winner probabilities for market evaluation", () => {
+    expect(winnerPickCorrect(0.7, true)).toBe(true);
+    expect(winnerPickCorrect(0.3, true)).toBe(false);
+    expect(winnerPickCorrect(0.7, false)).toBe(false);
+    expect(winnerPickCorrect(0.5, true)).toBeNull();
+    expect(winnerPickCorrect(null, false)).toBeNull();
+  });
+
+  it("publishes model and market winner accuracy for settled moneylines", async () => {
+    const selected = {
+      id: "registration-moneyline",
+      sport: "basketball",
+      game_id: "game-moneyline",
+      model_id: "model-moneyline",
+      generated_at: "2025-12-31T23:00:00.000000Z",
+      registered_at: "2026-01-01T00:01:00.000000Z",
+      starts_at: "2026-01-02T00:00:00.000000Z",
+      time_tbd: 0,
+      payload_json: JSON.stringify({
+        home_id: "home-moneyline", away_id: "away-moneyline", home_name: "Home", away_name: "Away", season: 2027,
+        prediction: { home_margin: 5, total: 145, home_win_probability: 0.7, margin_low: -8, margin_high: 18 },
+      }),
+      state_json: JSON.stringify({ home_id: "home-moneyline", away_id: "away-moneyline", starts_at: "2026-01-02T00:00:00.000000Z", time_tbd: 0, completed: 1, home_score: 80, away_score: 70 }),
+      exclusion: null,
+    };
+    const quote = {
+      id: "quote-moneyline",
+      sport: "basketball",
+      game_id: "game-moneyline",
+      provider: "licensed-feed",
+      bookmaker: "book-1",
+      market: "h2h",
+      captured_at: "2026-01-01T12:00:00.000000Z",
+      updated_at: "2026-01-01T11:59:00.000000Z",
+      payload_json: JSON.stringify({
+        home_id: "home-moneyline", away_id: "away-moneyline", starts_at: "2026-01-02T00:00:00.000000Z",
+        home_price: 1.8, away_price: 2.2,
+      }),
+    };
+    const prepare = vi.fn((sql: string) => {
+      const first = async () => {
+        if (sql.includes("MAX(CAST")) return { season: 2027 };
+        if (sql.includes("audit_predictions")) return { total: 1 };
+        return { total: 0 };
+      };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => sql.includes("FROM audit_predictions p")
+            ? { results: [selected] }
+            : sql.includes("SELECT id,sport,game_id,provider")
+              ? { results: [quote] }
+              : { results: [] },
+        }),
+      };
+    });
+    const response = await researchScorecard.request("/?sport=basketball&season=2027&limit=5000", {}, { RESEARCH_DB: { prepare } as never });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { sports: { basketball: { market_metrics: Array<Record<string, unknown>> } } };
+    expect(body.sports.basketball.market_metrics).toMatchObject([{
+      market: "h2h",
+      games: 1,
+      model_brier: expect.closeTo(0.09, 8),
+      market_brier: expect.closeTo((1 / 1.8 / (1 / 1.8 + 1 / 2.2) - 1) ** 2, 8),
+      model_winner_accuracy: 1,
+      market_winner_accuracy: 1,
+    }]);
   });
 
   it("returns the selected registration with parsed status and metrics", async () => {

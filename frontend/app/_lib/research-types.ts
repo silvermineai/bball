@@ -13,6 +13,8 @@ export type Comparison = {
   direction_result?: string;
   model_brier?: number;
   market_brier?: number;
+  model_winner_correct?: boolean;
+  market_winner_correct?: boolean;
 };
 export type LedgerGame = {
   id: string;
@@ -146,6 +148,8 @@ export type SportSummary = {
     market_mae: number | null;
     model_brier: number | null;
     market_brier: number | null;
+    model_winner_accuracy?: number | null;
+    market_winner_accuracy?: number | null;
     direction_results: Record<string, number>;
   }[];
   /**

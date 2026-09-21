@@ -558,6 +558,8 @@ export default function Scorecard() {
                   <th>Matched games</th>
                   <th>Model MAE</th>
                   <th>Market MAE</th>
+                  <th>Model winner%</th>
+                  <th>Market winner%</th>
                   <th>Model Brier</th>
                   <th>Market Brier</th>
                 </tr>
@@ -571,6 +573,8 @@ export default function Scorecard() {
                     <td>{r.games}</td>
                     <td>{fmt(r.model_mae)}</td>
                     <td>{fmt(r.market_mae)}</td>
+                    <td>{r.model_winner_accuracy == null ? "—" : `${fmt(r.model_winner_accuracy * 100)}%`}</td>
+                    <td>{r.market_winner_accuracy == null ? "—" : `${fmt(r.market_winner_accuracy * 100)}%`}</td>
                     <td>{fmt(r.model_brier, 4)}</td>
                     <td>{fmt(r.market_brier, 4)}</td>
                   </tr>
