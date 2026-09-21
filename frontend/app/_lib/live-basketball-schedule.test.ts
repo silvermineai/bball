@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { loadLiveBasketballScheduleClocks, mergeBasketballScheduleClocks } from "./live-basketball-schedule";
+import { hasConfirmedScheduleClock, loadLiveBasketballScheduleClocks, mergeBasketballScheduleClocks } from "./live-basketball-schedule";
 
 const game = (id: string): BBGame => ({
   id,
@@ -18,6 +18,14 @@ const game = (id: string): BBGame => ({
 });
 
 describe("live basketball schedule clocks", () => {
+  it("requires an explicitly valid, parseable source start", () => {
+    expect(hasConfirmedScheduleClock({ source_time_valid: true, source_start: "2026-11-02T05:00:00Z" })).toBe(true);
+    expect(hasConfirmedScheduleClock({ source_time_valid: true, source_start: null })).toBe(false);
+    expect(hasConfirmedScheduleClock({ source_time_valid: true, source_start: "not-a-clock" })).toBe(false);
+    expect(hasConfirmedScheduleClock({ source_time_valid: false, source_start: "2026-11-02T05:00:00Z" })).toBe(false);
+    expect(hasConfirmedScheduleClock({ source_start: "2026-11-02T05:00:00Z" })).toBe(false);
+  });
+
   it("loads and bounds scoreboard observations to numeric game IDs", async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,

@@ -16,6 +16,19 @@ export type ScheduleClockResponse = {
   confirmed_count?: number;
 };
 
+/**
+ * A canonical scheduled timestamp is not source-clock evidence. Keep this
+ * predicate strict so readiness boards do not count a game until an observed
+ * source start is explicitly marked valid and contains a real timestamp.
+ */
+export function hasConfirmedScheduleClock(
+  row: { source_start?: string | null; source_time_valid?: boolean | null } | null | undefined,
+) {
+  return row?.source_time_valid === true
+    && typeof row.source_start === "string"
+    && Number.isFinite(Date.parse(row.source_start));
+}
+
 export async function loadLiveBasketballScheduleClocks(
   signal?: AbortSignal,
   season = 2027,

@@ -22,6 +22,7 @@ import {
   mergeLiveBasketballForecasts,
 } from "../../_lib/live-basketball-forecasts";
 import {
+  hasConfirmedScheduleClock,
   loadLiveBasketballScheduleClocks,
   type ScheduleClockRow,
 } from "../../_lib/live-basketball-schedule";
@@ -377,7 +378,7 @@ export default function ForecastLab({
                 : null;
             })(),
         factorEditionMatches ? factorSignals[game.id] : undefined,
-        scheduleClockByGame.get(game.id)?.source_time_valid === true || !game.time_tbd,
+        hasConfirmedScheduleClock(scheduleClockByGame.get(game.id) || game),
       ));
     return sortRows(
       candidates.filter((row): row is Row => !!row).filter((row) => {
