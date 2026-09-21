@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  recruitingShortlistEditionLabel,
+  recruitingShortlistEditionState,
   recruitingShortlistKey,
   readRecruitingShortlist,
   toggleRecruitingShortlist,
@@ -23,6 +25,15 @@ const entry = (key = recruitingShortlistKey("2027", "42")): RecruitingShortlistE
 });
 
 describe("recruiting prospect shortlist", () => {
+  it("shows whether a saved row matches the active class edition", () => {
+    const saved = { season: "2027", edition: "a".repeat(64) } as const;
+    expect(recruitingShortlistEditionState(saved, { season: "2027", edition: "a".repeat(64) })).toBe("current");
+    expect(recruitingShortlistEditionState(saved, { season: "2027", edition: "b".repeat(64) })).toBe("changed");
+    expect(recruitingShortlistEditionState(saved, { season: "2026", edition: "a".repeat(64) })).toBe("different_class");
+    expect(recruitingShortlistEditionState({ season: "2027", edition: null }, { season: "2027", edition: "a".repeat(64) })).toBe("unverified");
+    expect(recruitingShortlistEditionLabel("changed")).toBe("Changed since save");
+  });
+
   it("accepts valid entries, removes duplicates and rejects malformed storage", () => {
     const valid = entry();
     const raw = JSON.stringify([valid, valid, { key: "bad", name: "No ID" }]);

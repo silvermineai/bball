@@ -18,6 +18,28 @@ export const RECRUITING_SHORTLIST_STORAGE_KEY = "silvermine:recruiting-shortlist
 
 export const recruitingShortlistKey = (season: string, athleteId: string) => `${season}:${athleteId}`;
 
+export type RecruitingShortlistEditionState = "current" | "changed" | "different_class" | "unverified";
+
+/** Compare a saved row with the active board edition without treating missing digests as current. */
+export function recruitingShortlistEditionState(
+  entry: Pick<RecruitingShortlistEntry, "season" | "edition">,
+  active: { season: string; edition: string | null | undefined },
+): RecruitingShortlistEditionState {
+  if (entry.season !== active.season) return "different_class";
+  if (!entry.edition || !active.edition) return "unverified";
+  return entry.edition === active.edition ? "current" : "changed";
+}
+
+export function recruitingShortlistEditionLabel(state: RecruitingShortlistEditionState): string {
+  return state === "current"
+    ? "Current active edition"
+    : state === "changed"
+      ? "Changed since save"
+      : state === "different_class"
+        ? "Different class edition"
+        : "Edition comparison unavailable";
+}
+
 const isString = (value: unknown): value is string => typeof value === "string";
 const nullableString = (value: unknown) => isString(value) ? value : null;
 const nullableNumber = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
