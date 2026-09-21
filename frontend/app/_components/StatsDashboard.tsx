@@ -4,7 +4,6 @@ import path from "node:path";
 import { getBasketball, getRosterModel, getRosters } from "../_lib/basketball-data";
 import {
   topBasketballLeaders,
-  type BasketballLeaderMetric,
   type BasketballLeaderPlayer,
 } from "../_lib/basketball-leaders";
 import type { BBGame, BBRoster, BBTeam } from "../_lib/basketball-types";
@@ -24,6 +23,7 @@ import LiveNcaaPlayerTable from "./LiveNcaaPlayerTable";
 import DashboardExportButton from "./DashboardExportButton";
 import LivePlayerShotMap from "./LivePlayerShotMap";
 import { coverageReceiptState, dashboardCoverageRows } from "../_lib/dashboard-coverage";
+import { compactBasketballLeaderCards } from "../_lib/basketball-leader-cards";
 
 function getPlayers(season: number) {
   // Prefer the current player release because it retains the complete basic
@@ -277,22 +277,10 @@ function RosterProductionTable({ rows }: { rows: ReturnType<typeof getRosterLead
   );
 }
 
-const leaderCards: Array<{ metric: BasketballLeaderMetric; label: string; description: string; percent?: boolean }> = [
-  { metric: "ppg", label: "Scoring", description: "points per game" },
-  { metric: "rpg", label: "Rebounding", description: "rebounds per game" },
-  { metric: "apg", label: "Playmaking", description: "assists per game" },
-  { metric: "spg", label: "Steals", description: "steals per game" },
-  { metric: "bpg", label: "Rim protection", description: "blocks per game" },
-  { metric: "ts", label: "True shooting", description: "scoring efficiency", percent: true },
-  { metric: "efg", label: "Effective FG", description: "shot efficiency", percent: true },
-  { metric: "three_pct", label: "3-point accuracy", description: "3P%", percent: true },
-  { metric: "ft_pct", label: "Free-throw accuracy", description: "FT%", percent: true },
-];
-
 function LeaderCards({ players, season }: { players: BasketballLeaderPlayer[]; season: number }) {
   return (
     <div className="basketball-leader-grid">
-      {leaderCards.filter((card) => players.some((player) => player.qualified && player[card.metric] != null)).map((card) => (
+      {compactBasketballLeaderCards.filter((card) => players.some((player) => player.qualified && player[card.metric] != null)).map((card) => (
         <section className="paper-panel" key={card.metric}>
           <div className="eyebrow">{card.description}</div>
           <h3>{card.label}</h3>
@@ -530,7 +518,7 @@ export default function StatsDashboard() {
           </div>
           <div className="dashboard-subsection" aria-labelledby="dashboard-single-stat-leaders">
             <div className="dashboard-section-heading"><div><span className="eyebrow">SINGLE-STAT LEADERS</span><h3 id="dashboard-single-stat-leaders">Who leads each box-score field?</h3></div><Link href="/basketball/leaders/">Open every leaderboard →</Link></div>
-            <p className="dashboard-caption">Top five qualified players for each commonly used production field. Select a field on the full leaderboard when you need the complete cohort or a different denominator.</p>
+            <p className="dashboard-caption">Top five qualified players for each compact-release production field. The compact archive does not retain shot-attempt totals for 3P% or FT%, so those rates stay on the live national table where explicit volume floors and denominators are shown. <Link href="/basketball/ncaa/">Open attempt-gated national leaderboards →</Link></p>
             <LeaderCards players={players} season={latestSeason} />
           </div>
         </section>
