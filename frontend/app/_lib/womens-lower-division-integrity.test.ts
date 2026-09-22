@@ -61,4 +61,13 @@ describe("women's lower-division release integrity", () => {
     (value.divisions.d2.individual[0] as { source_url: string }).source_url = externalUrl;
     expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/NCAA\.com source URL/);
   });
+
+  it("rejects an individual table ledgered under the team path", () => {
+    const value = edition();
+    const teamUrl = "https://www.ncaa.com/stats/basketball-women/d2/current/team/102";
+    value.receipts.push(receipt(teamUrl));
+    value.divisions.d2.available_statistics.individual[0].source_path = "/stats/basketball-women/d2/current/team/102";
+    (value.divisions.d2.individual[0] as { source_url: string }).source_url = teamUrl;
+    expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/exact-kind/);
+  });
 });

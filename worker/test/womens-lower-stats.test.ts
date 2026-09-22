@@ -8,6 +8,8 @@ const receipt = {
   bytes: 128,
 };
 const d3Receipt = { ...receipt, url: receipt.url.replace("/d2/", "/d3/") };
+const teamReceipt = { ...receipt, url: receipt.url.replace("/individual/", "/team/") };
+const d3TeamReceipt = { ...d3Receipt, url: d3Receipt.url.replace("/individual/", "/team/") };
 
 function edition() {
   const makeDivision = (division: 2 | 3) => {
@@ -21,7 +23,7 @@ function edition() {
     identity_note: "No stable athlete ID is published.",
     available_statistics: {
       individual: [{ label: "Points per game", source_path: new URL(division === 2 ? receipt.url : d3Receipt.url).pathname }],
-      team: [{ label: "Scoring offense", source_path: new URL(division === 2 ? receipt.url : d3Receipt.url).pathname }],
+      team: [{ label: "Scoring offense", source_path: new URL(division === 2 ? teamReceipt.url : d3TeamReceipt.url).pathname }],
     },
     individual: [{
       label: "Points per game",
@@ -35,7 +37,7 @@ function edition() {
       statistic: "avgPoints",
       headers: ["Rank", "Team", "PPG"],
       rows: [{ rank: 1, team: "Example College", ppg: 82.4, source_fields: { Team: "Example College" } }],
-      source_url: division === 2 ? receipt.url : d3Receipt.url,
+      source_url: division === 2 ? teamReceipt.url : d3TeamReceipt.url,
     }],
     };
   };
@@ -43,7 +45,7 @@ function edition() {
     schema_version: 1,
     generated_at: "2026-09-22T18:00:00Z",
     source: { publisher: "NCAA.com", method: "persisted source tables", limitation: "No stable athlete ID is published." },
-    receipts: [receipt, d3Receipt],
+    receipts: [{ ...receipt }, { ...d3Receipt }, { ...teamReceipt }, { ...d3TeamReceipt }],
     divisions: { d2: makeDivision(2), d3: makeDivision(3) },
   };
 }
@@ -72,8 +74,8 @@ describe("women's lower-division stats API", () => {
     await expect(response.json()).resolves.toMatchObject({
       division: "3",
       available_divisions: ["2", "3"],
-      statistics: [{ statistic: "avgPoints", rows: 1, source_url: d3Receipt.url }],
-      source_receipts: [receipt, d3Receipt],
+      statistics: [{ statistic: "avgPoints", rows: 1, source_url: d3TeamReceipt.url }],
+      source_receipts: [receipt, d3Receipt, teamReceipt, d3TeamReceipt],
     });
   });
 
@@ -97,9 +99,20 @@ describe("women's lower-division stats API", () => {
   it("fails closed when a lower-division table receipt points outside NCAA.com", async () => {
     const malformed = edition();
     const externalUrl = "https://example.com/stats/basketball-women/d2/current/individual/1009";
-    malformed.receipts[0].url = externalUrl;
+    malformed.receipts[0] = { ...malformed.receipts[0], url: externalUrl };
     malformed.divisions.d2.source_url = externalUrl;
     malformed.divisions.d2.individual[0].source_url = externalUrl;
+    const response = await womensLowerStats.request("/?division=2", {}, env(malformed));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "release_integrity_failed" });
+  });
+
+  it("fails closed when an individual table is ledgered under the team path", async () => {
+    const malformed = edition();
+    const teamUrl = receipt.url.replace("/individual/", "/team/");
+    expect(malformed.receipts.some((value) => value.url === teamUrl)).toBe(true);
+    malformed.divisions.d2.available_statistics.individual[0].source_path = new URL(teamUrl).pathname;
+    malformed.divisions.d2.individual[0].source_url = teamUrl;
     const response = await womensLowerStats.request("/?division=2", {}, env(malformed));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ code: "release_integrity_failed" });

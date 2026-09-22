@@ -73,7 +73,7 @@ function validateStatistic(
   if (!Array.isArray(value.rows) || value.rows.some((row) => !isRecord(row))) return fail(`D${division} ${kind} ${value.statistic} has malformed rows.`);
   if (!isNCAAWomenStatsUrl(value.source_url)) return fail(`D${division} ${kind} ${value.statistic} has no NCAA.com source URL.`);
   const sourcePath = new URL(value.source_url).pathname;
-  if (!availablePaths.has(sourcePath)) return fail(`D${division} ${kind} ${value.statistic} source path is absent from the available-statistics ledger.`);
+  if (!availablePaths.has(sourcePath) || !sourcePath.includes(`/${kind}/`)) return fail(`D${division} ${kind} ${value.statistic} source path is absent from the exact-kind available-statistics ledger.`);
   if (!receiptUrls.has(value.source_url)) return fail(`D${division} ${kind} ${value.statistic} has no matching source receipt.`);
   for (const row of value.rows) {
     if (!isRecord(row.source_fields)) return fail(`D${division} ${kind} ${value.statistic} has a row without retained source fields.`);
@@ -113,11 +113,11 @@ export function parseWomensLowerDivisionEdition(value: unknown): WomensLowerDivi
     if (!Number.isInteger(current.season) || typeof current.identity_status !== "string" || typeof current.identity_note !== "string") return fail(`D${division} metadata is incomplete.`);
     if (!isRecord(current.available_statistics) || !Array.isArray(current.available_statistics.individual) || !Array.isArray(current.available_statistics.team)) return fail(`D${division} available-statistics ledger is missing.`);
     const availableStatistics = current.available_statistics as { individual: unknown[]; team: unknown[] };
-    const availablePaths = new Set<string>();
+    const availablePaths: Record<"individual" | "team", Set<string>> = { individual: new Set<string>(), team: new Set<string>() };
     for (const kind of ["individual", "team"] as const) {
       for (const candidate of availableStatistics[kind]) {
         if (!isRecord(candidate) || typeof candidate.label !== "string" || typeof candidate.source_path !== "string" || !candidate.source_path.startsWith(`/stats/basketball-women/d${division}/`)) return fail(`D${division} ${kind} available-statistics ledger is malformed.`);
-        availablePaths.add(candidate.source_path);
+        availablePaths[kind].add(candidate.source_path);
       }
     }
     if (!Array.isArray(current.individual) || !Array.isArray(current.team)) return fail(`D${division} statistic tables are missing.`);
@@ -125,8 +125,8 @@ export function parseWomensLowerDivisionEdition(value: unknown): WomensLowerDivi
       ...current,
       source_scope: scope as WomensLowerDivisionEdition["divisions"]["2"]["source_scope"],
       available_statistics: current.available_statistics as WomensLowerDivisionEdition["divisions"]["2"]["available_statistics"],
-      individual: current.individual.map((stat) => validateStatistic(stat, division, "individual", receiptUrls, availablePaths)),
-      team: current.team.map((stat) => validateStatistic(stat, division, "team", receiptUrls, availablePaths)),
+      individual: current.individual.map((stat) => validateStatistic(stat, division, "individual", receiptUrls, availablePaths.individual)),
+      team: current.team.map((stat) => validateStatistic(stat, division, "team", receiptUrls, availablePaths.team)),
     } as WomensLowerDivisionEdition["divisions"][typeof division];
   }
   return { ...value, source: value.source as WomensLowerDivisionEdition["source"], receipts, divisions } as unknown as WomensLowerDivisionEdition;
