@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
-import { marketCaptureDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, type MarketReadinessMetadata } from "../../_lib/market-readiness";
+import { marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { comparisonGapDirectionLabel, comparisonGapLabel, comparisonTimingLabel } from "../../_lib/market-display";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Estimate type", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
@@ -182,6 +182,7 @@ export default function Scorecard() {
     marketMetadataStatus === "checking",
   );
   const marketCaptureNote = marketCaptureDiagnostic(marketMetadata);
+  const marketCaptureHistoryNote = marketCaptureHistoryDiagnostic(marketMetadata);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -464,6 +465,7 @@ export default function Scorecard() {
           {marketReadinessScorecardNote(marketReadiness)}
         </p>
         {marketCaptureNote && <p className="note" role="status" style={{ marginTop: 12 }}>{marketCaptureNote} This is capture evidence; only exact-game, pregame quotes enter the comparison ledger.</p>}
+        {marketCaptureHistoryNote && <p className="note" role="status" style={{ marginTop: 12 }}>{marketCaptureHistoryNote}</p>}
         {readiness && (
           <>
             <div className="ledger-metrics" style={{ marginTop: 16 }}>

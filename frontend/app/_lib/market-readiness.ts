@@ -13,6 +13,12 @@ export type MarketReadinessMetadata = {
   source?: "partial" | "unavailable";
   research_receipts?: number;
   research_latest_capture_at?: string | null;
+  research_capture_summary?: {
+    attempts?: number;
+    captures_with_quotes?: number;
+    captures_with_validated_markets?: number;
+    captures_incomplete?: number;
+  };
   provider_capabilities?: unknown[];
   research_capture?: {
     captured_at?: string;
@@ -142,6 +148,23 @@ export function marketCaptureDiagnostic(metadata: MarketReadinessMetadata | null
     ? ` from a bounded request of ${eligible.toLocaleString()} of ${candidates.toLocaleString()} eligible games${limit == null ? "" : ` (limit ${limit.toLocaleString()})`}`
     : eligible == null ? "" : ` of ${eligible.toLocaleString()} eligible games`;
   return `Latest capture inspected ${capture.summary_count.toLocaleString()} future summaries${coverage}${horizon == null ? "" : ` within a ${horizon.toLocaleString()}-day window`}; ${quoteSets.toLocaleString()} contained complete quote sets${oddsPayloads == null ? "" : ` and ${oddsPayloads.toLocaleString()} had a non-empty odds payload`}${failures == null ? "" : `; ${failures.toLocaleString()} summary requests failed`}${accepted == null ? "" : `; ${accepted.toLocaleString()} markets passed validation`}${rejected == null ? "" : `; ${rejected.toLocaleString()} summaries were rejected`}.`;
+}
+
+/** Summarize connector history so repeated no-quote captures stay distinct from an incomplete run. */
+export function marketCaptureHistoryDiagnostic(metadata: MarketReadinessMetadata | null | undefined): string | null {
+  const history = metadata?.research_capture_summary;
+  if (!history) return null;
+  const attempts = count(history.attempts);
+  const withQuotes = count(history.captures_with_quotes);
+  const validated = count(history.captures_with_validated_markets);
+  const incomplete = count(history.captures_incomplete);
+  if (
+    attempts === null ||
+    (withQuotes != null && withQuotes > attempts) ||
+    (validated != null && (withQuotes == null || validated > withQuotes)) ||
+    (incomplete != null && incomplete > attempts)
+  ) return null;
+  return `Capture history: ${attempts.toLocaleString()} attempts${withQuotes == null ? "" : `, ${withQuotes.toLocaleString()} with published quotes`}${validated == null ? "" : `, ${validated.toLocaleString()} with validated markets`}${incomplete == null ? "" : `, ${incomplete.toLocaleString()} incomplete`}.`;
 }
 
 type ComparisonReadiness = NonNullable<SportSummary["comparison_readiness"]>;

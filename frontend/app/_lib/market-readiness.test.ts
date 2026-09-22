@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, modelScopedScorecardPath } from "./market-readiness";
+import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, modelScopedScorecardPath } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -64,6 +64,21 @@ describe("market connector readiness", () => {
 
   it("withholds a capture diagnostic when the receipt has no summary count", () => {
     expect(marketCaptureDiagnostic({ research_receipts: 1 })).toBeNull();
+  });
+
+  it("distinguishes repeated no-quote captures from incomplete connector runs", () => {
+    expect(marketCaptureHistoryDiagnostic({
+      research_capture_summary: {
+        attempts: 20,
+        captures_with_quotes: 0,
+        captures_with_validated_markets: 0,
+        captures_incomplete: 1,
+      },
+    })).toBe("Capture history: 20 attempts, 0 with published quotes, 0 with validated markets, 1 incomplete.");
+    expect(marketCaptureHistoryDiagnostic({
+      research_capture_summary: { attempts: 2, captures_with_quotes: 1, captures_with_validated_markets: 2 },
+    })).toBeNull();
+    expect(marketCaptureHistoryDiagnostic({})).toBeNull();
   });
 
   it("shows unreadable eligible games in the capture diagnostic", () => {
