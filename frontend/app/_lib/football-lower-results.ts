@@ -46,6 +46,21 @@ export function lowerDivisionSelection(value: LowerFootballDivision | undefined)
   return value === "d3" ? "d3" : "d2";
 }
 
+/**
+ * Resolve the shared navigation's numeric division query to the lower
+ * football archive key. Keeping this conversion here prevents a D3 scope URL
+ * from silently opening the component's D2 default.
+ */
+export function lowerDivisionFromSearch(
+  value: string | null | undefined,
+  fallback: LowerFootballDivision = "d2",
+): LowerFootballDivision {
+  if (value === "3" || value === "d3") return "d3";
+  if (value === "2" || value === "d2") return "d2";
+  if (value === "fcs") return "fcs";
+  return lowerDivisionSelection(fallback);
+}
+
 export type LowerFootballTeam = {
   team_id: string;
   team: string;

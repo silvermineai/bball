@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   lowerForecastCsvRows,
   lowerForecastExplanation,
   lowerForecastsForDivision,
   lowerForecastUncertainty,
+  lowerDivisionFromSearch,
   lowerDivisionSelection,
   lowerResultsForDivision,
   lowerTeamRowsForDivision,
@@ -20,9 +22,11 @@ import { date, fmt, kick } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 
 export default function LowerDivisionResults({ initialDivision = "d2" }: { initialDivision?: LowerFootballDivision }) {
+  const searchParams = useSearchParams();
+  const requestedDivision = searchParams.get("division");
   const [archive, setArchive] = useState<LowerFootballResults | null>(null);
   const [playerReadiness, setPlayerReadiness] = useState<FootballLowerPlayerReadiness | null>(null);
-  const [division, setDivision] = useState<LowerFootballDivision>(() => lowerDivisionSelection(initialDivision));
+  const [division, setDivision] = useState<LowerFootballDivision>(() => lowerDivisionFromSearch(requestedDivision, initialDivision));
   const [query, setQuery] = useState("");
   const [teamQuery, setTeamQuery] = useState("");
   const [forecastQuery, setForecastQuery] = useState("");
@@ -30,8 +34,8 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setDivision(lowerDivisionSelection(initialDivision));
-  }, [initialDivision]);
+    setDivision(lowerDivisionFromSearch(requestedDivision, initialDivision));
+  }, [initialDivision, requestedDivision]);
 
   useEffect(() => {
     const controller = new AbortController();

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { lowerDivisionSelection, lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, lowerTeamRowsForDivision, validateLowerFootballResults } from "./football-lower-results";
+import { lowerDivisionFromSearch, lowerDivisionSelection, lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, lowerTeamRowsForDivision, validateLowerFootballResults } from "./football-lower-results";
 
 const row = (division: "fcs" | "d2" | "d3", score_complete = true) => ({
   game_id: `${division}-1`, kickoff: "2026-09-01T00:00:00Z", week: 1,
@@ -158,6 +158,14 @@ describe("lower-division football results", () => {
     expect(lowerForecastsForDivision(archive, "d3").map((item) => item.game_id)).toEqual(["d3-only"]);
     expect(lowerDivisionSelection("d3")).toBe("d3");
     expect(lowerDivisionSelection(undefined)).toBe("d2");
+  });
+
+  it("maps shared numeric division URLs to the exact lower archive", () => {
+    expect(lowerDivisionFromSearch("3")).toBe("d3");
+    expect(lowerDivisionFromSearch("d3")).toBe("d3");
+    expect(lowerDivisionFromSearch("2")).toBe("d2");
+    expect(lowerDivisionFromSearch("fcs")).toBe("fcs");
+    expect(lowerDivisionFromSearch("1", "d3")).toBe("d3");
   });
 
   it("keeps the exact-FCS model cohort available beside D2 and D3", () => {
