@@ -12,6 +12,7 @@ import {
   matchesMatchupSignal,
   parseMatchupFilters,
   sortMatchups,
+  isUsableBasketballPrediction,
   type MatchupCoverage,
   type MatchupSignal,
   type MatchupSort,
@@ -235,7 +236,12 @@ export default function Matchups({
       );
     }
   }, [q, month, coverage, signal, sort, page, focusedGameId, prepIds]);
-  const eligibleGames = scope === "forecasted" ? scheduledGames.filter((g) => g.prediction != null || g.fallback_prediction != null) : scheduledGames;
+  const usablePrediction = (game: BBGame) => isUsableBasketballPrediction(game.prediction)
+    ? game.prediction
+    : isUsableBasketballPrediction(game.fallback_prediction)
+      ? game.fallback_prediction
+      : null;
+  const eligibleGames = scope === "forecasted" ? scheduledGames.filter((g) => usablePrediction(g) != null) : scheduledGames;
   const effectiveCoverage = scope === "forecasted" ? "forecasted" : coverage;
   const rows = sortMatchups(
     eligibleGames.filter((g) => {
@@ -245,11 +251,11 @@ export default function Matchups({
           .toLowerCase()
           .includes(q.toLowerCase()) &&
         (month === "all" || g.starts_at.startsWith(month)) &&
-        matchesMatchupSignal(g.prediction || g.fallback_prediction, signal) &&
+        matchesMatchupSignal(usablePrediction(g), signal) &&
         (effectiveCoverage === "all" ||
           (effectiveCoverage === "forecasted"
-            ? g.prediction != null || g.fallback_prediction != null
-            : g.prediction == null && g.fallback_prediction == null))
+            ? usablePrediction(g) != null
+            : usablePrediction(g) == null))
       );
     }),
     sort,
@@ -439,8 +445,8 @@ export default function Matchups({
               : "Checking the live forecast edition before loading market comparisons…"}
       </p>
       <p className="note" role="status">
-        {liveGames
-          ? `Live D1 matchup rows: ${liveGames.filter((game) => game.prediction || game.fallback_prediction).length.toLocaleString()} modeled · refreshed from the latest registered edition.`
+          {liveGames
+          ? `Live D1 matchup rows: ${liveGames.filter((game) => usablePrediction(game) != null).length.toLocaleString()} modeled · refreshed from the latest registered edition.`
           : liveGamesError
             ? `${liveGamesError} Showing the published static slate.`
             : "Checking live matchup rows…"}

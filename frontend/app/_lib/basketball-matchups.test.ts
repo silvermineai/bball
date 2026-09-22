@@ -5,6 +5,7 @@ import {
   matchupFilterSearch,
   parseMatchupFilters,
   sortMatchups,
+  isUsableBasketballPrediction,
 } from "./basketball-matchups";
 import type { BBGame } from "./basketball-types";
 
@@ -27,10 +28,10 @@ const game = (
   venue: "",
   broadcast: "",
   prediction: {
-    home_score: 75,
+    home_score: 70 + home_margin,
     away_score: 70,
     home_margin,
-    total: 145,
+    total: 140 + home_margin,
     pace: 68,
     home_win_probability: probability,
     margin_low: home_margin - width / 2,
@@ -49,6 +50,24 @@ describe("basketball matchup triage", () => {
     expect(
       forecastSignal(game("c", "2026-11-01T00:00:00Z", 1, 0.77).prediction!).label,
     ).toBe("Strong lean");
+  });
+
+  it("fails closed for incomplete or contradictory forecast rows", () => {
+    const valid = game("valid", "2026-11-01T00:00:00Z", 4, 0.62).prediction!;
+    expect(isUsableBasketballPrediction(valid)).toBe(true);
+    expect(isUsableBasketballPrediction({ ...valid, home_win_probability: Number.NaN })).toBe(false);
+    expect(isUsableBasketballPrediction({ ...valid, home_score: 80 })).toBe(false);
+    expect(isUsableBasketballPrediction({ ...valid, margin_low: 8, margin_high: 2 })).toBe(false);
+  });
+
+  it("does not classify an invalid row as a signal or sortable forecast", () => {
+    const invalid = {
+      ...game("invalid", "2026-10-01T00:00:00Z", 4, 0.62),
+      prediction: { ...game("invalid", "2026-10-01T00:00:00Z", 4, 0.62).prediction!, total: Number.NaN },
+    };
+    expect(forecastSignal(invalid.prediction!)).toEqual({ label: "Unavailable", confidence: 0.5 });
+    expect(matchesMatchupSignal(invalid.prediction, "lean")).toBe(false);
+    expect(sortMatchups([invalid, game("valid", "2026-10-02T00:00:00Z", 2, 0.62)], "confidence").map((row) => row.id)).toEqual(["valid", "invalid"]);
   });
 
   it("sorts closest games first and leaves unforecast games last", () => {

@@ -75,12 +75,48 @@ export function matchupFilterSearch(filters: MatchupFilters) {
 }
 
 export type ForecastSignal = {
-  label: "Toss-up" | "Lean" | "Strong lean";
+  label: "Toss-up" | "Lean" | "Strong lean" | "Unavailable";
   confidence: number;
 };
 
+/**
+ * Validate the scalar forecast contract before a row participates in slate
+ * triage. The API applies the same boundary checks, but the bundled overview
+ * is also a runtime input and can outlive the worker edition. Keeping this
+ * guard here prevents NaN values, inverted intervals, and contradictory score
+ * arithmetic from becoming sortable or filterable forecasts.
+ */
+export function isUsableBasketballPrediction(
+  prediction: BBPrediction | null | undefined,
+): prediction is BBPrediction {
+  if (!prediction) return false;
+  const required = [
+    prediction.home_score,
+    prediction.away_score,
+    prediction.home_margin,
+    prediction.total,
+    prediction.pace,
+    prediction.home_win_probability,
+    prediction.margin_low,
+    prediction.margin_high,
+  ];
+  if (required.some((value) => !Number.isFinite(value))) return false;
+  if (prediction.pace <= 0 || prediction.home_win_probability < 0 || prediction.home_win_probability > 1) return false;
+  if (prediction.margin_low > prediction.margin_high || prediction.home_margin < prediction.margin_low || prediction.home_margin > prediction.margin_high) return false;
+  const close = (left: number, right: number) => Math.abs(left - right) <= 0.11;
+  if (!close(prediction.home_score - prediction.away_score, prediction.home_margin)) return false;
+  if (!close(prediction.home_score + prediction.away_score, prediction.total)) return false;
+  if (prediction.home_efficiency != null && (!Number.isFinite(prediction.home_efficiency) || !close(prediction.home_efficiency, 100 * prediction.home_score / prediction.pace))) return false;
+  if (prediction.away_efficiency != null && (!Number.isFinite(prediction.away_efficiency) || !close(prediction.away_efficiency, 100 * prediction.away_score / prediction.pace))) return false;
+  if (prediction.estimate_type != null && prediction.estimate_type !== "cold_start") return false;
+  return true;
+}
+
 /** Return the model's plain-language signal without rounding the probability. */
 export function forecastSignal(prediction: BBPrediction): ForecastSignal {
+  if (!isUsableBasketballPrediction(prediction)) {
+    return { confidence: 0.5, label: "Unavailable" };
+  }
   const confidence = Math.max(
     prediction.home_win_probability,
     1 - prediction.home_win_probability,
@@ -102,7 +138,7 @@ export function matchesMatchupSignal(
   signal: MatchupSignal,
 ) {
   if (signal === "all") return true;
-  if (!prediction) return false;
+  if (!isUsableBasketballPrediction(prediction)) return false;
   const confidence = forecastSignal(prediction).confidence;
   if (signal === "toss-up") return confidence < 0.6;
   if (signal === "lean") return confidence >= 0.6 && confidence < 0.75;
@@ -121,8 +157,16 @@ export function sortMatchups(games: BBGame[], sort: MatchupSort): BBGame[] {
   return games
     .map((game, index) => ({ game, index }))
     .sort((a, b) => {
-      const ap = a.game.prediction || a.game.fallback_prediction;
-      const bp = b.game.prediction || b.game.fallback_prediction;
+      const ap = isUsableBasketballPrediction(a.game.prediction)
+        ? a.game.prediction
+        : isUsableBasketballPrediction(a.game.fallback_prediction)
+          ? a.game.fallback_prediction
+          : null;
+      const bp = isUsableBasketballPrediction(b.game.prediction)
+        ? b.game.prediction
+        : isUsableBasketballPrediction(b.game.fallback_prediction)
+          ? b.game.fallback_prediction
+          : null;
       if (sort !== "date" && (ap != null) !== (bp != null)) {
         return ap != null ? -1 : 1;
       }

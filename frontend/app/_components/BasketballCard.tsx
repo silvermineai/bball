@@ -14,6 +14,7 @@ import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
 import { explainBasketballPrediction, publishedScoreArithmetic } from "../_lib/basketball-prediction-explanation";
 import { matchupPaceLens } from "../_lib/basketball-pace-lens";
+import { isUsableBasketballPrediction } from "../_lib/basketball-matchups";
 import RotationWatchPanel from "./RotationWatchPanel";
 
 export default function BasketballCard({
@@ -41,17 +42,19 @@ export default function BasketballCard({
   forecastCreatedAt?: string | null;
   model?: Pick<BBOverview["model"], "teams" | "efficiency" | "tempo"> | null;
 }) {
-  const p = g.prediction || g.fallback_prediction || null;
+  const primaryPrediction = isUsableBasketballPrediction(g.prediction) ? g.prediction : null;
+  const fallbackPrediction = isUsableBasketballPrediction(g.fallback_prediction) ? g.fallback_prediction : null;
+  const p = primaryPrediction || fallbackPrediction;
   const forecastEdition = resolveForecastEdition(g, {
     modelId: forecastModelId,
     generatedAt: forecastCreatedAt,
   });
-  const coldStart = !g.prediction && !!g.fallback_prediction;
+  const coldStart = !primaryPrediction && !!fallbackPrediction;
   const scoreExplanation = p ? explainBasketballPrediction(model, g, p) : null;
   const publishedArithmetic = p ? publishedScoreArithmetic(p) : null;
   const paceLens = matchupPaceLens(p, homeRating, awayRating);
-  const signalContext = forecastSignalContext(p, !!g.prediction);
-  const confidence = forecastConfidenceSummary(p, !!g.prediction);
+  const signalContext = forecastSignalContext(p, !!primaryPrediction);
+  const confidence = forecastConfidenceSummary(p, !!primaryPrediction);
   const strongestFactor = strongestMatchupSignal(g.matchup_factors, g.matchup_factors_same_edition !== false);
   const unknownTeams = forecastUnknownTeams(p);
   const marketQuotes = (["spreads", "totals", "h2h"] as const)
@@ -66,7 +69,7 @@ export default function BasketballCard({
     rosterScenario ? "roster scenario" : null,
   ].filter((value): value is string => value !== null);
   const evidence = forecastEvidenceCoverage({
-    primary: !!g.prediction,
+    primary: !!primaryPrediction,
     scheduled: !!(g.source_time_valid && g.source_start),
     factors: !!g.matchup_factors && g.matchup_factors_same_edition !== false,
     roster: !!rosterScenario,
