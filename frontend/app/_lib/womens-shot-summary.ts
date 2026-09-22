@@ -9,6 +9,58 @@ export type WomensShotTendencyStat = WomensShotTendency & {
   makeRate: number | null;
 };
 
+export type WomensShotProfileIdentity = {
+  profile_id: string;
+  name: string;
+  team: string;
+};
+
+export type WomensShotProfileMatch = {
+  /** Profiles whose normalized name and team labels both match. */
+  exact: WomensShotProfileIdentity[];
+  /** A source abbreviation and a full team label can be compared conservatively. */
+  compatible: WomensShotProfileIdentity[];
+  /** Name matches are useful review candidates but never establish identity. */
+  nameMatches: WomensShotProfileIdentity[];
+};
+
+const identityText = (value: unknown) => String(value ?? "")
+  .normalize("NFKD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLowerCase()
+  .replace(/[’']/g, "")
+  .replace(/[^a-z0-9]+/g, " ")
+  .trim();
+
+/**
+ * Compare a player file with the separate shot-profile namespace.
+ *
+ * Exact name + team matches, or a unique conservative abbreviation/full-team
+ * compatibility match, can be opened as a convenience. Name-only matches are
+ * returned for manual review; callers must not silently treat them as an
+ * athlete join.
+ */
+export function matchWomensShotProfiles(
+  profiles: readonly WomensShotProfileIdentity[],
+  name: string,
+  team: string,
+): WomensShotProfileMatch {
+  const playerName = identityText(name);
+  const playerTeam = identityText(team);
+  if (!playerName) return { exact: [], compatible: [], nameMatches: [] };
+  const nameMatches = profiles.filter((profile) => identityText(profile.name) === playerName);
+  const exact = playerTeam
+    ? nameMatches.filter((profile) => identityText(profile.team) === playerTeam)
+    : [];
+  const compatible = playerTeam
+    ? nameMatches.filter((profile) => {
+      const sourceTeam = identityText(profile.team);
+      return sourceTeam === playerTeam || sourceTeam.includes(playerTeam) || playerTeam.includes(sourceTeam);
+    })
+    : [];
+  return { exact, compatible, nameMatches };
+}
+
 /** Build a label-search handoff; shot profile IDs remain separate from player IDs. */
 export function womensShotProfileSearchHref(name: string) {
   const params = new URLSearchParams({ gender: "women", division: "1" });

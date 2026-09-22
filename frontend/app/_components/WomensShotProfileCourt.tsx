@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { CourtLines } from "./PlayerShotLocationCourt";
 import { PLAYER_COURT } from "../_lib/player-shot-locations";
-import { womensShotTendencyStats, type WomensShotTendency } from "../_lib/womens-shot-summary";
+import { matchWomensShotProfiles, womensShotTendencyStats, type WomensShotProfileMatch, type WomensShotTendency } from "../_lib/womens-shot-summary";
+import { WOMENS_SOURCE_SCOPE_LABEL } from "../_lib/womens-source-scope";
 import { useSearchParams } from "next/navigation";
 
 type Cell = { column: number; row: number; attempts: number; makes: number };
@@ -24,6 +25,12 @@ type Publication = {
   profiles: Profile[];
 };
 
+type Props = {
+  /** Optional exact-ID player-file context. Shot IDs remain a separate namespace. */
+  playerName?: string;
+  playerTeam?: string;
+};
+
 const columns = 10;
 const rows = 9;
 const cellWidth = PLAYER_COURT.svgWidth / columns;
@@ -34,20 +41,30 @@ const fill = (attempts: number, maximum: number) => {
   return `rgba(206, 97, 47, ${(0.12 + 0.68 * Math.sqrt(attempts / maximum)).toFixed(3)})`;
 };
 
-export default function WomensShotProfileCourt() {
+export default function WomensShotProfileCourt({ playerName, playerTeam }: Props = {}) {
   const searchParams = useSearchParams();
   const [publication, setPublication] = useState<Publication | null>(null);
-  const [query, setQuery] = useState(() => searchParams.get("q") || "");
+  const [query, setQuery] = useState(() => searchParams.get("q") || playerName || "");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [identityMatch, setIdentityMatch] = useState<WomensShotProfileMatch | null>(null);
   useEffect(() => {
     fetch("/data/basketball/womens-shots.json")
       .then((response) => response.ok ? response.json() : null)
       .then((value: Publication | null) => {
         setPublication(value);
-        setSelectedId(value?.profiles[0]?.profile_id || null);
+        if (!value) return;
+        if (playerName) {
+          const match = matchWomensShotProfiles(value.profiles, playerName, playerTeam || "");
+          setIdentityMatch(match);
+          setQuery(playerName);
+          setSelectedId(match.compatible.length === 1 ? match.compatible[0].profile_id : null);
+        } else {
+          setIdentityMatch(null);
+          setSelectedId(value.profiles[0]?.profile_id || null);
+        }
       })
       .catch(() => setPublication(null));
-  }, []);
+  }, [playerName, playerTeam]);
 
   const matches = useMemo(() => {
     if (!publication) return [];
@@ -55,14 +72,16 @@ export default function WomensShotProfileCourt() {
     if (!needle) return publication.profiles.slice(0, 12);
     return publication.profiles.filter((profile) => `${profile.name} ${profile.team} ${profile.profile_id}`.toLowerCase().includes(needle)).slice(0, 20);
   }, [publication, query]);
-  const selected = publication?.profiles.find((profile) => profile.profile_id === selectedId) || matches[0] || null;
+  const selected = publication?.profiles.find((profile) => profile.profile_id === selectedId)
+    || (playerName ? null : matches[0])
+    || null;
   const maximum = Math.max(0, ...(selected?.cells.map((cell) => cell.attempts) || []));
   const cellMap = new Map((selected?.cells || []).map((cell) => [`${cell.column}-${cell.row}`, cell]));
   const bands = womensShotTendencyStats(selected?.bands || [], selected?.located_attempts || 0);
   const sides = womensShotTendencyStats(selected?.sides || [], selected?.located_attempts || 0);
 
   return <section className="field-card" aria-labelledby="wbb-shot-map-title">
-    <div className="eyebrow">PLAYER SHOT MAP · 2026 COURT COORDINATES</div>
+    <div className="eyebrow">PLAYER SHOT MAP · 2026 COURT COORDINATES · {WOMENS_SOURCE_SCOPE_LABEL}</div>
     <h2 id="wbb-shot-map-title">Where each player likes to shoot</h2>
     <p className="muted">Find a retained shot profile, then inspect attempt concentration, distance bands and court-side tendencies. Profiles stay in their recorded identity namespace so uncertain player joins remain visible.</p>
     {!publication ? <p className="muted">Loading shot-coordinate profiles…</p> : <>
@@ -76,6 +95,14 @@ export default function WomensShotProfileCourt() {
           {!matches.length ? <span className="muted">No shot profile matches.</span> : null}
         </div>
       </div>
+      {playerName && identityMatch && identityMatch.compatible.length !== 1 ? <div className="notice" role="status">
+        <strong>Shot profile identity review required</strong>
+        <p className="muted" style={{ margin: "4px 0 0" }}>
+          The production file is an exact athlete-ID record, while the shot archive uses a separate source profile ID. {identityMatch.nameMatches.length
+            ? `${identityMatch.nameMatches.length} shot profile${identityMatch.nameMatches.length === 1 ? "" : "s"} share this name; select one only after reviewing its team label.`
+            : "No shot profile has the same recorded name."}
+        </p>
+      </div> : identityMatch?.compatible.length === 1 ? <p className="note" role="status">Opened one name-matched shot profile with a compatible source team label. Review the source team and identity status below; the separate IDs are not joined.</p> : null}
       {selected ? <div className="wbb-shot-map-layout">
         <div>
           <svg viewBox={`0 0 ${PLAYER_COURT.svgWidth} ${PLAYER_COURT.svgHeight}`} className="wbb-shot-map-court" role="img" aria-labelledby="wbb-shot-map-title wbb-shot-map-description">
@@ -108,7 +135,7 @@ export default function WomensShotProfileCourt() {
             {sides.map((row) => <div key={row.label}><span>{row.label}</span><strong>{(row.share * 100).toFixed(1)}%<small>{row.attempts.toLocaleString()} ATT · {row.makeRate == null ? "—" : `${(row.makeRate * 100).toFixed(1)}% FG`}</small></strong></div>)}
           </div>
         </div>
-      </div> : null}
+      </div> : playerName ? <p className="empty">No shot profile is opened automatically. Choose a reviewed candidate above when the source name is available.</p> : null}
       <p className="muted">{publication.coverage.profiles.toLocaleString()} shooter profiles · {publication.coverage.source_attempts.toLocaleString()} attempts · {publication.coverage.ambiguous_profiles.toLocaleString()} profiles flagged for identity review.</p>
     </>}
   </section>;

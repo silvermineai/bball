@@ -14,6 +14,7 @@ import {
 import { formatWomensPlayerStat, womensPlayerDetailGroups, womensPlayerFieldLabel } from "../../_lib/womens-player-detail";
 import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../../_lib/womens-source-scope";
 import { womensShotProfileSearchHref } from "../../_lib/womens-shot-summary";
+import WomensShotProfileCourt from "../../_components/WomensShotProfileCourt";
 
 type Edition = {
   observed_player_season: number;
@@ -118,6 +119,7 @@ export default function WomensPlayerProfile() {
       <div className="section-heading"><div><div className="eyebrow">Season release / retained fields</div><h2>Open the full stat line.</h2></div><span className="note">{Object.keys(seasonStats).length} numeric fields</span></div>
       {profile.season ? <>{womensPlayerDetailGroups.map((group) => <div key={group.label} style={{ marginTop: 18 }}><h3>{group.label}</h3><div className="raw-stat-grid">{group.fields.map(([key, label, kind]) => <div key={key}><dt>{label}</dt><dd>{formatWomensPlayerStat(seasonStats, key, kind)}</dd></div>)}</div></div>)}{Object.keys(seasonStats).filter((key) => !womensPlayerDetailGroups.flatMap((group) => group.fields.map(([field]) => field)).includes(key)).length ? <p className="note">Other retained fields: {Object.keys(seasonStats).filter((key) => !womensPlayerDetailGroups.flatMap((group) => group.fields.map(([field]) => field)).includes(key)).map(womensPlayerFieldLabel).join(" · ")}</p> : null}</> : <p className="empty">The player is present in the game-box release but not the 1,000-row season release.</p>}
     </section>
+    <WomensShotProfileCourt playerName={profile.name} playerTeam={profile.team} />
     <section className="section paper-panel"><h2>Read the evidence carefully.</h2><p>This is a current observed production file for one exact athlete ID. It does not infer eligibility, injury, transfer status, role, or future performance. The season release and game-box archive are separate views; missing values remain unavailable.</p></section>
   </>;
 }
