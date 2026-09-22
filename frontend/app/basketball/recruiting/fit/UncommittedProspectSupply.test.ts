@@ -22,6 +22,17 @@ const payload = (rows: UncommittedProspect[] = [row("1", "PG")]) => ({
   total: rows.length,
   edition: "a".repeat(64),
   captured_at: "2026-09-22T00:00:00Z",
+  field_coverage: {
+    total: rows.length,
+    position: rows.filter((item) => item.position).length,
+    rank: rows.filter((item) => item.rank != null).length,
+    grade: rows.filter((item) => item.grade != null).length,
+    high_school: rows.filter((item) => item.high_school).length,
+    hometown: rows.filter((item) => item.hometown).length,
+    height: rows.filter((item) => item.height_inches != null).length,
+    weight: rows.filter((item) => item.weight_pounds != null).length,
+  },
+  rank_quality: { ranked_rows: rows.filter((item) => item.rank != null).length, tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 },
   rows,
 });
 
@@ -37,6 +48,15 @@ describe("uncommitted prospect supply", () => {
   it("rejects a malformed or wrong-edition page", () => {
     expect(parseUncommittedProspectPage({ ...payload(), season: 2026 })).toBeNull();
     expect(parseUncommittedProspectPage({ ...payload(), edition: "bad" })).toBeNull();
+    expect(parseUncommittedProspectPage({ ...payload(), rank_quality: { ranked_rows: 0, tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 } })).toBeNull();
+    expect(parseUncommittedProspectPage({ ...payload(), field_coverage: { ...payload().field_coverage, rank: 0 } })).toBeNull();
+  });
+
+  it("retains cohort coverage while allowing unranked rows", () => {
+    const value = parseUncommittedProspectPage(payload([row("1", "PG"), row("2", "PG", null)]));
+    expect(value?.total).toBe(2);
+    expect(value?.coverage).toMatchObject({ total: 2, rank: 1, grade: 2 });
+    expect(value?.rank_quality.ranked_rows).toBe(1);
   });
 
   it("uses the same guard, wing and big mapping as the fit board", () => {
