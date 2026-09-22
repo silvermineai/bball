@@ -184,6 +184,7 @@ describe("bball api", () => {
         box_categories: Array<{ category: string; games: number }>;
         box_totals: Array<{ category: string; games: number; totals: Record<string, number> }>;
         box_rates: Array<{ category: string; games: number; rates: Record<string, number> }>;
+        source_field_coverage: Array<{ field: string; observed_rows: number; numeric_rows: number }>;
       };
       source_receipts: Array<Record<string, unknown>>;
       rows: Array<Record<string, unknown>>;
@@ -212,6 +213,21 @@ describe("bball api", () => {
     expect(body.summary.box_rates[1]).toEqual({ category: "passing", games: 1, rates: { completionPct: 60, interceptionRatePct: 0, touchdownRatePct: 20, yardsPerAttempt: 8.4 } });
     expect(body.summary.box_rates[2]).toMatchObject({ category: "rushing", games: 1, rates: { yardsPerAttempt: 6.25 } });
     expect(body.summary.box_rates[2].rates.touchdownRatePct).toBeCloseTo(16.6667, 3);
+    expect(body.summary.source_field_coverage).toEqual(expect.arrayContaining([
+      { field: "EPAplay", observed_rows: 1, numeric_rows: 1 },
+      { field: "TEPA", observed_rows: 1, numeric_rows: 1 },
+      { field: "TEPA_rank", observed_rows: 1, numeric_rows: 1 },
+      { field: "division", observed_rows: 1, numeric_rows: 0 },
+      { field: "game_id", observed_rows: 3, numeric_rows: 3 },
+      { field: "passesDefended", observed_rows: 1, numeric_rows: 1 },
+      { field: "rushingYards", observed_rows: 1, numeric_rows: 1 },
+      { field: "sacks", observed_rows: 1, numeric_rows: 1 },
+      { field: "stat_1", observed_rows: 1, numeric_rows: 0 },
+      { field: "totalTackles", observed_rows: 1, numeric_rows: 1 },
+    ]));
+    expect(body.summary.source_field_coverage).toEqual(
+      [...body.summary.source_field_coverage].sort((left, right) => left.field.localeCompare(right.field)),
+    );
     expect(body.source_receipts.every((receipt) => !("url" in receipt))).toBe(true);
   });
 

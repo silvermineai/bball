@@ -367,6 +367,12 @@ type FootballCareerBoxTotals = FootballBoxTotals & {
   team_id: string | null;
 };
 
+type FootballSourceFieldCoverage = {
+  field: string;
+  observed_rows: number;
+  numeric_rows: number;
+};
+
 /**
  * Derive a small set of rate stats only when both the source numerator and
  * denominator survived the retained box rows.  These are descriptive season
@@ -540,7 +546,7 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
       .bind(id, season, page * 50).all<{ dataset: string; season: number; record_key: string; athlete_id: string; team_id: string | null; game_id: string | null; category: string; stats_json: string; kickoff: string | null; home_name: string | null; away_name: string | null }>(),
     db.prepare(`SELECT dataset,category,team_id,stats_json
       FROM football_stats
-      WHERE athlete_id=? AND season=? AND dataset IN ('passing','rushing','receiving','box')
+      WHERE athlete_id=? AND season=?
       ORDER BY dataset,category,record_key`)
       .bind(id, season)
       .all<{ dataset: string; category: string; team_id: string | null; stats_json: string }>(),
@@ -563,6 +569,22 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
     const parsed = typeof value === "number" ? value : Number(value);
     return Number.isFinite(parsed) ? parsed : null;
   };
+  // Keep a complete inventory of the retained source keys for this exact
+  // athlete-season. This is deliberately a field inventory rather than a
+  // normalized stat dictionary: unfamiliar provider keys stay visible and
+  // missing values are counted as missing instead of being coerced to zero.
+  const sourceFieldCoverage = new Map<string, { observed_rows: number; numeric_rows: number }>();
+  for (const row of summaryRows) {
+    for (const [field, value] of Object.entries(row.stats)) {
+      const current = sourceFieldCoverage.get(field) || { observed_rows: 0, numeric_rows: 0 };
+      current.observed_rows += 1;
+      if (number(value) != null) current.numeric_rows += 1;
+      sourceFieldCoverage.set(field, current);
+    }
+  }
+  const sourceFieldCoverageRows: FootballSourceFieldCoverage[] = [...sourceFieldCoverage.entries()]
+    .map(([field, counts]) => ({ field, ...counts }))
+    .sort((left, right) => left.field.localeCompare(right.field));
   const production = summaryRows
     .filter((row) => row.dataset !== "box")
     .map((row) => ({
@@ -638,7 +660,7 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
       : [];
   });
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories, box_totals: boxTotals, box_rates: boxRates }, source_receipts: sourceReceipts });
+  return c.json({ rows, total: count.total, name, season, page, summary: { production, box_categories: boxCategories, box_totals: boxTotals, box_rates: boxRates, source_field_coverage: sourceFieldCoverageRows }, source_receipts: sourceReceipts });
 });
 
 app.get("/api/football/coverage", async (c) => {

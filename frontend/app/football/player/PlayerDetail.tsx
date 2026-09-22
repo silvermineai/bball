@@ -52,6 +52,11 @@ type Detail = {
       games: number;
       rates: Record<string, number>;
     }[];
+    source_field_coverage?: {
+      field: string;
+      observed_rows: number;
+      numeric_rows: number;
+    }[];
   };
   source_receipts?: {
     dataset: string;
@@ -266,6 +271,26 @@ export default function PlayerDetail() {
                           <td>{Object.entries(item.rates).map(([key, value]) => (
                             <span className="table-subrow" key={key}><strong>{rateLabel(key)}</strong><small>{formatRate(key, value)}</small></span>
                           ))}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              {(data.summary.source_field_coverage || []).length > 0 && (
+                <div style={{ marginTop: 18 }}>
+                  <div className="eyebrow">Complete source field inventory</div>
+                  <p className="note">
+                    Every top-level field retained for this exact athlete-season across the imported source rows. The inventory keeps provider names intact; numeric counts identify fields that can be read as numbers without claiming a shared definition.
+                  </p>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead><tr><th>Source field</th><th className="numeric">Rows carrying field</th><th className="numeric">Finite numeric values</th></tr></thead>
+                      <tbody>{(data.summary.source_field_coverage || []).map((field) => (
+                        <tr key={field.field}>
+                          <th scope="row"><code>{field.field}</code></th>
+                          <td className="numeric">{field.observed_rows.toLocaleString()}</td>
+                          <td className="numeric">{field.numeric_rows.toLocaleString()}</td>
                         </tr>
                       ))}</tbody>
                     </table>
