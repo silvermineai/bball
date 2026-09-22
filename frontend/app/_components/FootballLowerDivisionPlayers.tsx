@@ -16,6 +16,7 @@ import {
   type LowerFootballRawRow,
   type LowerFootballRankingBasis,
   lowerFootballPlayerRankValue,
+  lowerFootballMetricKeys,
   validateLowerFootballPlayerArchive,
 } from "../_lib/football-lower-player-view";
 
@@ -69,11 +70,12 @@ export default function FootballLowerDivisionPlayers({ division }: { division: "
     () => lowerFootballSourceFieldCoverage(archive?.rows || [], target),
     [archive, target],
   );
+  const metricKeys = useMemo(() => lowerFootballMetricKeys(rows), [rows]);
   const download = () => downloadCsv(
     `football-${target}-player-${category}-2026.csv`,
     toCsv(
-      ["Rank", "Division", "Category", "Ranking basis", "Player", "Athlete ID", "Team", "Team ID", "Games", "Source rows", definition.metric, `${definition.metric} per game`, ...Object.keys(rows[0]?.metrics || {})],
-      rows.map((row, index) => [index + 1, row.division.toUpperCase(), definition.label, rankingBasis === "per_game" ? "per_game" : "total", row.athlete, row.athlete_id, row.team, row.team_id, row.games, row.source_rows, row.primary, row.per_game, ...Object.keys(rows[0]?.metrics || {}).map((key) => row.metrics[key] ?? null)]),
+      ["Rank", "Division", "Category", "Ranking basis", "Player", "Athlete ID", "Team", "Team ID", "Games", "Source rows", definition.metric, `${definition.metric} per game`, ...metricKeys],
+      rows.map((row, index) => [index + 1, row.division.toUpperCase(), definition.label, rankingBasis === "per_game" ? "per_game" : "total", row.athlete, row.athlete_id, row.team, row.team_id, row.games, row.source_rows, row.primary, row.per_game, ...metricKeys.map((key) => row.metrics[key] ?? null)]),
     ),
   );
   const downloadRaw = () => {

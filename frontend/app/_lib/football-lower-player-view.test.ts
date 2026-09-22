@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballPlayerRankValue, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballPlayerRankValue, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -72,6 +72,13 @@ describe("lower football player aggregation", () => {
     expect(lowerFootballPlayerRankValue(result[0], "total")).toBe(300);
     expect(lowerFootballPlayerRankValue(result[0], "per_game")).toBe(150);
     expect(lowerFootballPlayerRankValue(result[1], "per_game")).toBe(180);
+  });
+
+  it("keeps metric columns that appear only on later ranked players", () => {
+    expect(lowerFootballMetricKeys([
+      { metrics: { passingYards: 200, passingTouchdowns: 2 } },
+      { metrics: { passingYards: 100, interceptions: 1 } },
+    ])).toEqual(["interceptions", "passingTouchdowns", "passingYards"]);
   });
 
   it("fails closed across divisions and categories", () => {

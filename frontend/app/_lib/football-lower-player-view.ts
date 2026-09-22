@@ -217,6 +217,17 @@ export type LowerFootballRankingBasis = "total" | "per_game";
 const finite = (value: number) => Number.isFinite(value);
 
 /**
+ * Return every retained provider metric represented in a ranked cohort.
+ * Different player rows can carry different source fields, so a first-row
+ * key list would silently omit columns from later rows during export.
+ */
+export function lowerFootballMetricKeys(
+  players: readonly Pick<LowerFootballPlayer, "metrics">[],
+): string[] {
+  return [...new Set(players.flatMap((player) => Object.keys(player.metrics)))].sort((left, right) => left.localeCompare(right));
+}
+
+/**
  * ESPN lower-division boxes can contain a synthetic ``Team`` row with a
  * negative ID for team totals. Keep that row in the raw archive for audit and
  * export, but never let it become a player in a ranking cohort.
