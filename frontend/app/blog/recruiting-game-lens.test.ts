@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBRosterScenario } from "../_lib/basketball-types";
-import { recruitingGamePlayerHref, selectRecruitingGameLenses } from "./recruiting-game-lens";
+import { recruitingGamePlayerEvidence, recruitingGamePlayerHref, selectRecruitingGameLenses } from "./recruiting-game-lens";
 
 const game = (overrides: Partial<BBGame> = {}): BBGame => ({
   id: "g-1",
@@ -46,6 +46,11 @@ const scenario = (overrides: Partial<BBRosterScenario> = {}): BBRosterScenario =
 describe("recruiting game player links", () => {
   it("preserves the exact athlete ID and prior season in the player archive URL", () => {
     expect(recruitingGamePlayerHref("a/b", 2026)).toBe("/basketball/ncaa-player/?id=a%2Fb&season=2026");
+  });
+
+  it("shows prior workload, observed BPM and exact-ID continuity without filling missing values", () => {
+    expect(recruitingGamePlayerEvidence({ athlete_id: "a", name: "Player", prior_minutes: 812.5, bpm: 3.2, returning: true, represented: true, weighted_bpm_minutes: 2600 })).toBe("813 prior min · 3.2 BPM · Returning · exact roster match");
+    expect(recruitingGamePlayerEvidence({ athlete_id: "b", name: "Player", prior_minutes: 500, bpm: null, returning: false, represented: false, weighted_bpm_minutes: null })).toBe("500 prior min · — BPM · No current roster match");
   });
 });
 

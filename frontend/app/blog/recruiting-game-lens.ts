@@ -1,4 +1,5 @@
-import type { BBGame, BBRosterModel, BBRosterScenario } from "../_lib/basketball-types";
+import type { BBGame, BBRosterModel, BBRosterPlayerWatch, BBRosterScenario } from "../_lib/basketball-types";
+import { rotationWatchNumber, rotationWatchStatus } from "../_lib/rotation-watch";
 
 export type RecruitingGameLens = {
   game: BBGame;
@@ -8,6 +9,15 @@ export type RecruitingGameLens = {
 /** Link a watched scenario row to the exact prior-season player archive. */
 export function recruitingGamePlayerHref(athleteId: string, priorSeason = 2026): string {
   return `/basketball/ncaa-player/?id=${encodeURIComponent(athleteId)}&season=${encodeURIComponent(String(priorSeason))}`;
+}
+
+/**
+ * Keep the blog's short player callout tied to the exact roster-scenario
+ * evidence. Missing BPM stays visible instead of becoming a zero or an
+ * inferred production grade.
+ */
+export function recruitingGamePlayerEvidence(player: BBRosterPlayerWatch): string {
+  return `${rotationWatchNumber(player.prior_minutes, 0)} prior min · ${rotationWatchNumber(player.bpm)} BPM · ${rotationWatchStatus(player)}`;
 }
 
 /**
