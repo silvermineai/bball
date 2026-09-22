@@ -16,6 +16,9 @@ export type WomensRecruitingProspect = {
   position?: string | null;
   grade?: number | null;
   rank?: number | null;
+  position_rank?: number | null;
+  state_rank?: number | null;
+  region_rank?: number | null;
   height_inches?: number | null;
   weight_pounds?: number | null;
   status?: string | null;
@@ -96,6 +99,9 @@ export const womensRecruitingProspectCsvHeaders = [
   "recruiting_class",
   "position",
   "national_rank",
+  "position_rank",
+  "state_rank",
+  "region_rank",
   "grade",
   "status",
   "committed_team_id",
@@ -115,6 +121,9 @@ export function womensRecruitingProspectCsvRows(
     recruitingClass,
     record.position ?? null,
     record.rank ?? null,
+    record.position_rank ?? null,
+    record.state_rank ?? null,
+    record.region_rank ?? null,
     record.grade ?? null,
     record.status ?? null,
     record.committed_team_id ?? null,
@@ -212,12 +221,18 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
       || Number.isNaN(Date.parse(recordCapturedAt))) return null;
     const grade = record.grade == null ? null : record.grade;
     const rank = record.rank == null ? null : record.rank;
+    const positionRank = record.position_rank == null ? null : record.position_rank;
+    const stateRank = record.state_rank == null ? null : record.state_rank;
+    const regionRank = record.region_rank == null ? null : record.region_rank;
     // ESPN's recruiting grade is a percentage-like 0–100 value. Reject an
     // impossible source value before it can become a misleading leader or
     // distort the release coverage denominator. Missing grades remain valid
     // and are handled as unavailable throughout the board.
     if (grade != null && (typeof grade !== "number" || !Number.isFinite(grade) || grade < 0 || grade > 100)) return null;
     if (rank != null && (typeof rank !== "number" || !Number.isSafeInteger(rank) || rank <= 0)) return null;
+    for (const dimensionalRank of [positionRank, stateRank, regionRank]) {
+      if (dimensionalRank != null && (typeof dimensionalRank !== "number" || !Number.isSafeInteger(dimensionalRank) || dimensionalRank <= 0)) return null;
+    }
     const height = record.height_inches == null ? null : record.height_inches;
     const weight = record.weight_pounds == null ? null : record.weight_pounds;
     if (height != null && (typeof height !== "number" || !Number.isFinite(height) || height < 0)) return null;
@@ -229,6 +244,9 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
       position: typeof record.position === "string" && record.position.trim() ? record.position.trim() : null,
       grade: grade as number | null,
       rank: rank as number | null,
+      position_rank: positionRank as number | null,
+      state_rank: stateRank as number | null,
+      region_rank: regionRank as number | null,
       height_inches: height as number | null,
       weight_pounds: weight as number | null,
       status: typeof record.status === "string" && record.status.trim() ? record.status.trim() : null,
@@ -315,6 +333,16 @@ export function rankWomensRecruitingProspects(
     .filter((row) => !needle || `${row.name} ${row.position || ""} ${row.high_school || ""} ${row.hometown || ""} ${row.athlete_id}`.toLowerCase().includes(needle))
     .sort((left, right) => (right.grade ?? -Infinity) - (left.grade ?? -Infinity) || left.name.localeCompare(right.name) || left.athlete_id.localeCompare(right.athlete_id))
     .slice(0, safeLimit);
+}
+
+/** Count only source-reported rank dimensions; no rank is synthesized locally. */
+export function womensRecruitingRankCoverage(records: readonly WomensRecruitingProspect[]) {
+  return {
+    national: records.filter((record) => record.rank != null).length,
+    position: records.filter((record) => record.position_rank != null).length,
+    state: records.filter((record) => record.state_rank != null).length,
+    region: records.filter((record) => record.region_rank != null).length,
+  };
 }
 
 /**

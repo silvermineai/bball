@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import release from "../../public/data/basketball/womens-recruiting.json";
-import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingHistory, validateWomensRecruitingRelease, womensRecruitingGradeBands, womensRecruitingPositionSupply, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows } from "./womens-recruiting-intel";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingHistory, validateWomensRecruitingRelease, womensRecruitingGradeBands, womensRecruitingPositionSupply, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows, womensRecruitingRankCoverage } from "./womens-recruiting-intel";
 
 const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[0][number]> = {}) => ({
   player_id: "p-1",
@@ -100,8 +100,21 @@ describe("women's recruiting prospect cohort", () => {
     }];
     expect(womensRecruitingProspectCsvHeaders).toContain("national_rank");
     expect(womensRecruitingProspectCsvRows(records, 2027)[0]).toEqual([
-      "17", "A Prospect", 2027, null, null, 92, "Undecided", null, null, "North High", null,
+      "17", "A Prospect", 2027, null, null, null, null, null, 92, "Undecided", null, null, "North High", null,
     ]);
+  });
+
+  it("preserves source dimensional ranks and reports each rank cohort separately", () => {
+    const records = [{ athlete_id: "17", name: "A Prospect", rank: 42, position_rank: 7, state_rank: 3, region_rank: 12, grade: 92 }];
+    expect(womensRecruitingRankCoverage(records)).toEqual({ national: 1, position: 1, state: 1, region: 1 });
+    expect(womensRecruitingProspectCsvHeaders).toContain("region_rank");
+    expect(womensRecruitingProspectCsvRows(records, 2027)[0].slice(3, 9)).toEqual([null, 42, 7, 3, 12, 92]);
+    const sourceRelease = {
+      schema_version: 1, sport: "basketball", gender: "women", season: 2027, edition: "f".repeat(64),
+      captured_at: "2026-09-22T04:10:24.839220Z", source: source(1), coverage: { prospects: 1, graded: 1, ranked: 1, committed: 0 },
+      records: [{ athlete_id: "101", name: "A", grade: 92, rank: 42, position_rank: 7, state_rank: 3, region_rank: 12, ...sourceFields("101") }],
+    };
+    expect(validateWomensRecruitingRelease(sourceRelease)?.records[0]).toMatchObject({ rank: 42, position_rank: 7, state_rank: 3, region_rank: 12 });
   });
 
   it("summarizes source statuses without turning verbal labels into destinations", () => {
