@@ -6,11 +6,12 @@ import { useSearchParams } from "next/navigation";
 import type { Game, Overview } from "../../_lib/data";
 import { filterFootballMatchupGames, parseFootballMatchupDivision } from "../../_lib/football-matchup-view";
 import { footballCalibrationReliabilityForDivision, footballCalibrationSummary, footballModelFactors, type FootballModelCalibration, type FootballReliabilityBand } from "../../_lib/football-model-factors";
+import { loadLiveFootballForecasts, loadLiveFootballModelReliability, mergeLiveFootballForecasts } from "../../_lib/live-football-forecasts";
 import { fmt, kick, signed } from "../../_lib/format";
 
 type Props = {
   games: Game[];
-  model: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef"> & {
+  model: Pick<Overview["model"], "id" | "teams" | "margin_coef" | "total_coef"> & {
     calibration?: FootballModelCalibration;
     evaluation?: { reliability?: FootballReliabilityBand[] };
   };
@@ -24,11 +25,48 @@ type Props = {
 export default function ForecastPreview({ games, model }: Props) {
   const params = useSearchParams();
   const [hydrated, setHydrated] = useState(false);
+  const [liveGames, setLiveGames] = useState<Game[] | null>(null);
+  const [liveModelId, setLiveModelId] = useState<string | null>(null);
+  const [liveReliability, setLiveReliability] = useState<FootballReliabilityBand[] | null>(null);
   useEffect(() => setHydrated(true), []);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadLiveFootballForecasts(controller.signal)
+      .then((rows) => {
+        if (controller.signal.aborted) return;
+        const modelId = rows.find((row) => row.model_id)?.model_id || null;
+        setLiveGames(mergeLiveFootballForecasts(games, rows));
+        setLiveModelId(modelId);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setLiveGames(null);
+          setLiveModelId(null);
+        }
+      });
+    return () => controller.abort();
+  }, [games]);
+  useEffect(() => {
+    if (!liveModelId) {
+      setLiveReliability(null);
+      return;
+    }
+    const controller = new AbortController();
+    setLiveReliability(null);
+    loadLiveFootballModelReliability(controller.signal, liveModelId)
+      .then((summary) => {
+        if (!controller.signal.aborted && summary.modelId === liveModelId) setLiveReliability(summary.reliability);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLiveReliability(null);
+      });
+    return () => controller.abort();
+  }, [liveModelId]);
   const division = parseFootballMatchupDivision(params.get("division"));
+  const activeGames = liveGames || games;
   const forecastPreview = useMemo(
-    () => filterFootballMatchupGames(games, division).filter((game) => game.prediction).slice(0, 20),
-    [division, games],
+    () => filterFootballMatchupGames(activeGames, division).filter((game) => game.prediction).slice(0, 20),
+    [activeGames, division],
   );
   const divisionLabel = division === "d1" ? "D1 · FBS/FCS" : division.toUpperCase();
 
@@ -52,7 +90,7 @@ export default function ForecastPreview({ games, model }: Props) {
                 // that calibration context into an exact-division lower-
                 // division forecast if one is added to the schedule later.
                 const reliability = prediction && division === "d1"
-                  ? footballCalibrationReliabilityForDivision(prediction.home_win_probability, model.evaluation?.reliability, division)
+                  ? footballCalibrationReliabilityForDivision(prediction.home_win_probability, liveModelId ? liveReliability : model.evaluation?.reliability, division)
                   : null;
                 return <tr key={game.id}>
                   <td>{kick(game.kickoff)}</td>
@@ -73,7 +111,9 @@ export default function ForecastPreview({ games, model }: Props) {
                     <strong>Primary</strong>
                     <small>{prediction?.margin_low == null || prediction.margin_high == null ? "Range unavailable" : `Range ${fmt(prediction.margin_low)} to ${fmt(prediction.margin_high)}`}</small>
                     {prediction && (() => {
-                      const factors = footballModelFactors(model, game);
+                      const factors = !liveModelId || prediction.model_id === model.id
+                        ? footballModelFactors(model, game)
+                        : null;
                       return <details className="forecast-factor-disclosure">
                         <summary>Explain estimate</summary>
                         {factors ? <dl className="raw-stat-grid">
@@ -93,7 +133,8 @@ export default function ForecastPreview({ games, model }: Props) {
         </>
       )}
       <p className="note" style={{ marginTop: 12 }}>Scores, win probability, margin, total and the calibrated range come from the registered Silvermine model edition. Held-out context reports the historical outcome rate for the probability band containing this estimate; it is not a game-specific confidence guarantee. Open the desk below to filter the full slate and compare qualifying market observations.</p>
-      {footballCalibrationSummary(model.calibration) && <p className="note" style={{ marginTop: 8 }}>{footballCalibrationSummary(model.calibration)}</p>}
+      <p className="note" role="status">{liveGames && liveModelId ? `Live forecast edition ${liveModelId} is connected to this preview.` : liveGames ? "Live forecast rows are connected; model edition identity is unavailable." : "Checking the latest live forecast edition; the published page edition remains visible until it responds."}</p>
+      {(!liveModelId || liveModelId === model.id) && footballCalibrationSummary(model.calibration) && <p className="note" style={{ marginTop: 8 }}>{footballCalibrationSummary(model.calibration)}</p>}
     </section>
   );
 }
