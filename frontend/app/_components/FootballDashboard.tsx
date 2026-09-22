@@ -15,6 +15,7 @@ import {
   type LowerFootballCategory,
   type LowerFootballRawRow,
 } from "../_lib/football-lower-player-view";
+import { topFootballSourceBoxLeaders } from "../_lib/football-leaders";
 
 type Production = {
   games?: number | null;
@@ -25,6 +26,7 @@ type Production = {
   epa_per_play: number | null;
   touchdowns: number | null;
   rank: number | null;
+  metrics?: Record<string, number>;
 };
 
 type Player = {
@@ -164,6 +166,33 @@ function PlayerTable({ players, season }: { players: Player[]; season: number })
       </tr>)}</tbody>
     </table>
   </div>;
+}
+
+const sourceBoxLeaderSpecs = [
+  { category: "defensive", metric: "tackles", label: "Tackles" },
+  { category: "interceptions", metric: "interceptions", label: "Interceptions" },
+  { category: "kicking", metric: "total_kicking_points", label: "Kicking points" },
+  { category: "punting", metric: "punt_yards", label: "Punt yards" },
+] as const;
+
+function SourceBoxPlayerTable({ players, season }: { players: Player[]; season: number }) {
+  const rows = sourceBoxLeaderSpecs.flatMap((spec) => topFootballSourceBoxLeaders(players, spec.category, spec.metric, 5).map((row) => ({ ...row, label: spec.label })));
+  return <section className="dashboard-section" aria-labelledby="football-source-box-players">
+    <div className="dashboard-section-heading"><div><span className="eyebrow">IDENTIFIED SOURCE BOX / {season}</span><h2 id="football-source-box-players">Defense and specialists</h2></div><Link href="/football/players/?category=defensive">Open player source-box rankings →</Link></div>
+    <p className="dashboard-caption">Exact athlete and team IDs from the completed player edition, ranked within each retained source category. Categories stay separate; this table does not create a combined player grade.</p>
+    <div className="dashboard-table-wrap"><table className="data-table dashboard-table">
+      <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Category</th><th>Source metric</th><th className="numeric">Value</th></tr></thead>
+      <tbody>{rows.map((row) => <tr key={`${row.category}-${row.metric}-${row.id}-${row.team_id || "unknown"}`}>
+        <td className="rank-number">{row.rank}</td>
+        <th scope="row"><Link href={`/football/player/?id=${encodeURIComponent(row.id)}&season=${season}`}>{row.name}</Link><small>{row.conference || "Conference unavailable"} · {row.division.toUpperCase()}</small></th>
+        <td>{row.team}<small>{row.team_id || "Team ID unavailable"}</small></td>
+        <td>{row.category}</td>
+        <td>{row.label}</td>
+        <td className="numeric"><strong>{fmt(row.value, 0)}</strong></td>
+      </tr>)}</tbody>
+    </table></div>
+    {!rows.length ? <p className="empty">No exact-ID source-box leader rows are available for this edition.</p> : null}
+  </section>;
 }
 
 const lowerLeaderCategories = ["passing", "rushing", "receiving"] as const satisfies readonly LowerFootballCategory[];
@@ -343,6 +372,7 @@ export default function FootballDashboard() {
         <PlayerTable players={players} season={completedPlayerSeason} />
       </section>
     </div>
+    <SourceBoxPlayerTable players={players} season={completedPlayerSeason} />
     {lowerFootballArchive ? <div className="dashboard-two-col">
       <LowerDivisionPlayerTable archive={lowerFootballArchive} division="d2" />
       <LowerDivisionPlayerTable archive={lowerFootballArchive} division="d3" />
