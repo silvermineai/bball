@@ -41,7 +41,11 @@ def test_wbb_readiness_requires_receipt_hashes_before_fit(tmp_path):
 
     forecast = tmp_path / "forecast.json"
     forecast.write_text(json.dumps({
-        "model_id": "wbb-test",
+        "sport": "basketball",
+        "gender": "women",
+        "target_season": 2027,
+        "model_status": "published",
+        "model_id": "womens-basketball-test",
         "validation": {"games": 100, "interval_games": 100, "interval_coverage": 0.8},
         "calibration": {
             "games": 100,
@@ -50,17 +54,47 @@ def test_wbb_readiness_requires_receipt_hashes_before_fit(tmp_path):
             "log_loss": 0.6,
             "margin_half_width": 20.0,
         },
-        "forecasts": [{"game_id": "g1"}],
+        "forecasts": [{"game_id": "g1", "date": "2026-11-01T00:00:00Z", "home_id": "home", "away_id": "away", "prediction": {}}],
     }))
     result = assess(tmp_path, forecast_path=forecast)
     assert result["status"] == "published"
     assert result["missing_inputs"] == []
-    assert result["model_id"] == "wbb-test"
+    assert result["model_id"] == "womens-basketball-test"
     assert result["forecast_rows"] == 1
     assert result["checks"][-1]["status"] == "ready"
     assert release_url("team_box", 2026).endswith(
         "/espn_womens_college_basketball_team_boxscores/team_box_2026.parquet"
     )
+
+
+def test_wbb_readiness_rejects_wrong_forecast_scope_even_when_inputs_are_ready(tmp_path):
+    for season in (2023, 2024, 2025, 2026):
+        retain_asset(tmp_path, "team_box", season, f"team_box_{season}.parquet")
+        retain_asset(tmp_path, "schedule", season, f"wbb_schedule_{season}.parquet")
+    retain_asset(tmp_path, "schedule", 2027, "wbb_schedule_2027.parquet")
+
+    forecast = tmp_path / "forecast.json"
+    forecast.write_text(json.dumps({
+        "sport": "basketball",
+        "gender": "men",
+        "target_season": 2027,
+        "model_status": "published",
+        "model_id": "womens-basketball-test",
+        "validation": {"games": 100, "interval_games": 100, "interval_coverage": 0.8},
+        "calibration": {
+            "games": 100,
+            "logistic_coefficients": [0.0, 0.1],
+            "brier": 0.2,
+            "log_loss": 0.6,
+            "margin_half_width": 20.0,
+        },
+        "forecasts": [{"game_id": "g1", "date": "2026-11-01T00:00:00Z", "home_id": "home", "away_id": "away", "prediction": {}}],
+    }))
+    result = assess(tmp_path, forecast_path=forecast)
+    assert result["status"] == "ready_for_fit"
+    assert result["model_id"] is None
+    assert result["checks"][-1]["key"] == "published_forecast_contract"
+    assert result["checks"][-1]["status"] == "blocked"
 
 
 def test_wbb_readiness_keeps_fit_ready_distinct_from_published(tmp_path):

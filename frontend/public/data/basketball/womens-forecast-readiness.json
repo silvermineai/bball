@@ -42,6 +42,13 @@
       "status": "ready",
       "detail": "Upcoming schedule rows are context only until a separate WBB model passes the historical gates.",
       "required": "scheduled games with stable game and team IDs"
+    },
+    {
+      "key": "published_forecast_contract",
+      "label": "Published WBB forecast contract",
+      "status": "ready",
+      "detail": "The forecast artifact carries the women’s scope, target season, published model identity, and unique game rows with team IDs, dates, and predictions.",
+      "required": "sport=basketball, gender=women, target season, published WBB model ID, unique games, team IDs, dates, and prediction objects"
     }
   ],
   "assets": [

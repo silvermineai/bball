@@ -184,22 +184,61 @@ def assess(
             "url": "",
             "next_step": "Fit and persist women’s calibration coefficients with Brier and log-loss evidence before publishing probabilities.",
         })
-    ready = not missing and all(check["status"] == "ready" for check in checks)
     forecast_rows = forecast.get("forecasts")
-    published = (
-        ready
+    # Input and calibration gates are not enough to publish an arbitrary JSON
+    # file as a WBB forecast. Require the artifact identity and a basic unique
+    # game-row contract here; the deeper arithmetic/model-input checks remain
+    # in check_live_publication.py.
+    forecast_ids: list[str] = []
+    forecast_rows_valid = isinstance(forecast_rows, list) and bool(forecast_rows)
+    if forecast_rows_valid:
+        for row in forecast_rows:
+            if not isinstance(row, dict):
+                forecast_rows_valid = False
+                break
+            game_id = row.get("game_id")
+            home_id = row.get("home_id")
+            away_id = row.get("away_id")
+            if (
+                not isinstance(game_id, str)
+                or not game_id.strip()
+                or not isinstance(home_id, str)
+                or not home_id.strip()
+                or not isinstance(away_id, str)
+                or not away_id.strip()
+                or home_id == away_id
+                or not isinstance(row.get("date"), str)
+                or not isinstance(row.get("prediction"), dict)
+            ):
+                forecast_rows_valid = False
+                break
+            forecast_ids.append(game_id)
+    forecast_contract_ready = (
+        forecast.get("sport") == "basketball"
+        and forecast.get("gender") == "women"
+        and forecast.get("target_season") == target_season
+        and forecast.get("model_status") == "published"
         and isinstance(forecast.get("model_id"), str)
-        and bool(forecast["model_id"].strip())
-        and isinstance(forecast_rows, list)
-        and len(forecast_rows) > 0
+        and forecast["model_id"].startswith("womens-basketball-")
+        and forecast_rows_valid
+        and len(forecast_ids) == len(set(forecast_ids))
     )
-    status = "published" if published else "ready_for_fit" if ready else "blocked"
+    checks.append({
+        "key": "published_forecast_contract",
+        "label": "Published WBB forecast contract",
+        "status": "ready" if forecast_contract_ready else "blocked",
+        "detail": "The forecast artifact carries the women’s scope, target season, published model identity, and unique game rows with team IDs, dates, and predictions." if forecast_contract_ready else "A forecast artifact is not publishable until its women’s scope, target season, model status, and unique game-row identity are present.",
+        "required": "sport=basketball, gender=women, target season, published WBB model ID, unique games, team IDs, dates, and prediction objects",
+    })
+    fit_ready = not missing and all(check["status"] == "ready" for check in checks if check["key"] != "published_forecast_contract")
+    published = fit_ready and forecast_contract_ready
+    status = "published" if published else "ready_for_fit" if fit_ready else "blocked"
     model_id = forecast.get("model_id") if published else None
     model_boundary = (
         "A women’s-only multi-season forecast is published from separately retained team-box history. Men’s coefficients, calibration, IDs and forecast rows are never substituted."
         if published
         else "A women’s-only fit has passed its input gates, but no published forecast edition is present. Men’s coefficients, calibration, IDs and forecast rows are never substituted."
-        if ready
+        if fit_ready
         else "No women’s forecast is published. Men’s coefficients, calibration, IDs and forecast rows are never substituted."
     )
     return {
