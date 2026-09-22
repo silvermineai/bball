@@ -849,7 +849,13 @@ researchScorecard.get("/", zValidator("query", querySchema), async (c) => {
   let report: Awaited<ReturnType<typeof loadReport>>;
   try {
     report = await withTimeout(loadReport(researchDb(c.env), sport, season, now, model, gameId), DB_TIMEOUT_MS);
-  } catch {
+  } catch (error) {
+    console.error("research scorecard load failed", {
+      sport,
+      season: season ?? null,
+      gameId: gameId || null,
+      message: error instanceof Error ? error.message : String(error),
+    });
     return c.json({ error: "The live research scorecard is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }
   const filtered = report.games.filter((row) => {
