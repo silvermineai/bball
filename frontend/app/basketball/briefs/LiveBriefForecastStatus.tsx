@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { date, fmt } from "../../_lib/format";
+import { compareForecastEditions, hasForecastDelta } from "../../_lib/live-forecast-delta";
+import type { BBPrediction } from "../../_lib/basketball-types";
 
 type LiveRow = {
   model_id?: string;
@@ -15,12 +17,19 @@ type LiveRow = {
 
 type LiveResponse = { rows?: LiveRow[] };
 
+function signedDelta(value: number | null, suffix: string) {
+  if (value == null || !Number.isFinite(value)) return null;
+  return `${value > 0 ? "+" : ""}${fmt(value, 1)}${suffix}`;
+}
+
 export default function LiveBriefForecastStatus({
   gameId,
   staticEdition,
+  staticPrediction,
 }: {
   gameId: string;
   staticEdition: string;
+  staticPrediction: Pick<BBPrediction, "home_margin" | "home_win_probability" | "total">;
 }) {
   const [row, setRow] = useState<LiveRow | null>(null);
   const [status, setStatus] = useState<"checking" | "live" | "unavailable">("checking");
@@ -45,10 +54,19 @@ export default function LiveBriefForecastStatus({
   }, [gameId]);
 
   const prediction = row?.prediction;
+  const delta = compareForecastEditions(
+    staticPrediction,
+    prediction || null,
+  );
+  const changes = [
+    signedDelta(delta.homeMargin, " pts margin"),
+    signedDelta(delta.homeWinProbabilityPp, " pp home win"),
+    signedDelta(delta.total, " pts total"),
+  ].filter((value): value is string => value !== null);
   return (
     <p className="note" role="status">
       {status === "live" && row
-        ? <>Live D1 forecast check: {prediction?.home_margin == null ? "margin unavailable" : `home margin ${fmt(prediction.home_margin, 1)}`} · {prediction?.home_win_probability == null ? "win probability unavailable" : `${fmt(prediction.home_win_probability * 100, 1)}% home`} · {prediction?.total == null ? "total unavailable" : `total ${fmt(prediction.total, 1)}`} · model {row.model_id || "unlabeled"}{row.created_at ? ` · captured ${date(row.created_at)}` : ""}. The notebook above is the static edition from {date(staticEdition)}.</>
+        ? <>Live D1 forecast check: {prediction?.home_margin == null ? "margin unavailable" : `home margin ${fmt(prediction.home_margin, 1)}`} · {prediction?.home_win_probability == null ? "win probability unavailable" : `${fmt(prediction.home_win_probability * 100, 1)}% home`} · {prediction?.total == null ? "total unavailable" : `total ${fmt(prediction.total, 1)}`} · model {row.model_id || "unlabeled"}{row.created_at ? ` · captured ${date(row.created_at)}` : ""}. {hasForecastDelta(delta) ? <>Change vs static brief: {changes.join(" · ")}.</> : "No valid field delta is available."} The notebook above is the static edition from {date(staticEdition)}.</>
         : status === "unavailable"
           ? <>Live D1 forecast check unavailable; the brief remains available from its static edition ({date(staticEdition)}).</>
           : "Checking the latest registered D1 forecast for this game…"}
