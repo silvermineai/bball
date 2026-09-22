@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildNcaaRecentForm,
   gameEvidenceWindowLabel,
+  playerGameExportEvidence,
+  playerGameExportEvidenceHeaders,
   playerGamePossessionLine,
 } from "./ncaa-player-form";
 
@@ -52,6 +54,15 @@ describe("NCAA player recent form", () => {
 });
 
 describe("NCAA player game possession evidence", () => {
+  it("keeps explicit CSV evidence columns aligned with the game table", () => {
+    expect(playerGameExportEvidenceHeaders).toEqual([
+      "Recorded offensive possessions",
+      "Points per recorded possession",
+    ]);
+    expect(playerGameExportEvidence({ pts: 18, o_poss: 27 })).toEqual([27, 2 / 3]);
+    expect(playerGameExportEvidence({ pts: 18, o_poss: null })).toEqual([null, null]);
+  });
+
   it("exposes the retained possession count and derives scoring yield", () => {
     expect(playerGamePossessionLine({ pts: 18, o_poss: 27 })).toEqual({
       possessions: 27,

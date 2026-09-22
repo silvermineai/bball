@@ -19,6 +19,12 @@ export type NcaaGamePossessionLine = {
   points_per_possession: number | null;
 };
 
+/** Stable labels for the derived game-log columns shown beside the source fields. */
+export const playerGameExportEvidenceHeaders = [
+  "Recorded offensive possessions",
+  "Points per recorded possession",
+] as const;
+
 /** Describe the visible game-log window against the season total. */
 export function gameEvidenceWindowLabel(recordedGames: number, loadedRows: number) {
   const total = Number.isFinite(recordedGames) && recordedGames >= 0 ? Math.trunc(recordedGames) : 0;
@@ -45,6 +51,12 @@ export function playerGamePossessionLine(stats: NcaaFormGame["stats"]): NcaaGame
         ? null
         : points / possessions,
   };
+}
+
+/** Keep exported evidence in the same order and missingness rules as the game table. */
+export function playerGameExportEvidence(stats: NcaaFormGame["stats"]): [number | null, number | null] {
+  const line = playerGamePossessionLine(stats);
+  return [line.possessions, line.points_per_possession];
 }
 
 function average(games: NcaaFormGame[], key: string) {

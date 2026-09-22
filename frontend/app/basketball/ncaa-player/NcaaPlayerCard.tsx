@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { date, fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-import { buildNcaaRecentForm, gameEvidenceWindowLabel, playerGamePossessionLine } from "../../_lib/ncaa-player-form";
+import { buildNcaaRecentForm, gameEvidenceWindowLabel, playerGameExportEvidence, playerGameExportEvidenceHeaders, playerGamePossessionLine } from "../../_lib/ncaa-player-form";
 import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, playerSeasonBoxSummary, safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 import PlayerRankingSnapshot from "./PlayerRankingSnapshot";
 import PlayerShotLocationCourt from "../../_components/PlayerShotLocationCourt";
@@ -295,10 +295,10 @@ export default function NcaaPlayerCard() {
       downloadCsv(
         `ncaa-player-${id}-${season}-complete-game-log.csv`,
         toCsv(
-          ["Season", "Game date", "Contest ID", "Player", "Archive player ID", "Team", "Archive team ID", "Opponent", ...statKeys, "Raw recorded stats JSON"],
+          ["Season", "Game date", "Contest ID", "Player", "Archive player ID", "Team", "Archive team ID", "Opponent", ...playerGameExportEvidenceHeaders, ...statKeys, "Raw recorded stats JSON"],
           rows.map((row) => [
             season, row.game_date, row.contest_id, row.player_name, id, row.team_name, row.team_id, row.opponent_name,
-            ...statKeys.map((key) => row.stats[key]), JSON.stringify(row.stats),
+            ...playerGameExportEvidence(row.stats), ...statKeys.map((key) => row.stats[key]), JSON.stringify(row.stats),
           ]),
         ),
       );
