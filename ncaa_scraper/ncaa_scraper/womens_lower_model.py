@@ -220,8 +220,20 @@ def build_division_artifact(
     source_receipts: list[dict[str, Any]] | None = None,
     source_asset_sha256: str | None = None,
     target_schedule_present: bool = False,
+    gender: str = "women",
+    model_version: str = MODEL_VERSION,
 ) -> dict[str, Any]:
-    """Build one division's research-only rating artifact."""
+    """Build one division's research-only rating artifact.
+
+    The fit is shared by the men’s and women’s exact-scope editions, while
+    the published gender and model namespace stay explicit. This prevents a
+    lower-division men's release from being mistaken for the source-native
+    women's edition or used as a cross-gender fallback.
+    """
+    if gender not in {"men", "women"}:
+        raise ValueError("gender must be men or women")
+    if not model_version or not isinstance(model_version, str):
+        raise ValueError("model_version must be a non-empty string")
     games, excluded = normalize_final_games(contests, division)
     model = _fit(games) if len(games) >= 2 else {"ratings": {}, "home_advantage": 0.0, "teams": [], "ridge": 12.0}
     backtest = _backtest(games)
@@ -230,7 +242,7 @@ def build_division_artifact(
     payload = {
         "schema_version": 1,
         "sport": "basketball",
-        "gender": "women",
+        "gender": gender,
         "division": division,
         "season": 2025,
         "target_season": TARGET_SEASON,
@@ -282,5 +294,5 @@ def build_division_artifact(
         ],
     }
     digest_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
-    payload["model_id"] = f"{MODEL_VERSION}-d{division}-{hashlib.sha256(digest_payload).hexdigest()[:12]}"
+    payload["model_id"] = f"{model_version}-d{division}-{hashlib.sha256(digest_payload).hexdigest()[:12]}"
     return payload

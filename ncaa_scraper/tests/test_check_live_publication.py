@@ -21,6 +21,7 @@ from scripts.check_live_publication import (
     womens_lower_division_metadata,
     womens_lower_schedule_archive_metadata,
     womens_lower_ratings_metadata,
+    mens_lower_ratings_metadata,
     lower_division_target_probe_metadata,
     mens_lower_schedule_archive_metadata,
     validate_recruiting_destinations,
@@ -131,6 +132,25 @@ class LivePublicationCheckTest(unittest.TestCase):
         payload["divisions"]["d2"]["target_schedule"]["status"] = "ready"
         with self.assertRaisesRegex(ValueError, "forecast gate"):
             womens_lower_ratings_metadata(payload)
+
+    @staticmethod
+    def mens_lower_ratings_payload():
+        payload = LivePublicationCheckTest.womens_lower_ratings_payload()
+        payload["gender"] = "men"
+        for division in ("d2", "d3"):
+            payload["divisions"][division]["model_id"] = f"mbb-lower-ratings-v1-{division}-" + "a" * 12
+        return payload
+
+    def test_mens_lower_ratings_metadata_requires_its_own_model_namespace(self):
+        payload = self.womens_lower_ratings_payload()
+        payload["gender"] = "men"
+        for division in ("d2", "d3"):
+            payload["divisions"][division]["model_id"] = f"mbb-lower-ratings-v1-{division}-" + "a" * 12
+        summary = mens_lower_ratings_metadata(payload)
+        self.assertEqual(summary["d2"]["model_id"], "mbb-lower-ratings-v1-d2-" + "a" * 12)
+        payload["divisions"]["d2"]["model_id"] = "wbb-lower-ratings-v1-d2-" + "a" * 12
+        with self.assertRaisesRegex(ValueError, "scope is malformed"):
+            mens_lower_ratings_metadata(payload)
 
     @staticmethod
     def lower_target_probe_payload(sport_code="WBB"):
@@ -528,6 +548,8 @@ class LivePublicationCheckTest(unittest.TestCase):
                 return LivePublicationCheckTest.womens_lower_schedule_payload()
             if path == "/data/basketball/womens-lower-division-ratings.json":
                 return LivePublicationCheckTest.womens_lower_ratings_payload()
+            if path == "/data/basketball/mens-lower-division-ratings.json":
+                return LivePublicationCheckTest.mens_lower_ratings_payload()
             if path == "/data/basketball/womens-lower-division-target-probe.json":
                 return LivePublicationCheckTest.lower_target_probe_payload("WBB")
             if path == "/data/basketball/mens-lower-division-schedules.json":

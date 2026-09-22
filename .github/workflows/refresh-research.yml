@@ -256,6 +256,8 @@ jobs:
           }
           refresh_schedule men scripts/scrape-mens-lower-division-schedules.py frontend/public/data/basketball/mens-lower-division-schedules.json
           refresh_schedule women scripts/scrape-womens-lower-division-schedules.py frontend/public/data/basketball/womens-lower-division-schedules.json
+          python scripts/build-mens-lower-division-ratings.py
+          python scripts/build-womens-lower-division-ratings.py
 
       - name: Refresh ESPN lower-division football player boxes
         # ESPN's group-35 feed is a combined D2/D3 discovery surface. The

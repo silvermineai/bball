@@ -778,8 +778,8 @@ def womens_lower_schedule_archive_metadata(payload: dict) -> dict:
     }
 
 
-def womens_lower_ratings_metadata(payload: dict) -> dict:
-    """Validate the research-only women’s D2/D3 rating artifact.
+def _lower_ratings_metadata(payload: dict, *, gender: str, model_prefix: str, label: str) -> dict:
+    """Validate a research-only exact-scope D2/D3 rating artifact.
 
     The lower-division rating board is deliberately separate from the D1
     forecast edition.  Validate its identity and forecast gate here so a
@@ -789,20 +789,20 @@ def womens_lower_ratings_metadata(payload: dict) -> dict:
         not isinstance(payload, dict)
         or payload.get("schema_version") != 1
         or payload.get("sport") != "basketball"
-        or payload.get("gender") != "women"
+        or payload.get("gender") != gender
         or payload.get("model_status") != "research_only"
         or payload.get("forecast_status") != "not_published"
         or payload.get("target_season") != 2027
     ):
-        raise ValueError("women's lower-division ratings artifact has an invalid publication contract")
+        raise ValueError(f"{label} lower-division ratings artifact has an invalid publication contract")
     generated_at = payload.get("generated_at")
     try:
         timestamp(generated_at)
     except (TypeError, ValueError):
-        raise ValueError("women's lower-division ratings artifact has an invalid generation time") from None
+        raise ValueError(f"{label} lower-division ratings artifact has an invalid generation time") from None
     divisions = payload.get("divisions")
     if not isinstance(divisions, dict):
-        raise ValueError("women's lower-division ratings artifact has no division map")
+        raise ValueError(f"{label} lower-division ratings artifact has no division map")
     summary: dict[str, object] = {}
     for division in ("d2", "d3"):
         record = divisions.get(division)
@@ -812,9 +812,9 @@ def womens_lower_ratings_metadata(payload: dict) -> dict:
             or record.get("model_status") != "research_only"
             or record.get("forecast_status") != "not_published"
             or not isinstance(record.get("model_id"), str)
-            or not record["model_id"].startswith(f"wbb-lower-ratings-v1-{division}-")
+            or not record["model_id"].startswith(f"{model_prefix}-{division}-")
         ):
-            raise ValueError(f"women's lower-division {division} ratings scope is malformed")
+            raise ValueError(f"{label} lower-division {division} ratings scope is malformed")
         coverage = record.get("coverage")
         if (
             not isinstance(coverage, dict)
@@ -826,10 +826,10 @@ def womens_lower_ratings_metadata(payload: dict) -> dict:
             or coverage["source_receipts"] <= 0
             or not isinstance(coverage.get("excluded"), dict)
         ):
-            raise ValueError(f"women's lower-division {division} ratings coverage is malformed")
+            raise ValueError(f"{label} lower-division {division} ratings coverage is malformed")
         ratings = record.get("ratings")
         if not isinstance(ratings, list) or len(ratings) != coverage["teams"]:
-            raise ValueError(f"women's lower-division {division} ratings do not reconcile with team coverage")
+            raise ValueError(f"{label} lower-division {division} ratings do not reconcile with team coverage")
         ranks = []
         seen_team_ids: set[str] = set()
         for row in ratings:
@@ -845,11 +845,11 @@ def womens_lower_ratings_metadata(payload: dict) -> dict:
                 or not isinstance(row.get("games"), int)
                 or row["games"] <= 0
             ):
-                raise ValueError(f"women's lower-division {division} rating row is malformed")
+                raise ValueError(f"{label} lower-division {division} rating row is malformed")
             seen_team_ids.add(row["team_id"])
             ranks.append(row["rank"])
         if sorted(ranks) != list(range(1, len(ratings) + 1)):
-            raise ValueError(f"women's lower-division {division} ratings have non-contiguous ranks")
+            raise ValueError(f"{label} lower-division {division} ratings have non-contiguous ranks")
         target_schedule = record.get("target_schedule")
         if (
             not isinstance(target_schedule, dict)
@@ -858,7 +858,7 @@ def womens_lower_ratings_metadata(payload: dict) -> dict:
             or target_schedule.get("games") != 0
             or not isinstance(target_schedule.get("note"), str)
         ):
-            raise ValueError(f"women's lower-division {division} forecast gate is malformed")
+            raise ValueError(f"{label} lower-division {division} forecast gate is malformed")
         source = record.get("source")
         if (
             not isinstance(source, dict)
@@ -869,7 +869,7 @@ def womens_lower_ratings_metadata(payload: dict) -> dict:
             or not isinstance(source.get("receipt_digest"), str)
             or not re.fullmatch(r"[0-9a-f]{64}", source["receipt_digest"])
         ):
-            raise ValueError(f"women's lower-division {division} ratings source evidence is malformed")
+            raise ValueError(f"{label} lower-division {division} ratings source evidence is malformed")
         summary[division] = {
             "valid_final_games": coverage["valid_final_games"],
             "teams": coverage["teams"],
@@ -878,6 +878,14 @@ def womens_lower_ratings_metadata(payload: dict) -> dict:
             "forecast_status": record["forecast_status"],
         }
     return summary
+
+
+def womens_lower_ratings_metadata(payload: dict) -> dict:
+    return _lower_ratings_metadata(payload, gender="women", model_prefix="wbb-lower-ratings-v1", label="women's")
+
+
+def mens_lower_ratings_metadata(payload: dict) -> dict:
+    return _lower_ratings_metadata(payload, gender="men", model_prefix="mbb-lower-ratings-v1", label="men's")
 
 
 def lower_division_target_probe_metadata(
@@ -1640,6 +1648,9 @@ def check_live(
     mens_lower_schedule = mens_lower_schedule_archive_metadata(
         get_json(base_url, "/data/basketball/mens-lower-division-schedules.json")
     )
+    mens_lower_ratings = mens_lower_ratings_metadata(
+        get_json(base_url, "/data/basketball/mens-lower-division-ratings.json")
+    )
     mens_lower_target_probe = lower_division_target_probe_metadata(
         get_json(base_url, "/data/basketball/mens-lower-division-target-probe.json"),
         "MBB",
@@ -1842,6 +1853,12 @@ def check_live(
         "mens_lower_schedule_receipts": mens_lower_schedule["receipt_count"],
         "mens_d2_schedule_contests": mens_lower_schedule["d2_contests"],
         "mens_d3_schedule_contests": mens_lower_schedule["d3_contests"],
+        "mens_d2_rating_games": mens_lower_ratings["d2"]["valid_final_games"],
+        "mens_d2_rating_teams": mens_lower_ratings["d2"]["teams"],
+        "mens_d2_rating_model": mens_lower_ratings["d2"]["model_id"],
+        "mens_d3_rating_games": mens_lower_ratings["d3"]["valid_final_games"],
+        "mens_d3_rating_teams": mens_lower_ratings["d3"]["teams"],
+        "mens_d3_rating_model": mens_lower_ratings["d3"]["model_id"],
         "mens_lower_target_probe_contests": mens_lower_target_probe["contests"],
         "mens_lower_target_probe_calendar_days": mens_lower_target_probe["calendar_days"],
         "mens_lower_target_probe_receipts": mens_lower_target_probe["receipt_count"],
