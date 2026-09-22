@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   divisionPlayerArchiveExport,
+  divisionPlayerArchiveMetricOptions,
   filterDivisionPlayerArchive,
   paginateDivisionPlayerArchive,
 } from "./division-player-archive";
@@ -33,5 +34,14 @@ describe("division player archive", () => {
     expect(result.headers).toContain("source_stats_json");
     expect(result.rows[0][result.headers.indexOf("fga")]).toBeNull();
     expect(String(result.rows[0][result.headers.indexOf("source_stats_json")])).toContain('"PPG"');
+  });
+
+  it("exposes retained totals and workload fields as ranking choices", () => {
+    const keys = divisionPlayerArchiveMetricOptions.map((option) => option.key);
+    expect(keys).toContain("pts");
+    expect(keys).toContain("fga");
+    expect(keys).toContain("pf");
+    expect(keys).toContain("mins");
+    expect(keys).toContain("o_poss");
   });
 });

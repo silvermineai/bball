@@ -1,7 +1,11 @@
+import { divisionRankingMetrics } from "./division-player-rankings";
 import {
   sortDivisionPlayers,
   type DivisionPlayerWithEvidence,
 } from "./division-player-detail";
+
+/** Every retained NCAA field can drive a transparent lower-division sort. */
+export const divisionPlayerArchiveMetricOptions = divisionRankingMetrics.map(([key, label]) => ({ key, label }));
 
 export const DIVISION_PLAYER_ARCHIVE_PAGE_SIZE = 50;
 

@@ -7,6 +7,7 @@ import { lowerDivisionPlayerHref } from "../_lib/division-archive-links";
 import { downloadCsv, toCsv } from "../_lib/csv";
 import {
   divisionPlayerArchiveExport,
+  divisionPlayerArchiveMetricOptions,
   filterDivisionPlayerArchive,
   paginateDivisionPlayerArchive,
 } from "../_lib/division-player-archive";
@@ -20,8 +21,8 @@ import {
 type Player = DivisionPlayerWithEvidence;
 
 type Publication = { season: number; generated_at: string; players: Player[] };
-const metrics = [["ppg", "PPG"], ["rpg", "RPG"], ["apg", "APG"], ["spg", "SPG"], ["bpg", "BPG"], ["mpg", "MPG"], ["fg_pct", "FG%"], ["three_pct", "3P%"], ["ft_pct", "FT%"], ["threes_pg", "3PG"], ["ast_to", "A/TO"], ["dbl_dbl", "DD"]] as const;
-type Metric = (typeof metrics)[number][0];
+const metrics = divisionPlayerArchiveMetricOptions;
+type Metric = (typeof metrics)[number]["key"];
 
 const value = (raw: number | null | undefined, digits = 1) => typeof raw === "number" && Number.isFinite(raw) ? raw.toFixed(digits) : "—";
 const captured = (raw: string) => {
@@ -80,7 +81,7 @@ export default function DivisionPlayerArchive({ division }: { division: "2" | "3
         <label htmlFor="division-player-search">Search player or team</label>
         <input id="division-player-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, program, or player ID" />
         <label htmlFor="division-player-metric">Sort by</label>
-        <select id="division-player-metric" value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>{metrics.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
+        <select id="division-player-metric" value={metric} onChange={(event) => setMetric(event.target.value as Metric)}>{metrics.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}</select>
       </div>
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{total.toLocaleString()} matching retained players · page {pageResult.page + 1} of {pageResult.pages} · season {publication.season} · captured {captured(publication.generated_at)}.</p><div className="button-row"><button className="button secondary" type="button" onClick={downloadAll} disabled={!filteredPlayers.length}>Download all matching CSV ↓</button></div></div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
