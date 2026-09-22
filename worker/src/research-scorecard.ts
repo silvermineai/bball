@@ -620,14 +620,16 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
   if (modelId) countBinds.push(modelId);
   const gameClause = gameId ? " AND game_id=?" : "";
   const count = await db.prepare(`SELECT count(*) AS total FROM audit_predictions WHERE sport=? AND CAST(json_extract(payload_json,'$.season') AS INTEGER)=? AND registered_at<=?${gameClause}${modelClause}`).bind(...countBinds).first<{ total: number }>();
-  const predictionBinds: Array<string | number> = [now, sport, season, now];
+  const predictionBinds: Array<string | number> = [now];
+  if (gameId) predictionBinds.push(gameId);
+  predictionBinds.push(sport, season, now);
   if (gameId) predictionBinds.push(gameId);
   if (modelId) predictionBinds.push(modelId);
   const result = await db.prepare(`
     WITH latest_state AS (
       SELECT sport, game_id, payload_json,
              ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS state_rank
-       FROM audit_game_states WHERE observed_at<=?
+       FROM audit_game_states WHERE observed_at<=?${gameId ? " AND game_id=?" : ""}
     ), candidates AS (
       SELECT p.*, s.payload_json AS state_json,
         CASE
