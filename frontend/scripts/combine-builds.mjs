@@ -5,6 +5,12 @@ await cp("out", "dist/client", { recursive: true });
 // Keep the generated sitemap reachable when a previous negative cache entry
 // exists for Next's conventional /sitemap.xml key.
 await cp("out/sitemap.xml", "dist/client/sitemap-index.xml");
+// The research ledger is served by the live scorecard API and is also synced
+// into Cloudflare D1. Keep the static build from copying its 40 MiB fallback
+// into Workers Assets, whose per-file limit is 25 MiB. Leaving the file in
+// `out` is useful for local inspection; it must not be part of the deployable
+// asset tree.
+await rm("dist/client/data/research/ledger.json", { force: true });
 await mkdir("dist/client/basketball-shell", { recursive: true });
 await cp(
   "dist/basketball/index.html",
