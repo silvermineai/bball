@@ -1,5 +1,5 @@
 import type { BBGame, BBRosterScenario } from "./basketball-types";
-import type { Comparison } from "./research-types";
+import type { Comparison, LedgerGame } from "./research-types";
 
 export type LiveForecastRow = {
   game_id: string;
@@ -34,7 +34,7 @@ type LiveForecastPage = {
 };
 
 type LiveScorecardResponse = {
-  games: Array<{ game_id: string; model_id?: string | null; comparisons?: Comparison[] }>;
+  games: Array<{ game_id: string; model_id?: string | null; comparisons?: Comparison[]; market_readiness?: LedgerGame["market_readiness"] }>;
 };
 
 export type LiveGameMarketComparison = {
@@ -42,6 +42,8 @@ export type LiveGameMarketComparison = {
   forecastCreatedAt: string | null;
   forecastStartsAt: string | null;
   comparisons: Comparison[];
+  /** Server-side reason a quote is absent or withheld for this exact game. */
+  marketReadiness?: LedgerGame["market_readiness"];
 };
 
 export type LiveMarketComparisonStatus = "checking_forecast" | "checking_market" | "ready" | "unavailable";
@@ -267,6 +269,7 @@ export async function loadLiveBasketballGameMarketComparison(
     forecastCreatedAt: forecast.created_at || null,
     forecastStartsAt: forecast.starts_at || null,
     comparisons: game?.comparisons || [],
+    marketReadiness: game?.market_readiness,
   };
 }
 

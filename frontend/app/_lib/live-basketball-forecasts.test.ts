@@ -266,7 +266,7 @@ describe("live basketball forecast merge", () => {
         ok: true,
         json: async () => ({ games: [
           { game_id: "g1", model_id: "wrong-model", comparisons: [{ provider: "wrong", bookmaker: "wrong", market: "spreads" }] },
-          { game_id: "g1", model_id: "model-live", comparisons: [{ provider: "feed", bookmaker: "book", market: "spreads", captured_at: "2026-09-20T13:00:00Z", updated_at: "2026-09-20T13:00:00Z", line: -2.5, model_difference: 1.2, market_home_probability: null }] },
+          { game_id: "g1", model_id: "model-live", market_readiness: { status: "no_qualified_line", message: "No retained pregame line is available for this game.", retained_observations: 0, eligible_observations: 0, comparable_observations: 0, selected_comparisons: 0, rejection_counts: {} }, comparisons: [{ provider: "feed", bookmaker: "book", market: "spreads", captured_at: "2026-09-20T13:00:00Z", updated_at: "2026-09-20T13:00:00Z", line: -2.5, model_difference: 1.2, market_home_probability: null }] },
         ] }),
       });
     vi.stubGlobal("fetch", fetcher);
@@ -274,6 +274,7 @@ describe("live basketball forecast merge", () => {
       modelId: "model-live",
       forecastCreatedAt: "2026-09-20T12:00:00Z",
       forecastStartsAt: "2026-09-20T16:00:00Z",
+      marketReadiness: { status: "no_qualified_line", message: "No retained pregame line is available for this game.", retained_observations: 0, eligible_observations: 0, comparable_observations: 0, selected_comparisons: 0, rejection_counts: {} },
       comparisons: [{ provider: "feed", bookmaker: "book", market: "spreads", captured_at: "2026-09-20T13:00:00Z", updated_at: "2026-09-20T13:00:00Z", line: -2.5, model_difference: 1.2, market_home_probability: null }],
     });
     expect(fetcher).toHaveBeenNthCalledWith(1, "/api/basketball/research/forecasts?season=2027&gameId=g1&model=latest&status=all&limit=1", { signal: undefined });

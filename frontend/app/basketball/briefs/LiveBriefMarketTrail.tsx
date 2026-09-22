@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { date, fmt, signed } from "../../_lib/format";
 import { comparisonTimingLabel } from "../../_lib/market-display";
+import { gameMarketReadinessLabel } from "../../_lib/game-market-readiness";
 import {
   loadLiveBasketballGameMarketComparison,
   type LiveGameMarketComparison,
@@ -61,7 +62,7 @@ export default function LiveBriefMarketTrail({ gameId }: { gameId: string }) {
               </table>
             </div>
           </>
-        ) : <p className="note">The current forecast edition is verified for this game, but no qualifying market quote is attached. No line or edge is inferred.</p>
+        ) : <p className="note"><strong>{gameMarketReadinessLabel(result.marketReadiness)}</strong>. {result.marketReadiness?.message || "The current forecast edition is verified for this game, but no qualifying market quote is attached."} No line or edge is inferred.</p>
       ) : null}
     </div>
   );
