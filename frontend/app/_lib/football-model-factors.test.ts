@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { footballCalibrationReliability, footballCalibrationSummary, footballModelFactors } from "./football-model-factors";
+import { footballCalibrationReliability, footballCalibrationReliabilityForDivision, footballCalibrationSummary, footballModelFactors } from "./football-model-factors";
 
 const model = {
   teams: ["away", "home", "other"],
@@ -42,6 +42,13 @@ describe("football model factor decomposition", () => {
     expect(footballCalibrationReliability(0.72, [{ lower: 0.7, upper: 0.8, games: 0, predicted: 0.74, observed: 0.72 }])).toBeNull();
     expect(footballCalibrationReliability(Number.NaN, [])).toBeNull();
     expect(footballCalibrationReliability(0.72, [{ lower: 0.8, upper: 0.7, games: 10, predicted: 0.8, observed: 0.8 }])).toBeNull();
+  });
+
+  it("does not reuse D1 holdout bins for lower-division forecasts", () => {
+    const reliability = [{ lower: 0.7, upper: 0.8, games: 40, predicted: 0.74, observed: 0.7 }];
+    expect(footballCalibrationReliabilityForDivision(0.72, reliability, "d1")).not.toBeNull();
+    expect(footballCalibrationReliabilityForDivision(0.72, reliability, "d2")).toBeNull();
+    expect(footballCalibrationReliabilityForDivision(0.72, reliability, "d3")).toBeNull();
   });
 
   it("explains the registered probability and range calibration", () => {

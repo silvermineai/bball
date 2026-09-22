@@ -81,6 +81,20 @@ export function footballCalibrationReliability(
   };
 }
 
+/**
+ * Keep D1 holdout bins attached to the D1 model scope. A future lower-
+ * division model must publish its own reliability artifact before a per-game
+ * card can show calibration context.
+ */
+export function footballCalibrationReliabilityForDivision(
+  homeWinProbability: number,
+  reliability: FootballReliabilityBand[] | null | undefined,
+  division: "d1" | "d2" | "d3",
+): FootballCalibrationReliability | null {
+  if (division !== "d1") return null;
+  return footballCalibrationReliability(homeWinProbability, reliability);
+}
+
 /** Explain the registered probability/range mapping without adding a forecast input. */
 export function footballCalibrationSummary(calibration?: FootballModelCalibration | null): string | null {
   if (!calibration || !Number.isFinite(calibration.games) || calibration.games <= 0

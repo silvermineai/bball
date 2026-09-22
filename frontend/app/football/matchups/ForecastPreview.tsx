@@ -5,12 +5,15 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { Game, Overview } from "../../_lib/data";
 import { filterFootballMatchupGames, parseFootballMatchupDivision } from "../../_lib/football-matchup-view";
-import { footballCalibrationSummary, footballModelFactors, type FootballModelCalibration } from "../../_lib/football-model-factors";
+import { footballCalibrationReliabilityForDivision, footballCalibrationSummary, footballModelFactors, type FootballModelCalibration, type FootballReliabilityBand } from "../../_lib/football-model-factors";
 import { fmt, kick, signed } from "../../_lib/format";
 
 type Props = {
   games: Game[];
-  model: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef"> & { calibration?: FootballModelCalibration };
+  model: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef"> & {
+    calibration?: FootballModelCalibration;
+    evaluation?: { reliability?: FootballReliabilityBand[] };
+  };
 };
 
 /**
@@ -42,9 +45,15 @@ export default function ForecastPreview({ games, model }: Props) {
         <>
           <div className="table-scroll">
             <table className="data-table">
-              <thead><tr><th>Start</th><th>Away</th><th>Home</th><th className="numeric">Away pts</th><th className="numeric">Home pts</th><th className="numeric">Home win%</th><th className="numeric">Margin</th><th className="numeric">Total</th><th>Estimate</th></tr></thead>
+              <thead><tr><th>Start</th><th>Away</th><th>Home</th><th className="numeric">Away pts</th><th className="numeric">Home pts</th><th className="numeric">Home win%</th><th>Held-out context</th><th className="numeric">Margin</th><th className="numeric">Total</th><th>Estimate</th></tr></thead>
               <tbody>{forecastPreview.map((game) => {
                 const prediction = game.prediction;
+                // The holdout bins are from the D1 model edition. Never carry
+                // that calibration context into an exact-division lower-
+                // division forecast if one is added to the schedule later.
+                const reliability = prediction && division === "d1"
+                  ? footballCalibrationReliabilityForDivision(prediction.home_win_probability, model.evaluation?.reliability, division)
+                  : null;
                 return <tr key={game.id}>
                   <td>{kick(game.kickoff)}</td>
                   <td><Link href={`/football/matchups/?team=${encodeURIComponent(game.away_name)}&division=${division === "d1" ? "1" : division.slice(1)}`}>{game.away_name}</Link></td>
@@ -52,6 +61,12 @@ export default function ForecastPreview({ games, model }: Props) {
                   <td className="numeric">{fmt(prediction?.away_score)}</td>
                   <td className="numeric"><strong>{fmt(prediction?.home_score)}</strong></td>
                   <td className="numeric">{prediction?.home_win_probability == null ? "—" : `${fmt(prediction.home_win_probability * 100)}%`}</td>
+                  <td>
+                    {reliability ? <>
+                      <strong>{reliability.side} {fmt(reliability.confidence_lower * 100, 0)}–{fmt(reliability.confidence_upper * 100, 0)}%</strong>
+                      <small>{reliability.games.toLocaleString()} held-out games · {reliability.observed == null ? "observed rate unavailable" : `${fmt(reliability.observed * 100, 1)}% observed`}</small>
+                    </> : <span className="note">Unavailable</span>}
+                  </td>
                   <td className="numeric">{fmt(prediction?.home_margin)}</td>
                   <td className="numeric">{fmt(prediction?.total)}</td>
                   <td>
@@ -77,7 +92,7 @@ export default function ForecastPreview({ games, model }: Props) {
           {!forecastPreview.length && <p className="empty">No published forecasts are available for the requested division.</p>}
         </>
       )}
-      <p className="note" style={{ marginTop: 12 }}>Scores, win probability, margin, total and the calibrated range come from the registered Silvermine model edition. Open the desk below to filter the full slate and compare qualifying market observations.</p>
+      <p className="note" style={{ marginTop: 12 }}>Scores, win probability, margin, total and the calibrated range come from the registered Silvermine model edition. Held-out context reports the historical outcome rate for the probability band containing this estimate; it is not a game-specific confidence guarantee. Open the desk below to filter the full slate and compare qualifying market observations.</p>
       {footballCalibrationSummary(model.calibration) && <p className="note" style={{ marginTop: 8 }}>{footballCalibrationSummary(model.calibration)}</p>}
     </section>
   );
