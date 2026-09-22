@@ -12,6 +12,8 @@ import {
   footballPlayerFilterSearch,
   hasRankedProduction,
   footballSourceBoxMetric,
+  footballSourceBoxMetrics,
+  resolveFootballSourceBoxMetric,
   parseFootballPlayerFilters,
   parseFootballPlayerScope,
   productionForCategory,
@@ -86,6 +88,9 @@ describe("football player index category selection", () => {
   });
   it("keeps exact-ID box totals rankable without inventing EPA", () => {
     expect(footballSourceBoxMetric("defensive")).toBe("tackles");
+    expect(footballSourceBoxMetrics("defensive").map((metric) => metric.key)).toContain("sacks");
+    expect(resolveFootballSourceBoxMetric("defensive", "sacks")?.label).toBe("Sacks");
+    expect(resolveFootballSourceBoxMetric("defensive", "made_up")?.key).toBe("tackles");
     expect(footballSourceBoxMetric("passing")).toBeNull();
     const ranks = computeSourceBoxRanks([
       { id: "2", team_id: "b", name: "Beta", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, source: "box", metrics: { tackles: 8 } } } },
@@ -99,6 +104,16 @@ describe("football player index category selection", () => {
     ], "defensive", "fcs");
     expect(fcsRanks.get(footballPlayerRankKey("3", "c", "defensive"))).toBe(1);
     expect(fcsRanks.has(footballPlayerRankKey("4", "d", "defensive"))).toBe(false);
+  });
+  it("ranks a selected retained source-box field without mixing categories", () => {
+    const ranks = computeSourceBoxRanks([
+      { id: "1", team_id: "a", name: "Tackle leader", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { tackles: 20, sacks: 1 } } } },
+      { id: "2", team_id: "b", name: "Sack leader", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { tackles: 10, sacks: 4 } } } },
+      { id: "3", team_id: "c", name: "Wrong category", division: "fbs", categories: ["interceptions"], production: { interceptions: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { sacks: 99 } } } },
+    ], "defensive", "fbs", "sacks");
+    expect(ranks.get(footballPlayerRankKey("2", "b", "defensive"))).toBe(1);
+    expect(ranks.get(footballPlayerRankKey("1", "a", "defensive"))).toBe(2);
+    expect(ranks.size).toBe(2);
   });
   it("gives equal source-box totals the same competition rank", () => {
     const ranks = computeSourceBoxRanks([
@@ -226,6 +241,7 @@ describe("football player board URL state", () => {
       query: "Smith Jr.",
       qualified: true,
       sort: "rank",
+      metric: "",
       page: 3,
     });
   });
@@ -240,6 +256,7 @@ describe("football player board URL state", () => {
         query: "",
         qualified: false,
         sort: "rank",
+        metric: "",
         page: 0,
       }),
     ).toBe("?division=fcs");
@@ -258,6 +275,7 @@ describe("football player board URL state", () => {
       query: "",
       qualified: false,
       sort: "rank",
+      metric: "",
       page: 0,
     });
   });
@@ -271,6 +289,7 @@ describe("football player board URL state", () => {
         query: "Smith Jr.",
         qualified: true,
         sort: "rank",
+        metric: "",
         page: 3,
       }),
     ).toBe("?season=2024&category=receiving&division=all&q=Smith+Jr.&qualified=1&page=3");
@@ -282,6 +301,7 @@ describe("football player board URL state", () => {
         query: "",
         qualified: false,
         sort: "rank",
+        metric: "",
         page: 0,
       }),
     ).toBe("");
@@ -298,8 +318,27 @@ describe("football player board URL state", () => {
         query: "",
         qualified: false,
         sort: "yards_per_play",
+        metric: "",
         page: 0,
       }),
     ).toBe("?sort=yards_per_play");
+  });
+
+  it("keeps a valid source-box ranking metric in the shareable URL", () => {
+    expect(parseFootballPlayerFilters("?category=defensive&metric=sacks", seasons)).toMatchObject({
+      category: "defensive",
+      metric: "sacks",
+    });
+    expect(parseFootballPlayerFilters("?category=defensive&metric=unknown", seasons).metric).toBe("tackles");
+    expect(footballPlayerFilterSearch({
+      season: "2025",
+      category: "defensive",
+      division: "fbs",
+      query: "",
+      qualified: false,
+      sort: "rank",
+      metric: "sacks",
+      page: 0,
+    })).toBe("?category=defensive&metric=sacks");
   });
 });

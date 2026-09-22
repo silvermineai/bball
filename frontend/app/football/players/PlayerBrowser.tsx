@@ -18,6 +18,7 @@ import {
   footballPlayerCategories,
   footballEventDataset,
   footballSourceBoxMetric,
+  footballSourceBoxMetrics,
   footballPlayerFilterSearch,
   footballPlayerSorts,
   parseFootballPlayerFilters,
@@ -51,7 +52,7 @@ const sortLabels: Record<FootballPlayerSort, string> = {
   success_rate: "Success rate",
   plays: "Volume (plays)",
 };
-const exportHeaders = ["Season", "Division", "Category", "Rank", "Rank basis", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Category games", "Plays", "Yards", "Yards per play", "Touchdowns", "Success rate %", "Total EPA", "EPA per play", "EPA per play percentile", "Ranked threshold plays", "Qualified", "Source metrics"];
+const exportHeaders = ["Season", "Division", "Category", "Rank", "Rank basis", "Rank stat", "Rank stat value", "Player", "Athlete ID", "Team", "Team ID", "Conference", "Box games", "Category games", "Plays", "Yards", "Yards per play", "Touchdowns", "Success rate %", "Total EPA", "EPA per play", "EPA per play percentile", "Ranked threshold plays", "Qualified", "Source metrics"];
 type Player = {
   id: string;
   team_id: string;
@@ -77,6 +78,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     [category, setCategory] = useState<FootballPlayerCategory>("passing"),
     [division, setDivision] = useState<FootballPlayerDivision>("fbs"),
     [sort, setSort] = useState<FootballPlayerSort>("rank"),
+    [metric, setMetric] = useState(""),
     [query, setQuery] = useState(""),
     [qualified, setQualified] = useState(false),
     [page, setPage] = useState(0),
@@ -90,7 +92,8 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     [compareMessage, setCompareMessage] = useState("");
   const coverage = catalog.seasons.find((s) => String(s.season) === season);
   const eventDataset = footballEventDataset(category);
-  const sourceBoxMetric = footballSourceBoxMetric(category);
+  const sourceBoxMetrics = footballSourceBoxMetrics(category);
+  const sourceBoxMetric = sourceBoxMetrics.find((item) => item.key === metric) ?? sourceBoxMetrics[0] ?? null;
   useEffect(() => {
     const requestedScope = parseFootballPlayerScope(window.location.search);
     setScope(requestedScope);
@@ -102,6 +105,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     setCategory(parsed.category);
     setDivision(parsed.division);
     setSort(parsed.sort);
+    setMetric(parsed.metric);
     setQuery(parsed.query);
     setQualified(parsed.qualified);
     setPage(parsed.page);
@@ -115,12 +119,13 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
       category,
       division,
       sort,
+      metric: sourceBoxMetric?.key ?? "",
       query,
       qualified,
       page,
     });
     window.history.replaceState(window.history.state, "", url);
-  }, [hydrated, scope, season, category, division, sort, query, qualified, page]);
+  }, [hydrated, scope, season, category, division, sort, sourceBoxMetric?.key, query, qualified, page]);
   useEffect(() => {
     setCompareKeys([]);
     setCompareMessage("");
@@ -175,8 +180,9 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
       data?.season === +season ? data.players : [],
       category,
       division,
+      sourceBoxMetric?.key,
     ),
-    [category, data, division, season],
+    [category, data, division, season, sourceBoxMetric?.key],
   );
   const provisionalRanks = useMemo(
     () => computeProvisionalProductionRanks(
@@ -290,7 +296,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     const rankBasis = s?.rank != null
       ? "publisher_source_rank"
       : sourceBoxMetric
-        ? `exact_id_source_box_${sourceBoxMetric}_competition_rank`
+        ? `exact_id_source_box_${sourceBoxMetric.key}_competition_rank`
         : season === "2026"
           ? "provisional_observed_total_epa_competition_rank"
           : division === "fcs"
@@ -300,12 +306,12 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                 ? "silvermine_fcs_source_box_yards_competition_rank"
                 : "unavailable"
             : "unavailable";
-    return [season, p.division, selected?.category || category, rank, rankBasis, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, efficiencyPercentiles.get(footballPlayerRankKey(p.id, p.team_id, selected?.category || category)), data?.rankings[selected?.category || category]?.minimum_plays, rank != null ? "yes" : "no", s?.metrics ? JSON.stringify(s.metrics) : null];
+    return [season, p.division, selected?.category || category, rank, rankBasis, sourceBoxMetric?.key, sourceBoxMetric ? s?.metrics?.[sourceBoxMetric.key] : null, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, efficiencyPercentiles.get(footballPlayerRankKey(p.id, p.team_id, selected?.category || category)), data?.rankings[selected?.category || category]?.minimum_plays, rank != null ? "yes" : "no", s?.metrics ? JSON.stringify(s.metrics) : null];
   };
   const download = (all = false) => {
     const selectedRows = all ? rows : rows.slice(page * 40, page * 40 + 40);
     downloadCsv(
-      `football-player-rankings-${season}-${category}-${sort}-${all ? "all" : `page-${page + 1}`}.csv`,
+      `football-player-rankings-${season}-${category}-${sourceBoxMetric?.key || sort}-${all ? "all" : `page-${page + 1}`}.csv`,
       toCsv(exportHeaders, selectedRows.map(exportRow)),
     );
   };
@@ -371,6 +377,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             value={category}
             onChange={(e) => {
               setCategory(e.target.value as FootballPlayerCategory);
+              setMetric(footballSourceBoxMetric(e.target.value as FootballPlayerCategory) ?? "");
               setQualified(false);
               setPage(0);
             }}
@@ -389,6 +396,23 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
             {footballPlayerSorts.map((value) => <option key={value} value={value}>{sortLabels[value]}</option>)}
           </select>
         </label>
+        {sourceBoxMetric && (
+          <label className="control">
+            <span>RANK STAT</span>
+            <select
+              value={sourceBoxMetric.key}
+              onChange={(e) => {
+                setMetric(e.target.value);
+                setQualified(false);
+                setPage(0);
+              }}
+            >
+              {sourceBoxMetrics.map((item) => (
+                <option key={item.key} value={item.key}>{item.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="control">
           <span>DIVISION</span>
           <select
@@ -444,7 +468,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
               setPage(0);
             }}
           />
-          Show ranked players only ({sourceBoxMetric ? `source-box order by ${sourceBoxMetric}` : season === "2026" ? "observed EPA order (provisional)" : division === "fcs" ? "FCS Silvermine production order" : "FBS source rank"}{minimum && season !== "2026" ? `, at least ${minimum} plays` : ", numeric source total required"})
+          Show ranked players only ({sourceBoxMetric ? `source-box order by ${sourceBoxMetric.label}` : season === "2026" ? "observed EPA order (provisional)" : division === "fcs" ? "FCS Silvermine production order" : "FBS source rank"}{minimum && season !== "2026" ? `, at least ${minimum} plays` : ", numeric source total required"})
         </label>
       )}
       {compareMessage && <p className="note" role="status">{compareMessage}</p>}
@@ -492,7 +516,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         </section>
       )}
       <p className="note" style={{ marginBottom: 20 }}>
-        Ordered by {sourceBoxMetric ? `source-box order by ${sourceBoxMetric}` : division === "fcs" && sort === "rank" ? "FCS Silvermine production order" : sortLabels[sort].toLowerCase()} within{" "}
+        Ordered by {sourceBoxMetric ? `${sourceBoxMetric.label.toLowerCase()} from exact-ID source boxes` : division === "fcs" && sort === "rank" ? "FCS Silvermine production order" : sortLabels[sort].toLowerCase()} within{" "}
         {category === "all"
           ? "the best available ranked category per player"
           : category}. Team
@@ -506,7 +530,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         zero. The EPA / play percentile compares observed values within the
         selected season, division and category cohort; it is a descriptive rate
         context and does not replace the source rank or create a composite grade.
-        {sourceBoxMetric ? ` ${sourceBoxMetric} order is a transparent exact-ID source-box total; equal totals share a competition rank, and it is not a composite grade.` : season === "2026" ? " The 2026 offensive order is provisional: it competition-ranks observed total EPA within the selected division because the partial-season source has not issued qualified native ranks. Equal EPA totals share a rank. It is descriptive and should not be read as a full-season or composite grade." : division === "fcs" ? ` FCS rank is a Silvermine competition ranking of ${fcsRankBasis === "total_epa" ? "retained total EPA" : fcsRankBasis === "source_box_yards" ? "exact-ID source-box yards because this cohort has no retained EPA" : "available retained production"} after the category play threshold; equal values share a rank, and EPA is never compared with yards. The publisher does not provide a source FCS rank.` : " FBS rank is the retained source rank."}
+        {sourceBoxMetric ? ` ${sourceBoxMetric.label} is a transparent exact-ID source-box field; equal values share a competition rank. Rate fields remain visible but are not rank choices without a source-defined qualification threshold.` : season === "2026" ? " The 2026 offensive order is provisional: it competition-ranks observed total EPA within the selected division because the partial-season source has not issued qualified native ranks. Equal EPA totals share a rank. It is descriptive and should not be read as a full-season or composite grade." : division === "fcs" ? ` FCS rank is a Silvermine competition ranking of ${fcsRankBasis === "total_epa" ? "retained total EPA" : fcsRankBasis === "source_box_yards" ? "exact-ID source-box yards because this cohort has no retained EPA" : "available retained production"} after the category play threshold; equal values share a rank, and EPA is never compared with yards. The publisher does not provide a source FCS rank.` : " FBS rank is the retained source rank."}
       </p>
       {eventDataset && !sourceBoxMetric ? (
         <section className="section paper-panel">
@@ -545,13 +569,14 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
               <thead>
                 <tr>
                   <th>Compare</th>
-                  <th>{sourceBoxMetric ? "Source-box rank" : season === "2026" ? "Provisional EPA rank" : division === "fcs" ? "FCS rank" : "EPA rank"}</th>
+                  <th>{sourceBoxMetric ? `${sourceBoxMetric.label} rank` : season === "2026" ? "Provisional EPA rank" : division === "fcs" ? "FCS rank" : "EPA rank"}</th>
                   <th>Player / team</th>
                   <th>Category</th>
                   {sourceBoxMetric ? (
                     <>
                       <th className="numeric">Box games</th>
                       <th className="numeric">Stat games</th>
+                      <th className="numeric">{sourceBoxMetric.label}</th>
                       <th>Recorded source metrics</th>
                     </>
                   ) : (
@@ -607,6 +632,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
                         <>
                           <td className="numeric">{p.box_games}</td>
                           <td className="numeric">{fmt(s?.games, 0)}</td>
+                          <td className="numeric"><strong>{fmt(s?.metrics?.[sourceBoxMetric.key], 2)}</strong></td>
                           <td>
                             <div className="note" style={{ margin: 0 }}>
                               {Object.entries(s?.metrics || {}).map(([key, value]) => `${key.replaceAll("_", " ")}: ${fmt(value, 2)}`).join(" · ") || "—"}

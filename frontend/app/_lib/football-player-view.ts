@@ -113,19 +113,73 @@ const footballEventCategoryMap: Partial<
   puntReturns: "specialists",
 };
 
-/** Exact-ID source-box field used for a transparent category order. */
-const sourceBoxMetricMap: Partial<Record<FootballPlayerCategory, string>> = {
-  defensive: "tackles",
-  interceptions: "interceptions",
-  fumbles: "fumbles_recovered",
-  kicking: "total_kicking_points",
-  punting: "punt_yards",
-  kickReturns: "kick_return_yards",
-  puntReturns: "punt_return_yards",
+export type FootballSourceBoxMetric = {
+  key: string;
+  label: string;
 };
 
+/**
+ * Rankable exact-ID counting fields retained in each source-box category.
+ * Percentage and per-opportunity fields stay visible in the table but are not
+ * ranked without a source-defined qualification threshold.
+ */
+const sourceBoxMetricMap: Partial<Record<FootballPlayerCategory, FootballSourceBoxMetric[]>> = {
+  defensive: [
+    { key: "tackles", label: "Tackles" },
+    { key: "solo_tackles", label: "Solo tackles" },
+    { key: "tackles_for_loss", label: "Tackles for loss" },
+    { key: "sacks", label: "Sacks" },
+    { key: "passes_defended", label: "Passes defended" },
+    { key: "hurries", label: "Quarterback hurries" },
+    { key: "defensive_touchdowns", label: "Defensive touchdowns" },
+  ],
+  interceptions: [
+    { key: "interceptions", label: "Interceptions" },
+    { key: "interception_yards", label: "Interception return yards" },
+    { key: "interception_touchdowns", label: "Interception touchdowns" },
+  ],
+  fumbles: [
+    { key: "fumbles_recovered", label: "Fumbles recovered" },
+  ],
+  kicking: [
+    { key: "total_kicking_points", label: "Kicking points" },
+    { key: "field_goals_made", label: "Field goals made" },
+    { key: "extra_points_made", label: "Extra points made" },
+  ],
+  punting: [
+    { key: "punt_yards", label: "Punt yards" },
+    { key: "punts_inside_20", label: "Punts inside the 20" },
+    { key: "long_punt", label: "Longest punt" },
+  ],
+  kickReturns: [
+    { key: "kick_return_yards", label: "Kick-return yards" },
+    { key: "kick_returns", label: "Kick returns" },
+    { key: "kick_return_touchdowns", label: "Kick-return touchdowns" },
+    { key: "long_kick_return", label: "Longest kick return" },
+  ],
+  puntReturns: [
+    { key: "punt_return_yards", label: "Punt-return yards" },
+    { key: "punt_returns", label: "Punt returns" },
+    { key: "punt_return_touchdowns", label: "Punt-return touchdowns" },
+    { key: "long_punt_return", label: "Longest punt return" },
+  ],
+};
+
+export function footballSourceBoxMetrics(category: FootballPlayerCategory) {
+  return sourceBoxMetricMap[category] ?? [];
+}
+
 export function footballSourceBoxMetric(category: FootballPlayerCategory): string | null {
-  return sourceBoxMetricMap[category] ?? null;
+  return footballSourceBoxMetrics(category)[0]?.key ?? null;
+}
+
+/** Keep a requested metric inside the selected source category. */
+export function resolveFootballSourceBoxMetric(
+  category: FootballPlayerCategory,
+  requested: string | null | undefined,
+) {
+  const metrics = footballSourceBoxMetrics(category);
+  return metrics.find((metric) => metric.key === requested) ?? metrics[0] ?? null;
 }
 
 /** Return the source notebook for categories that do not have stable athlete IDs. */
@@ -140,6 +194,7 @@ export type FootballPlayerFilters = {
   query: string;
   qualified: boolean;
   sort: FootballPlayerSort;
+  metric: string;
   page: number;
 };
 
@@ -160,6 +215,10 @@ export function parseFootballPlayerFilters(
   const division = params.get("division");
   const page = Number(params.get("page") || 0);
   const requestedSort = params.get("sort") as FootballPlayerSort | null;
+  const resolvedMetric = resolveFootballSourceBoxMetric(
+    category && footballPlayerCategories.includes(category) ? category : "passing",
+    params.get("metric"),
+  );
   return {
     season,
     category:
@@ -168,6 +227,7 @@ export function parseFootballPlayerFilters(
     query: params.get("q") || "",
     qualified: params.get("qualified") === "1",
     sort: requestedSort && footballPlayerSorts.includes(requestedSort) ? requestedSort : "rank",
+    metric: resolvedMetric?.key ?? "",
     page: Number.isInteger(page) && page > 0 && page <= 250 ? page : 0,
   };
 }
@@ -181,6 +241,8 @@ export function footballPlayerFilterSearch(filters: FootballPlayerFilters) {
   if (filters.query) params.set("q", filters.query);
   if (filters.qualified) params.set("qualified", "1");
   if (filters.sort !== "rank") params.set("sort", filters.sort);
+  const defaultMetric = footballSourceBoxMetric(filters.category);
+  if (filters.metric && filters.metric !== defaultMetric) params.set("metric", filters.metric);
   if (filters.page) params.set("page", String(filters.page));
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -259,8 +321,9 @@ export function computeSourceBoxRanks(
   players: FootballRankablePlayer[],
   category: FootballPlayerCategory,
   division: FootballPlayerDivision = "all",
+  requestedMetric?: string | null,
 ) {
-  const metric = footballSourceBoxMetric(category);
+  const metric = resolveFootballSourceBoxMetric(category, requestedMetric)?.key;
   if (!metric || category === "all") return new Map<string, number>();
   const rows = players.flatMap((player) => {
     if (player.division !== "fbs" && player.division !== "fcs") return [];
