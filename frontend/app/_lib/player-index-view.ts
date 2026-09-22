@@ -9,6 +9,8 @@ export const playerIndexSorts = [
   "apg",
   "ts",
   "mpg",
+  "starts",
+  "starter_rate",
   "spg",
   "bpg",
   "fpg",

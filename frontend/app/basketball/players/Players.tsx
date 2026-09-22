@@ -119,6 +119,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     | "apg"
     | "ts"
     | "mpg"
+    | "starts"
+    | "starter_rate"
     | "spg"
     | "bpg"
     | "fpg"
@@ -224,6 +226,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             <option value="apg">Assists per game</option>
             <option value="ts">True shooting</option>
             <option value="mpg">Minutes per game</option>
+            <option value="starts">Starts</option>
+            <option value="starter_rate">Starter rate · higher is better</option>
             <option value="spg">Steals per game</option>
             <option value="bpg">Blocks per game</option>
             <option value="fpg">Fouls per game</option>
@@ -273,7 +277,9 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
         free-throw coefficient differs from the commonly used NBA 0.44.
         ORB/G, DRB/G and PF/G are source-recorded per-game context; FTR is FTA /
         FGA, 3PA rate is 3PA / FGA, and TO rate is TOV / (FGA + 0.475 FTA +
-        TOV). Incomplete totals remain unavailable. Stat ranks use
+        TOV). Starts and starter rate use only source-reported starter fields;
+        starter rate remains unavailable when the source has no starter
+        denominator. Incomplete totals remain unavailable. Stat ranks use
         this season and qualification setting before search filters; ties share
         rank. The archive includes some opponents outside Division I.
       </p>
@@ -451,6 +457,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                   <th>Pos.</th>
                   {[
                     "GP",
+                    "Starts",
+                    "Starter%",
                     "MIN/G",
                     "PTS/G",
                     "REB/G",
@@ -501,6 +509,8 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                     <td>{p.position || "—"}</td>
                     {[
                       p.games,
+                      p.starts,
+                      p.starter_rate == null ? null : p.starter_rate * 100,
                       p.mpg,
                       p.ppg,
                       p.rpg,
@@ -523,7 +533,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                       ),
                     ].map((v, i) => (
                       <td className="numeric" key={i}>
-                        {fmt(v, i === 0 ? 0 : 1)}
+                        {fmt(v, i === 0 || i === 1 ? 0 : 1)}
                       </td>
                     ))}
                   </tr>

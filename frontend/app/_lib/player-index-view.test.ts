@@ -46,6 +46,14 @@ describe("historical player index URL state", () => {
     expect(playerIndexSortValue(2.4, "fpg")).toBe(2.4);
   });
 
+  it("accepts retained starter-count and starter-rate sorts without filling missingness", () => {
+    expect(parsePlayerIndexFilters("?sort=starts", [2026])).toMatchObject({ sort: "starts" });
+    expect(parsePlayerIndexFilters("?sort=starter_rate", [2026])).toMatchObject({ sort: "starter_rate" });
+    expect(playerIndexSortValue(10, "starts")).toBe(10);
+    expect(playerIndexSortValue(0.5, "starter_rate")).toBe(0.5);
+    expect(playerIndexSortValue(null, "starter_rate")).toBeNull();
+  });
+
   it("ranks an explainable profile index with lower turnover rate favorable", () => {
     const rows = rankPlayerProfiles([
       { id: "a", team_id: "1", ppg: 20, rpg: 8, apg: 7, spg: 2, bpg: 1, ts: 0.65, efg: 0.62, tov_rate: 0.1 },
