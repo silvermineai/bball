@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import release from "../../public/data/basketball/womens-recruiting.json";
-import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingRelease, womensRecruitingPositionSupply, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows } from "./womens-recruiting-intel";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingRelease, womensRecruitingGradeBands, womensRecruitingPositionSupply, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows } from "./womens-recruiting-intel";
 
 const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[0][number]> = {}) => ({
   player_id: "p-1",
@@ -68,6 +68,24 @@ describe("women's recruiting prospect cohort", () => {
     ], "north", 5);
     expect(rows.map((row) => row.athlete_id)).toEqual(["2", "3"]);
     expect(rows[1].grade).toBeNull();
+  });
+
+  it("groups source grades while keeping missing grades separate", () => {
+    expect(womensRecruitingGradeBands([
+      { athlete_id: "1", name: "A", grade: 100 },
+      { athlete_id: "2", name: "B", grade: 95 },
+      { athlete_id: "3", name: "C", grade: 94.9 },
+      { athlete_id: "4", name: "D", grade: 80 },
+      { athlete_id: "5", name: "E", grade: 79.9 },
+      { athlete_id: "6", name: "F", grade: null },
+    ])).toEqual([
+      { label: "95–100", minimum: 95, maximum: 100, prospects: 2, share: 2 / 6 },
+      { label: "90–94.9", minimum: 90, maximum: 94.999999, prospects: 1, share: 1 / 6 },
+      { label: "80–89.9", minimum: 80, maximum: 89.999999, prospects: 1, share: 1 / 6 },
+      { label: "Below 80", minimum: null, maximum: 79.999999, prospects: 1, share: 1 / 6 },
+      { label: "Grade unavailable", minimum: null, maximum: null, prospects: 1, share: 1 / 6 },
+    ]);
+    expect(womensRecruitingGradeBands([]).every((band) => band.share === null)).toBe(true);
   });
 
   it("exports validated prospect fields without filling missing ranks or destinations", () => {

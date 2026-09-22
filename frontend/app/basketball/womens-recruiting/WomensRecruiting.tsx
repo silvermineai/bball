@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { downloadCsv, toCsv, type CsvCell } from "../../_lib/csv";
 import {
   rankWomensRecruitingProspects,
+  womensRecruitingGradeBands,
   womensRecruitingPositionSupply,
   type WomensRecruitingProspect,
   type WomensRecruitingRelease,
@@ -51,6 +52,8 @@ export default function WomensRecruiting({ release }: { release: WomensRecruitin
     [release.records],
   );
   const positionSupply = useMemo(() => womensRecruitingPositionSupply(release.records), [release.records]);
+  const gradeBands = useMemo(() => womensRecruitingGradeBands(release.records), [release.records]);
+  const gradeLeaders = useMemo(() => rankWomensRecruitingProspects(release.records, "", 10), [release.records]);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return rankWomensRecruitingProspects(
@@ -98,6 +101,46 @@ export default function WomensRecruiting({ release }: { release: WomensRecruitin
         </table>
       </div>
     </section> : null}
+    <section className="section two-col" aria-label="Women's source grade profile">
+      <article className="paper-panel recruiting-class-table">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Source grade profile · class {release.season}</div>
+            <h2>See the recorded grade distribution.</h2>
+          </div>
+          <span className="note">{release.coverage.graded.toLocaleString()} graded rows</span>
+        </div>
+        <p className="note">These bands summarize ESPN&apos;s recorded grade field. They are descriptive source buckets, not a Silvermine rank or a projection. Missing grades remain unavailable.</p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Source grade</th><th className="numeric">Prospects</th><th className="numeric">Share</th></tr></thead>
+            <tbody>{gradeBands.map((band) => <tr key={band.label}><th scope="row">{band.label}</th><td className="numeric">{band.prospects.toLocaleString()}</td><td className="numeric">{band.share == null ? "—" : `${(band.share * 100).toFixed(1)}%`}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </article>
+      <article className="paper-panel recruiting-class-table">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Highest recorded source grades</div>
+            <h2>Start with the strongest graded rows.</h2>
+          </div>
+          <span className="note">No national rank inferred</span>
+        </div>
+        <p className="note">Rows are ordered by recorded grade, then name and ESPN athlete ID. Ties stay ties; the table does not manufacture ordinal ranks. The current release carries no source-ranked national ranks or destination IDs.</p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Prospect</th><th>Position</th><th className="numeric">Source grade</th><th>Status</th><th>Destination</th></tr></thead>
+            <tbody>{gradeLeaders.map((record) => <tr key={record.athlete_id}>
+              <th scope="row"><strong>{record.name}</strong><small>ESPN athlete ID {record.athlete_id}</small></th>
+              <td>{display(record.position)}</td>
+              <td className="numeric"><strong>{display(record.grade)}</strong></td>
+              <td>{display(record.status)}</td>
+              <td>{record.committed_team_name || "Unavailable"}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </article>
+    </section>
     <section className="section" aria-labelledby="womens-recruiting-board">
       <div className="section-heading">
         <div>

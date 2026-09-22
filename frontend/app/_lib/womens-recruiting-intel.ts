@@ -41,6 +41,14 @@ export type WomensRecruitingPositionSupply = {
   statuses: Array<{ status: string; prospects: number }>;
 };
 
+export type WomensRecruitingGradeBand = {
+  label: string;
+  minimum: number | null;
+  maximum: number | null;
+  prospects: number;
+  share: number | null;
+};
+
 export type WomensRecruitingRelease = {
   schema_version: 1;
   sport: "basketball";
@@ -240,6 +248,43 @@ export function rankWomensRecruitingProspects(
     .filter((row) => !needle || `${row.name} ${row.position || ""} ${row.high_school || ""} ${row.hometown || ""} ${row.athlete_id}`.toLowerCase().includes(needle))
     .sort((left, right) => (right.grade ?? -Infinity) - (left.grade ?? -Infinity) || left.name.localeCompare(right.name) || left.athlete_id.localeCompare(right.athlete_id))
     .slice(0, safeLimit);
+}
+
+/**
+ * Describe the source grade distribution without converting grades into a
+ * Silvermine ranking. Missing grades remain in their own bucket and every
+ * share uses the supplied release rows as its denominator.
+ */
+export function womensRecruitingGradeBands(
+  records: WomensRecruitingProspect[],
+): WomensRecruitingGradeBand[] {
+  const bands: Array<Omit<WomensRecruitingGradeBand, "prospects" | "share">> = [
+    { label: "95–100", minimum: 95, maximum: 100 },
+    { label: "90–94.9", minimum: 90, maximum: 94.999999 },
+    { label: "80–89.9", minimum: 80, maximum: 89.999999 },
+    { label: "Below 80", minimum: null, maximum: 79.999999 },
+    { label: "Grade unavailable", minimum: null, maximum: null },
+  ];
+  const counts = bands.map(() => 0);
+  records.forEach((record) => {
+    const grade = record.grade;
+    const index = typeof grade !== "number" || !Number.isFinite(grade)
+      ? bands.length - 1
+      : grade >= 95
+        ? 0
+        : grade >= 90
+          ? 1
+          : grade >= 80
+            ? 2
+            : 3;
+    counts[index] += 1;
+  });
+  const denominator = records.length;
+  return bands.map((band, index) => ({
+    ...band,
+    prospects: counts[index],
+    share: denominator > 0 ? counts[index] / denominator : null,
+  }));
 }
 
 /**
