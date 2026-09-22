@@ -27,7 +27,37 @@ export type NationalPlayerRow = {
   three_pct: number | null;
   ft_pct: number | null;
   ppg_rank: number | null;
+  source_stats?: NationalSourceStats;
 };
+
+export type NationalSourceStat = {
+  headers: string[];
+  cells: string[];
+  rank: number | null;
+  value: number | null;
+};
+
+export type NationalSourceStats = Record<string, NationalSourceStat>;
+
+/** Keep only well-formed publisher snapshots; malformed fields stay unavailable. */
+export function normalizeNationalSourceStats(value: unknown): NationalSourceStats | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value as Record<string, unknown>).flatMap(([key, raw]) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+    const candidate = raw as Record<string, unknown>;
+    if (!Array.isArray(candidate.headers) || !Array.isArray(candidate.cells)) return [];
+    const headers = candidate.headers.filter((cell): cell is string => typeof cell === "string");
+    const cells = candidate.cells.filter((cell): cell is string => typeof cell === "string");
+    const rank = typeof candidate.rank === "number" && Number.isFinite(candidate.rank) ? candidate.rank : null;
+    const statValue = typeof candidate.value === "number" && Number.isFinite(candidate.value) ? candidate.value : null;
+    return [[key, { headers, cells, rank, value: statValue } as NationalSourceStat] as const];
+  });
+  return entries.length ? Object.fromEntries(entries) as NationalSourceStats : undefined;
+}
+
+export function sourceStatEntries(player: Pick<NationalPlayerRow, "source_stats">) {
+  return Object.entries(player.source_stats || {}).sort(([left], [right]) => left.localeCompare(right));
+}
 
 export type NationalLeaderMetric = "ppg" | "rpg" | "apg" | "spg" | "bpg" | "threes_pg" | "mpg" | "ast_to" | "dbl_dbl" | "fg_pct" | "three_pct" | "ft_pct";
 export type NationalLeaderDivision = "1" | "2" | "3" | "all";
@@ -71,7 +101,8 @@ export type LiveLeader = {
   three_pct?: number | null;
   ft_pct?: number | null;
   publisher_rank?: number | null;
-  payload?: (Partial<NationalPlayerRow> & { pf?: number | null; tov?: number | null }) | null;
+  source_stats?: unknown;
+  payload?: (Partial<NationalPlayerRow> & { pf?: number | null; tov?: number | null; source_stats?: unknown }) | null;
 };
 
 export type LiveLeaderResponse = { rows?: LiveLeader[]; total?: number; limit?: number; pages?: number; min_games?: number };
@@ -81,7 +112,7 @@ export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | nu
   if (row.player_id == null || !row.name) return null;
   const division = Number(row.division ?? payload.division);
   if (![1, 2, 3].includes(division)) return null;
-  return {
+  const normalized: NationalPlayerRow = {
     player_id: row.player_id,
     division,
     name: row.name,
@@ -104,6 +135,9 @@ export function normalizeNationalLeader(row: LiveLeader): NationalPlayerRow | nu
     ft_pct: row.ft_pct ?? payload.ft_pct ?? null,
     ppg_rank: row.publisher_rank ?? payload.ppg_rank ?? null,
   };
+  const sourceStats = normalizeNationalSourceStats(row.source_stats ?? payload.source_stats);
+  if (sourceStats) normalized.source_stats = sourceStats;
+  return normalized;
 }
 
 export function metricValue(row: NationalPlayerRow, metric: NationalLeaderMetric) {
@@ -111,7 +145,7 @@ export function metricValue(row: NationalPlayerRow, metric: NationalLeaderMetric
 }
 
 export const nationalLeaderCsvHeaders = [
-  "Rank", "Player ID", "Player", "Team", "Conference", "GP", "PPG", "RPG", "APG", "SPG", "BPG", "3P/G", "MPG", "A/TO", "Double-doubles", "PF/G", "TO/G", "FG%", "3P%", "FT%", "Division", "Selected metric", "Selected value",
+  "Rank", "Player ID", "Player", "Team", "Conference", "GP", "PPG", "RPG", "APG", "SPG", "BPG", "3P/G", "MPG", "A/TO", "Double-doubles", "PF/G", "TO/G", "FG%", "3P%", "FT%", "Division", "Selected metric", "Selected value", "Raw source stats JSON",
 ];
 
 export function nationalLeaderCsvRows(
@@ -144,6 +178,7 @@ export function nationalLeaderCsvRows(
       `D${player.division}`,
       metric,
       metricValue(player, metric),
+      player.source_stats ? JSON.stringify(player.source_stats) : null,
     ];
   });
 }
@@ -360,7 +395,7 @@ export default function LiveNationalPlayerTable({
       {error ? <p className={players.length ? "note" : "empty"} role="status">{error}{players.length ? "" : " Try another field or return to points per game."}</p> : null}
       <div className="dashboard-table-wrap" aria-busy={loading}>
         <table className="data-table dashboard-table">
-          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Division</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">3P/G</th><th className="numeric">MPG</th><th className="numeric">A/TO</th><th className="numeric">D-D</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th></tr></thead>
+          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Division</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">3P/G</th><th className="numeric">MPG</th><th className="numeric">A/TO</th><th className="numeric">D-D</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th>Source snapshot</th></tr></thead>
           <tbody>{players.slice(0, rowLimit).map((player) => (
           <tr key={player.player_id}>
             <td className="rank-number">{player.leader_rank ?? "—"}</td>
@@ -382,6 +417,9 @@ export default function LiveNationalPlayerTable({
             <td className="numeric">{metric === "fg_pct" ? <strong>{pct(metricValue(player, "fg_pct"))}</strong> : pct(metricValue(player, "fg_pct"))}</td>
             <td className="numeric">{metric === "three_pct" ? <strong>{pct(metricValue(player, "three_pct"))}</strong> : pct(metricValue(player, "three_pct"))}</td>
             <td className="numeric">{metric === "ft_pct" ? <strong>{pct(metricValue(player, "ft_pct"))}</strong> : pct(metricValue(player, "ft_pct"))}</td>
+            <td>
+              {sourceStatEntries(player).length ? <details className="ranking-recorded-details"><summary>{sourceStatEntries(player).length} source snapshot field{sourceStatEntries(player).length === 1 ? "" : "s"}</summary>{sourceStatEntries(player).map(([key, source]) => <small key={key}><strong>{key}</strong> · rank {source.rank ?? "—"} · value {source.value ?? "—"}<br />headers: {source.headers.join(" · ")}<br />cells: {source.cells.join(" · ")}</small>)}</details> : <span className="note">—</span>}
+            </td>
           </tr>
         ))}</tbody>
         </table>
