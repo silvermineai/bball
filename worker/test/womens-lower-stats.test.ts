@@ -117,4 +117,15 @@ describe("women's lower-division stats API", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ code: "release_integrity_failed" });
   });
+
+  it("fails closed when a dangling available-statistics entry uses the wrong kind path", async () => {
+    const malformed = edition();
+    malformed.divisions.d2.available_statistics.team.push({
+      label: "Rebounds",
+      source_path: "/stats/basketball-women/d2/current/individual/103",
+    });
+    const response = await womensLowerStats.request("/?division=2", {}, env(malformed));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "release_integrity_failed" });
+  });
 });

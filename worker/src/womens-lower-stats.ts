@@ -93,7 +93,7 @@ function validateEdition(value: unknown): RecordValue | null {
         const entries = available[kind];
         if (!Array.isArray(entries)) return null;
         for (const entry of entries) {
-          if (!isRecord(entry) || typeof entry.label !== "string" || typeof entry.source_path !== "string" || !entry.source_path.startsWith(`/stats/basketball-women/d${division}/`)) return null;
+          if (!isRecord(entry) || typeof entry.label !== "string" || typeof entry.source_path !== "string" || !entry.source_path.startsWith(`/stats/basketball-women/d${division}/`) || !entry.source_path.includes(`/${kind}/`)) return null;
           availablePaths[kind].add(entry.source_path);
         }
       }

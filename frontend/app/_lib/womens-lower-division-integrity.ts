@@ -116,7 +116,7 @@ export function parseWomensLowerDivisionEdition(value: unknown): WomensLowerDivi
     const availablePaths: Record<"individual" | "team", Set<string>> = { individual: new Set<string>(), team: new Set<string>() };
     for (const kind of ["individual", "team"] as const) {
       for (const candidate of availableStatistics[kind]) {
-        if (!isRecord(candidate) || typeof candidate.label !== "string" || typeof candidate.source_path !== "string" || !candidate.source_path.startsWith(`/stats/basketball-women/d${division}/`)) return fail(`D${division} ${kind} available-statistics ledger is malformed.`);
+        if (!isRecord(candidate) || typeof candidate.label !== "string" || typeof candidate.source_path !== "string" || !candidate.source_path.startsWith(`/stats/basketball-women/d${division}/`) || !candidate.source_path.includes(`/${kind}/`)) return fail(`D${division} ${kind} available-statistics ledger is malformed.`);
         availablePaths[kind].add(candidate.source_path);
       }
     }

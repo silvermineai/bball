@@ -68,6 +68,15 @@ describe("women's lower-division release integrity", () => {
     value.receipts.push(receipt(teamUrl));
     value.divisions.d2.available_statistics.individual[0].source_path = "/stats/basketball-women/d2/current/team/102";
     (value.divisions.d2.individual[0] as { source_url: string }).source_url = teamUrl;
-    expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/exact-kind/);
+    expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/available-statistics ledger is malformed/);
+  });
+
+  it("rejects a dangling ledger entry under the wrong stat kind", () => {
+    const value = edition();
+    (value.divisions.d2.available_statistics.team as Array<{ label: string; source_path: string }>).push({
+      label: "Scoring offense",
+      source_path: "/stats/basketball-women/d2/current/individual/103",
+    });
+    expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/available-statistics ledger is malformed/);
   });
 });
