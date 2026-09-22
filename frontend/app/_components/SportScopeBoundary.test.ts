@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublishedBoundary, isWomensDivisionDesk, isWomensPlayerRankingDesk, scopeBoundaryView } from "./SportScopeBoundary";
+import { isPublishedBoundary, isWomensDivisionDesk, isWomensOverviewDesk, isWomensPlayerRankingDesk, scopeBoundaryView } from "./SportScopeBoundary";
 
 describe("sport scope boundary", () => {
   it("does not render the default men's page before the URL scope hydrates", () => {
@@ -31,6 +31,14 @@ describe("sport scope boundary", () => {
     expect(isWomensPlayerRankingDesk("/basketball/ncaa-rankings/")).toBe(true);
     expect(isWomensPlayerRankingDesk("/basketball/ncaa-rankings-preview")).toBe(false);
     expect(scopeBoundaryView(true, "basketball", { gender: "women", division: "1" }, "/basketball/ncaa-rankings/")).toBe("published");
+  });
+
+  it("publishes the women’s D1 snapshot on the shared Overview route", () => {
+    expect(isWomensOverviewDesk("/basketball")).toBe(true);
+    expect(isWomensOverviewDesk("/basketball/")).toBe(true);
+    expect(isWomensOverviewDesk("/basketball/players")).toBe(false);
+    expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/")).toBe(false);
+    expect(scopeBoundaryView(true, "basketball", { gender: "women", division: "1" }, "/basketball/")).toBe("published");
   });
 
   it("lets the women's Division tab render its scope readiness desk", () => {
