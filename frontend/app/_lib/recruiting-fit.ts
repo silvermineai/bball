@@ -156,9 +156,10 @@ export type FitRow = {
   player: BBRoster;
   role: FitRole | "unknown";
   /** Ordinal within the complete role/workload-qualified cohort, before search filtering. */
-  cohortRank: number;
+  cohortRank: number | null;
   cohortTotal: number;
-  score: number;
+  /** Null when the selected skill metrics cannot support a score. */
+  score: number | null;
   skillPercentile: number | null;
   skillComponents: number;
   skillComponentTotal: number;
@@ -312,7 +313,7 @@ export function buildRecruitingFit(
     const minutes = eligible.map((row) => value(row, "minutes")).filter((v): v is number => v != null);
     const workloadPercentile = percentile(minutes, value(player, "minutes"));
     const score = skill.score == null || workloadPercentile == null
-      ? 0
+      ? null
       : Math.round((skill.score * 0.7 + workloadPercentile * 0.3) * 1000) / 10;
     return {
       player,
@@ -326,9 +327,16 @@ export function buildRecruitingFit(
       primaryValue: skill.primary,
     };
   });
-  const ordered = scored
-    .sort((a, b) => b.score - a.score || (b.player.prior_production?.minutes || 0) - (a.player.prior_production?.minutes || 0) || a.player.name.localeCompare(b.player.name))
-    .map((row, index) => ({ ...row, cohortRank: index + 1, cohortTotal: scored.length }));
+  const ranked = scored
+    .filter((row): row is typeof row & { score: number } => row.score != null)
+    .sort((a, b) => b.score - a.score || (b.player.prior_production?.minutes || 0) - (a.player.prior_production?.minutes || 0) || a.player.name.localeCompare(b.player.name));
+  const unranked = scored
+    .filter((row) => row.score == null)
+    .sort((a, b) => (b.player.prior_production?.minutes || 0) - (a.player.prior_production?.minutes || 0) || a.player.name.localeCompare(b.player.name));
+  const ordered = [
+    ...ranked.map((row, index) => ({ ...row, cohortRank: index + 1, cohortTotal: ranked.length })),
+    ...unranked.map((row) => ({ ...row, cohortRank: null, cohortTotal: ranked.length })),
+  ];
   return ordered
     .filter((row) => !query || `${row.player.name} ${row.player.team} ${row.player.previous_teams.join(" ")}`.toLowerCase().includes(query));
 }

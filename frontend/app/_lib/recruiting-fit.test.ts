@@ -94,7 +94,9 @@ describe("recruiting fit", () => {
     ];
     const result = buildRecruitingFit(rows, { teamId: "target", role: "guard", focus: "creation", minimumMinutes: 400 });
     expect(result.map((row) => row.player.id)).toEqual(["a", "b"]);
-    expect(result[0].score).toBeGreaterThan(result[1].score);
+    expect(result[0].score).not.toBeNull();
+    expect(result[1].score).not.toBeNull();
+    expect(result[0].score!).toBeGreaterThan(result[1].score!);
   });
 
   it("keeps cohort rank and denominator stable when a name filter hides candidates", () => {
@@ -118,6 +120,22 @@ describe("recruiting fit", () => {
     ], { teamId: "target", role: "any", focus: "shooting", minimumMinutes: 400 });
     expect(result.find((row) => row.player.id === "complete")).toMatchObject({ skillComponents: 3, skillComponentTotal: 3 });
     expect(result.find((row) => row.player.id === "partial")).toMatchObject({ skillComponents: 2, skillComponentTotal: 3 });
+  });
+
+  it("withholds a fit score when every selected skill field is missing", () => {
+    const result = buildRecruitingFit([
+      player({ id: "target", team_id: "target" }),
+      player({ id: "complete", team_id: "2", prior_production: { games: 25, minutes: 700, mpg: 28, ppg: 14, rpg: 4, apg: 5, teams: ["A"] } }),
+      player({ id: "missing", team_id: "3", prior_production: { games: 25, minutes: 600, mpg: 24, ppg: null, rpg: null, apg: null, efg: null, ts: null, three_pct: null, ft_rate: null, three_rate: null, tov_rate: null, teams: ["B"] } }),
+    ], { teamId: "target", role: "any", focus: "creation", minimumMinutes: 400 });
+    expect(result.find((row) => row.player.id === "complete")?.score).not.toBeNull();
+    expect(result.find((row) => row.player.id === "missing")).toMatchObject({
+      score: null,
+      cohortRank: null,
+      cohortTotal: 1,
+      skillComponents: 0,
+      skillComponentTotal: 2,
+    });
   });
 
   it("scores rebounding from offensive and defensive components", () => {
