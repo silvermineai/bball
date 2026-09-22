@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { date, fmt } from "../../_lib/format";
+import { downloadCsv, toCsv } from "../../_lib/csv";
+import { footballPlayerExportHeaders, footballPlayerExportRows } from "../../_lib/football-player-export";
 type Row = {
   dataset: string;
   game_id: string | null;
@@ -299,6 +301,23 @@ export default function PlayerDetail() {
             {data.total} records · the retained archive release imports ·{" "}
             {data.season}
           </p>
+          <div className="button-row" style={{ marginBottom: 16 }}>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => {
+                const headers = footballPlayerExportHeaders(data.rows);
+                downloadCsv(
+                  `football-player-${id}-${data.season}-page-${page + 1}.csv`,
+                  toCsv(headers, footballPlayerExportRows(data.rows, headers)),
+                );
+              }}
+              disabled={!data.rows.length}
+            >
+              Download source rows CSV ↓
+            </button>
+            <span className="note">Current page · source field names and values are retained.</span>
+          </div>
           {data.rows.map((row, i) => (
             <details key={`${page}-${i}`} open={i === 0}>
               <summary>
