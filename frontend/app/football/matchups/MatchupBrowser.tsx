@@ -16,7 +16,7 @@ import {
 import type { LiveFootballMarketComparisonSet } from "../../_lib/live-football-forecasts";
 import type { FootballSlateIntel } from "../../_lib/football-brief";
 import { loadFootballRecruitingContext, type FootballRecruitingTeam } from "../../_lib/football-recruiting-context";
-import { comparisonQuoteSummary } from "../../_lib/market-display";
+import { comparisonQuoteSummary, comparisonTimingLabel } from "../../_lib/market-display";
 import {
   matchesFootballMatchupDivision,
   matchesFootballMatchupSignal,
@@ -428,14 +428,18 @@ export default function MatchupBrowser({
                     <th className="numeric">Model home win</th>
                     <th className="numeric">Spread / gap</th>
                     <th className="numeric">Total / gap</th>
-                    <th>Captured</th>
+                    <th>Evidence clock</th>
                   </tr>
                 </thead>
                 <tbody>
                   {marketLinkedRows.slice(0, 12).map(({ game, comparisons }) => {
                     const spread = comparisons.find((quote) => quote.market === "spreads");
                     const total = comparisons.find((quote) => quote.market === "totals");
-                    const captured = comparisons[0]?.captured_at;
+                    const latest = [...comparisons].sort((left, right) =>
+                      (right.updated_at || right.captured_at).localeCompare(left.updated_at || left.captured_at),
+                    )[0];
+                    const captured = latest?.captured_at;
+                    const updated = latest?.updated_at;
                     return (
                       <tr key={game.id}>
                         <td>
@@ -448,7 +452,9 @@ export default function MatchupBrowser({
                         <td className="numeric">{game.prediction?.home_win_probability == null ? "—" : `${fmt(game.prediction.home_win_probability * 100)}%`}</td>
                         <td className="numeric">{spread?.line == null ? "—" : `${spread.line > 0 ? "+" : ""}${fmt(spread.line)} / ${spread.model_difference >= 0 ? "+" : ""}${fmt(spread.model_difference)}`}</td>
                         <td className="numeric">{total?.line == null ? "—" : `${fmt(total.line)} / ${total.model_difference >= 0 ? "+" : ""}${fmt(total.model_difference)}`}</td>
-                        <td>{captured ? kick(captured) : "—"}</td>
+                        <td>
+                          {captured ? <><strong>Captured {kick(captured)}</strong><small>{updated ? `Feed updated ${kick(updated)}` : "Feed update clock unavailable"}</small>{updated ? <small>{comparisonTimingLabel({ updated_at: updated }, game.kickoff)}</small> : null}</> : "—"}
+                        </td>
                       </tr>
                     );
                   })}

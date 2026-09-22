@@ -784,7 +784,7 @@ export default function Scorecard() {
                             <br />
                             Captured {kick(c.captured_at)}
                             <br />
-                            {comparisonTimingLabel(c, g.starts_at)} · {kick(c.updated_at)}
+                            Feed updated {kick(c.updated_at)} · {comparisonTimingLabel(c, g.starts_at)}
                             {c.direction_result && (
                               <>
                                 <br />
