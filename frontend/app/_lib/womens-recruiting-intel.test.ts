@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankWomensObservedPlayers } from "./womens-recruiting-intel";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects } from "./womens-recruiting-intel";
 
 const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[0][number]> = {}) => ({
   player_id: "p-1",
@@ -32,5 +32,17 @@ describe("women's recruiting production context", () => {
     ], "avgAssists", 2);
     expect(rows.map((row) => row.player_id)).toEqual(["p-1", "p-2"]);
     expect(rankWomensObservedPlayers([player({ stats: {} })], "avgAssists")[0].metricValue).toBeNull();
+  });
+});
+
+describe("women's recruiting prospect cohort", () => {
+  it("sorts observed grades and filters exact retained fields", () => {
+    const rows = rankWomensRecruitingProspects([
+      { athlete_id: "2", name: "B", grade: 88, high_school: "North" },
+      { athlete_id: "1", name: "A", grade: 93, high_school: "South" },
+      { athlete_id: "3", name: "C", grade: null, high_school: "North" },
+    ], "north", 5);
+    expect(rows.map((row) => row.athlete_id)).toEqual(["2", "3"]);
+    expect(rows[1].grade).toBeNull();
   });
 });

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { womensRecruitingCoverage, type WomensRecruitingSurface } from "../_lib/womens-recruiting-coverage";
-import { rankWomensObservedPlayers, type WomensObservedMetric, type WomensObservedPlayer } from "../_lib/womens-recruiting-intel";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects, type WomensObservedMetric, type WomensObservedPlayer, type WomensRecruitingProspect } from "../_lib/womens-recruiting-intel";
 
 type Edition = {
   generated_at?: string;
@@ -14,6 +14,13 @@ type Edition = {
   };
   players?: WomensObservedPlayer[];
 };
+type ProspectEdition = {
+  season?: number;
+  edition?: string;
+  captured_at?: string;
+  coverage?: { prospects?: number; graded?: number; ranked?: number; committed?: number };
+  records?: WomensRecruitingProspect[];
+};
 
 const date = (value?: string) => {
   if (!value) return "—";
@@ -23,6 +30,8 @@ const date = (value?: string) => {
 
 export default function WomensBasketballRecruiting() {
   const [edition, setEdition] = useState<Edition | null>(null);
+  const [prospectEdition, setProspectEdition] = useState<ProspectEdition | null>(null);
+  const [prospectQuery, setProspectQuery] = useState("");
   const [metric, setMetric] = useState<WomensObservedMetric>("avgPoints");
   useEffect(() => {
     const controller = new AbortController();
@@ -30,6 +39,10 @@ export default function WomensBasketballRecruiting() {
       .then((response) => response.ok ? response.json() as Promise<Edition> : null)
       .then((value) => { if (!controller.signal.aborted) setEdition(value); })
       .catch(() => { if (!controller.signal.aborted) setEdition(null); });
+    fetch("/data/basketball/womens-recruiting.json", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<ProspectEdition> : null)
+      .then((value) => { if (!controller.signal.aborted) setProspectEdition(value); })
+      .catch(() => { if (!controller.signal.aborted) setProspectEdition(null); });
     return () => controller.abort();
   }, []);
 
@@ -42,6 +55,7 @@ export default function WomensBasketballRecruiting() {
     () => rankWomensObservedPlayers(edition?.players || [], metric, 12),
     [edition?.players, metric],
   );
+  const prospects = useMemo(() => rankWomensRecruitingProspects(prospectEdition?.records || [], prospectQuery, 20), [prospectEdition?.records, prospectQuery]);
   const metricLabel: Record<WomensObservedMetric, string> = {
     avgPoints: "PPG",
     avgRebounds: "RPG",
@@ -52,7 +66,7 @@ export default function WomensBasketballRecruiting() {
   return <section className="field-card" aria-labelledby="wbb-recruiting-title">
     <div className="eyebrow">WOMEN&apos;S RECRUITING CONTEXT · SOURCE-NATIVE</div>
     <h2 id="wbb-recruiting-title">Roster context with the boundary attached</h2>
-    <p className="muted">Women&apos;s roster and player production rows are available for study. A women&apos;s recruiting event feed has not passed the import contract, so no men&apos;s recruiting records, commitments or eligibility claims are substituted here.</p>
+    <p className="muted">Women&apos;s roster and player production rows are available for study. The women&apos;s prospect cohort is published separately from recruiting events; missing ranks, commitments and eligibility fields remain unavailable, and no men&apos;s recruiting records are substituted.</p>
     {!edition ? <p className="muted">Loading women&apos;s recruiting coverage…</p> : <>
       <div className="strip" aria-label="Women&apos;s recruiting coverage counts">
         {coverage.map((surface) => <div key={surface.key}><strong>{surface.rows.toLocaleString()}</strong><span>{surface.label}</span></div>)}
@@ -67,6 +81,14 @@ export default function WomensBasketballRecruiting() {
         <Link className="button secondary" href="/basketball/?gender=women&division=1">Open women&apos;s dashboard ↗</Link>
         <Link className="hero-link" href="/research/coverage/?sport=basketball&gender=women&division=1">Review division coverage →</Link>
       </div>
+      <section className="field-card wbb-player-card" aria-labelledby="wbb-recruiting-prospects-title">
+        <div className="eyebrow">WOMEN&apos;S PROSPECT COHORT · 2027 SOURCE IDS</div>
+        <div className="section-heading">
+          <div><h3 id="wbb-recruiting-prospects-title">Observed prospect grades</h3><p className="muted">Grades are the only published evaluative field in this cohort. Rank and commitment columns remain unavailable when the source does not return them.</p></div>
+          <label className="wbb-recruiting-metric">Find a prospect <input aria-label="Find a women's prospect" value={prospectQuery} onChange={(event) => setProspectQuery(event.target.value)} placeholder="Name, school, or ID" /></label>
+        </div>
+        {prospectEdition ? <><div className="strip" aria-label="Women&apos;s prospect coverage"><div><strong>{(prospectEdition.coverage?.prospects || 0).toLocaleString()}</strong><span>Prospects</span></div><div><strong>{(prospectEdition.coverage?.graded || 0).toLocaleString()}</strong><span>Graded</span></div><div><strong>{(prospectEdition.coverage?.ranked || 0).toLocaleString()}</strong><span>National ranks</span></div><div><strong>{(prospectEdition.coverage?.committed || 0).toLocaleString()}</strong><span>Commitment IDs</span></div></div><div className="table-scroll"><table className="data-table"><thead><tr><th>Prospect</th><th>Position</th><th className="numeric">Grade</th><th>High school</th><th>Hometown</th><th>Status</th></tr></thead><tbody>{prospects.map((prospect) => <tr key={prospect.athlete_id}><th scope="row"><strong>{prospect.name}</strong><small>Exact source ID · {prospect.athlete_id}</small></th><td>{prospect.position || "—"}</td><td className="numeric">{prospect.grade == null ? "—" : prospect.grade}</td><td>{prospect.high_school || "—"}</td><td>{prospect.hometown || "—"}</td><td>{prospect.status || "—"}</td></tr>)}</tbody></table></div>{!prospects.length ? <p className="empty">No women&apos;s prospects match this search.</p> : null}<p className="note">Receipt-backed women&apos;s release edition <code>{prospectEdition.edition?.slice(0, 12) || "unavailable"}…</code> · captured {date(prospectEdition.captured_at)}. National and position ranks are unavailable for this release; the table is grade-sorted observed evidence, not a Silvermine ranking.</p></> : <p className="muted">Women&apos;s prospect release unavailable; no rows are substituted.</p>}
+      </section>
       <section className="field-card wbb-player-card" aria-labelledby="wbb-recruiting-production-title">
         <div className="eyebrow">SOURCE-NATIVE PRODUCTION CONTEXT · 2026 EDITION</div>
         <div className="section-heading">
