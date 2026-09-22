@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
+import { baselineMarginDelta } from "../_lib/forecast-lab-view";
 
 type ForecastModel = {
   model_id?: string;
@@ -18,6 +19,7 @@ type FootballModelSummary = {
     season?: number | null;
     games?: number | null;
     margin_mae?: number | null;
+    baseline_margin_mae?: number | null;
     winner_accuracy?: number | null;
     brier?: number | null;
     interval_coverage?: number | null;
@@ -63,6 +65,8 @@ export function formatFootballModelEvidence(summary?: FootballModelSummary | nul
   const parts = [`held out ${(evaluation.games as number).toLocaleString()} games`];
   if (Number.isFinite(evaluation.winner_accuracy)) parts.push(`${((evaluation.winner_accuracy as number) * 100).toFixed(1)}% winner accuracy`);
   if (Number.isFinite(evaluation.margin_mae)) parts.push(`${(evaluation.margin_mae as number).toFixed(1)} pt margin MAE`);
+  const baselineDelta = baselineMarginDelta(evaluation.margin_mae, evaluation.baseline_margin_mae);
+  if (baselineDelta != null) parts.push(`${Math.abs(baselineDelta).toFixed(1)} pts ${baselineDelta >= 0 ? "lower" : "higher"} than the baseline`);
   if (Number.isFinite(evaluation.brier)) parts.push(`Brier ${(evaluation.brier as number).toFixed(3)}`);
   if (Number.isFinite(evaluation.interval_coverage)) parts.push(`${((evaluation.interval_coverage as number) * 100).toFixed(1)}% range coverage`);
   if (summary.calibration?.games && Number.isFinite(summary.calibration.margin_half_width)) {
