@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { date, fmt } from "../../_lib/format";
+import { downloadCsv } from "../../_lib/csv";
+import { footballRecruitingCsv, type FootballRecruitingView } from "../../_lib/football-recruiting-export";
 
 type View = "rosters" | "recruits" | "talent" | "returning";
 type Division = "all" | "fbs" | "fcs" | "d2" | "d3" | "naia" | "unknown";
@@ -100,6 +102,11 @@ export default function RecruitingDesk() {
   }, [division, meta, page, query, retry, season, team, view]);
   const selectedReceipt = useMemo(() => result?.source_receipts[0] || null, [result]);
   const updateView = (next: View) => { setPage(0); setView(next); };
+  const downloadCurrentPage = () => {
+    if (!result) return;
+    const csv = footballRecruitingCsv(view as FootballRecruitingView, result.rows, Number(result.season));
+    downloadCsv(`football-${view}-${result.season}-page-${page + 1}.csv`, csv);
+  };
   return <>
     <div className="page-title">
       <div className="eyebrow">Football personnel desk / retained context</div>
@@ -142,7 +149,7 @@ export default function RecruitingDesk() {
         </tbody></table></div>
         <p className="note" style={{ marginTop: 12 }}>A record count describes the retained recruiting release. It does not establish enrollment, eligibility, playing time or a program&apos;s future roster strength.</p>
       </section>}
-      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching rows · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><Link className="hero-link" href={`/football/source-stats/?dataset=${encodeURIComponent(result.dataset)}&season=${result.season}`}>Open raw dataset browser →</Link></div>
+      <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching rows · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><div className="button-row"><button className="button secondary" type="button" onClick={downloadCurrentPage}>Download page CSV ↓</button><Link className="hero-link" href={`/football/source-stats/?dataset=${encodeURIComponent(result.dataset)}&season=${result.season}`}>Open raw dataset browser →</Link></div></div>
       <p className="note">{result.division_scope?.note || "Division is shown only when the source row or exact season/team directory supplies it."}</p>
       <div className="table-scroll"><table className="data-table"><thead><tr>{view === "rosters" ? <><th>Player</th><th>Program</th><th>Division</th><th>Position</th><th>Experience</th><th>Status</th><th>Listed size</th></> : view === "recruits" ? <><th>Recruit</th><th>Program</th><th>Division</th><th>Position</th><th>Stars</th><th>Grade</th></> : view === "talent" ? <><th>Program</th><th>Division</th><th>Talent composite</th><th>Talent rank</th><th>Blue-chip ratio</th><th>Recruit count</th></> : <><th>Program</th><th>Division</th><th>Offense returning</th><th>Defense returning</th><th>Overall returning</th><th>Returning players</th><th>Estimated</th></>}</tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.record_key}-${row.id || row.team_id}`}>
         {view === "rosters" && <><th scope="row">{row.id ? <Link href={`/football/player/?id=${encodeURIComponent(String(row.id))}&season=${result.season}`}>{value(row, "name")}</Link> : value(row, "name")}<small>{row.id ? `Athlete ${row.id}` : "No stable athlete ID"}</small></th><td>{value(row, "team")}</td><td>{value(row, "division")}</td><td>{value(row, "position")}</td><td>{value(row, "experience")}</td><td>{value(row, "status")}{row.active != null && <small>{row.active ? "Active flag" : "Inactive flag"}</small>}</td><td>{row.height == null && row.weight == null ? "—" : `${row.height == null ? "—" : `${fmt(Number(row.height), 0)} in`} · ${row.weight == null ? "—" : `${fmt(Number(row.weight), 0)} lb`}`}</td></>}
