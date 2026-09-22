@@ -3,27 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { CourtLines } from "./PlayerShotLocationCourt";
 import { PLAYER_COURT } from "../_lib/player-shot-locations";
-import { matchWomensShotProfiles, womensShotTendencyStats, type WomensShotProfileMatch, type WomensShotTendency } from "../_lib/womens-shot-summary";
+import { matchWomensShotProfiles, parseWomensShotPublication, womensShotTendencyStats, type WomensShotProfileMatch, type WomensShotPublication, type WomensShotTendency } from "../_lib/womens-shot-summary";
 import { WOMENS_SOURCE_SCOPE_LABEL } from "../_lib/womens-source-scope";
 import { useSearchParams } from "next/navigation";
 
-type Cell = { column: number; row: number; attempts: number; makes: number };
-type Profile = {
-  profile_id: string;
-  name: string;
-  team: string;
-  identity_status: "stable" | "ambiguous";
-  attempts: number;
-  makes: number;
-  located_attempts: number;
-  cells: Cell[];
-  bands: WomensShotTendency[];
-  sides: WomensShotTendency[];
-};
-type Publication = {
-  coverage: { source_attempts: number; profiles: number; located_attempts: number; ambiguous_profiles: number };
-  profiles: Profile[];
-};
+type Cell = WomensShotPublication["profiles"][number]["cells"][number];
+type Profile = WomensShotPublication["profiles"][number];
+type Publication = WomensShotPublication;
 
 type Props = {
   /** Optional exact-ID player-file context. Shot IDs remain a separate namespace. */
@@ -50,20 +36,25 @@ export default function WomensShotProfileCourt({ playerName, playerTeam }: Props
   useEffect(() => {
     fetch("/data/basketball/womens-shots.json")
       .then((response) => response.ok ? response.json() : null)
-      .then((value: Publication | null) => {
-        setPublication(value);
-        if (!value) return;
+      .then((value: unknown) => {
+        const parsed = value == null ? null : parseWomensShotPublication(value);
+        setPublication(parsed);
+        if (!parsed) return;
         if (playerName) {
-          const match = matchWomensShotProfiles(value.profiles, playerName, playerTeam || "");
+          const match = matchWomensShotProfiles(parsed.profiles, playerName, playerTeam || "");
           setIdentityMatch(match);
           setQuery(playerName);
           setSelectedId(match.compatible.length === 1 ? match.compatible[0].profile_id : null);
         } else {
           setIdentityMatch(null);
-          setSelectedId(value.profiles[0]?.profile_id || null);
+          setSelectedId(parsed.profiles[0]?.profile_id || null);
         }
       })
-      .catch(() => setPublication(null));
+      .catch(() => {
+        setPublication(null);
+        setIdentityMatch(null);
+        setSelectedId(null);
+      });
   }, [playerName, playerTeam]);
 
   const matches = useMemo(() => {
