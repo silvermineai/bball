@@ -6,7 +6,7 @@ import { fmt } from "../_lib/format";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
-export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "dbl_dbl" | "ts" | "efg" | "fg_pct" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "usage_rate" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
+export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "dbl_dbl" | "ts" | "efg" | "fg_pct" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "usage_rate" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "assisted_make_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
 type Metric = LiveNCAAMetric;
 
 export type LiveNCAAPlayerRow = {
@@ -50,6 +50,8 @@ export type LiveNCAAPlayerRow = {
   putback_attempts?: number | null;
   putback_makes?: number | null;
   transition_points?: number | null;
+  assisted_makes?: number | null;
+  unassisted_makes?: number | null;
   unassisted_total_attempts?: number | null;
   unassisted_attempts?: number | null;
   unassisted_points?: number | null;
@@ -157,6 +159,11 @@ export function playerRecordedDetailGroups(row: LiveNCAAPlayerRow): RecordedPlay
   addSplit("Midrange", row.mid_makes, row.mid_attempts);
   addSplit("Putback", row.putback_makes, row.putback_attempts);
   add(shooting, "Transition points", row.transition_points);
+  add(shooting, "Assisted makes", row.assisted_makes);
+  add(shooting, "Unassisted makes", row.unassisted_makes);
+  if (recordedNumber(row.assisted_makes) && recordedNumber(row.unassisted_makes) && recordedNumber(row.fgm) && row.fgm > 0 && row.assisted_makes + row.unassisted_makes === row.fgm) {
+    add(shooting, "Assisted make share", (100 * row.assisted_makes) / row.fgm, { percent: true, decimals: 1 });
+  }
   add(shooting, "Unassisted points", row.unassisted_points);
   add(shooting, "Unassisted attempts", row.unassisted_attempts ?? row.unassisted_total_attempts);
   add(shooting, "Half-court points", row.half_points);
@@ -241,6 +248,7 @@ const metrics: Array<{ key: Metric; label: string; description: string; volume: 
   { key: "putback_pct", label: "Putback finishing", description: "putback field-goal percentage", volume: 50 },
   { key: "rim_rate", label: "Rim attempt rate", description: "rim share of attempts", volume: 50 },
   { key: "transition_share", label: "Transition share", description: "transition possession share", volume: 50 },
+  { key: "assisted_make_share", label: "Assisted make share", description: "assisted FGM / FGM", volume: 50 },
   { key: "unassisted_rate", label: "Unassisted rate", description: "unassisted scoring rate", volume: 50 },
   { key: "unassisted_share", label: "Unassisted share", description: "unassisted scoring share", volume: 50 },
   { key: "rapm_net", label: "Net RAPM", description: "regularized lineup impact", volume: 0 },
@@ -287,6 +295,7 @@ const metricGuidance: Record<Metric, string> = {
   putback_pct: "Putback finishing is the source-attributed field-goal percentage on putbacks.",
   rim_rate: "Rim attempt rate is the source-attributed share of attempts at the rim.",
   transition_share: "Transition share is the source-attributed share of transition possessions.",
+  assisted_make_share: "Assisted make share is assisted FGM divided by total FGM, qualified at 50 makes. It is shown only when assisted and unassisted makes reconcile to total makes.",
   unassisted_rate: "Unassisted rate is the source-attributed rate of unassisted scoring.",
   unassisted_share: "Unassisted share is the source-attributed share of scoring without an assist.",
   rapm_net: "Net RAPM is the exact-ID lineup impact estimate; it requires qualified offensive and defensive possession samples.",
@@ -316,7 +325,7 @@ export const playerCsvHeaders = [
   "Rank", "Player ID", "Team ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
   "Points", "PPG", "Rebounds", "RPG", "Offensive rebounds", "OR/G", "Defensive rebounds", "DR/G",
   "Assists", "APG", "Steals", "SPG", "Blocks", "BPG", "Double-doubles", "Fouls", "PF/G", "Turnovers", "TO/G",
-  "FGA", "FGM", "FG%", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value", "Core stat fields recorded", "Offensive possessions", "Team possessions", "Usage events", "Team usage events", "Team minutes",
+  "FGA", "FGM", "FG%", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Assisted FGM", "Unassisted FGM", "Assisted make share", "Selected metric", "Selected value", "Core stat fields recorded", "Offensive possessions", "Team possessions", "Usage events", "Team usage events", "Team minutes",
 ];
 
 /** Keep the homepage export aligned with the visible player table and retain raw denominators. */
@@ -340,11 +349,14 @@ export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCel
     const threePct = percentage(row.tpm, row.tpa);
     const ftPct = percentage(row.ftm, row.fta);
     const ts = percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null);
+    const assistedMakeShare = row.assisted_makes != null && row.unassisted_makes != null && row.fgm != null && row.fgm > 0 && row.assisted_makes >= 0 && row.unassisted_makes >= 0 && row.assisted_makes + row.unassisted_makes === row.fgm
+      ? (100 * row.assisted_makes) / row.fgm
+      : null;
     return [
       row.rank, row.player_id, row.team_id, row.player_name, row.team_name, row.position, row.class_year,
       row.games, row.minutes, mpg, row.points, ppg, row.rebounds, rpg, row.offensive_rebounds, orpg,
       row.defensive_rebounds, drpg, row.assists, apg, row.steals, spg, row.blocks, bpg, row.double_doubles, row.fouls, fpg,
-      row.turnovers, topg, row.fga, row.fgm, fgPct, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts,
+      row.turnovers, topg, row.fga, row.fgm, fgPct, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts, row.assisted_makes, row.unassisted_makes, assistedMakeShare,
       metric, row.value, `${coverage.observed}/${coverage.total}`, row.possessions ?? row.off_poss, row.team_possessions, row.usage_events, row.team_usage_events, row.team_minutes,
     ];
   });
@@ -400,7 +412,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   }, [metric, query, season]);
 
   const active = metrics.find((candidate) => candidate.key === metric)!;
-  const percentageMetric = ["ts", "efg", "fg_pct", "half_ts", "three_pct", "two_pct", "ft_pct", "tov_rate", "usage_rate", "three_rate", "ft_rate", "ast_rate", "rim_pct", "mid_pct", "putback_pct", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "poss_share"].includes(metric);
+  const percentageMetric = ["ts", "efg", "fg_pct", "half_ts", "three_pct", "two_pct", "ft_pct", "tov_rate", "usage_rate", "three_rate", "ft_rate", "ast_rate", "rim_pct", "mid_pct", "putback_pct", "rim_rate", "transition_share", "assisted_make_share", "unassisted_rate", "unassisted_share", "poss_share"].includes(metric);
   const displayMetric = (row: PlayerRow) => {
     if (metric === "balanced_index") return fmt(row.value, 2);
     const value = row.value;

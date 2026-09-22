@@ -135,6 +135,15 @@ describe("homepage NCAA player export", () => {
     expect(values[playerCsvHeaders.indexOf("Team minutes")]).toBe(3000);
   });
 
+  it("exports assisted make share only when the retained split reconciles", () => {
+    const complete = playerCsvRows([{ ...row, assisted_makes: 60, unassisted_makes: 40 }], "assisted_make_share")[0];
+    expect(complete[playerCsvHeaders.indexOf("Assisted FGM")]).toBe(60);
+    expect(complete[playerCsvHeaders.indexOf("Unassisted FGM")]).toBe(40);
+    expect(complete[playerCsvHeaders.indexOf("Assisted make share")]).toBe(60);
+    const mismatched = playerCsvRows([{ ...row, assisted_makes: 61, unassisted_makes: 40 }], "assisted_make_share")[0];
+    expect(mismatched[playerCsvHeaders.indexOf("Assisted make share")]).toBeNull();
+  });
+
   it("does not invent detail values when source denominators are missing", () => {
     const groups = playerRecordedDetailGroups({ ...row, rim_makes: 3, rim_attempts: null, usage_events: 2, team_usage_events: null });
     expect(groups.find((group) => group.key === "shooting")?.items.some((item) => item.label === "Rim accuracy")).toBe(false);

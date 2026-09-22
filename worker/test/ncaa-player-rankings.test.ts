@@ -128,6 +128,11 @@ describe("NCAA player rankings availability", () => {
     expect(volumeColumn("unassisted_rate")).toBe("unassisted_total_attempts");
   });
 
+  it("derives assisted make share only from a reconciled make split", () => {
+    expect(metricExpression("assisted_make_share")).toBe("CASE WHEN fgm > 0 AND assisted_makes >= 0 AND unassisted_makes >= 0 AND assisted_makes + unassisted_makes = fgm THEN 100.0 * assisted_makes / fgm ELSE NULL END");
+    expect(volumeColumn("assisted_make_share")).toBe("fgm");
+  });
+
   it("derives putback accuracy from exact makes and attempts", () => {
     expect(metricExpression("putback_pct")).toBe("CASE WHEN putback_attempts > 0 AND putback_makes >= 0 AND putback_makes <= putback_attempts THEN 100.0 * putback_makes / putback_attempts ELSE NULL END");
     expect(volumeColumn("putback_pct")).toBe("putback_attempts");
@@ -152,6 +157,62 @@ describe("NCAA player rankings availability", () => {
     expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga_unast')) = COUNT(*)");
     expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga')) = COUNT(*)");
     expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fgm')) = COUNT(*)");
+    expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fgm_ast')) = COUNT(*)");
+    expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fgm_unast')) = COUNT(*)");
+  });
+
+  it("publishes the assisted make definition and fail-closed qualification", async () => {
+    const batch = vi.fn(async () => [
+      { results: [{ season: 2026 }] },
+      { results: [] },
+      { results: [] },
+      { results: [] },
+    ]);
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&meta=1",
+      {},
+      { DB: { batch, prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })) } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      metrics: expect.arrayContaining(["assisted_make_share"]),
+      metric_definitions: {
+        assisted_make_share: {
+          definition: "100 × assisted field goals made / total field goals made",
+          qualification: "At least 50 total field goals made",
+          integrity: "Available only when assisted plus unassisted makes exactly equals total field goals made",
+          availability: "D1 player-box archive only; unavailable in the published individual fallback",
+        },
+      },
+    });
+  });
+
+  it("enforces the 50-make qualification even when a caller requests no volume floor", async () => {
+    const bind = vi.fn((...values: unknown[]) => ({
+      first: vi.fn(async () => ({ total: 0, values })),
+      all: vi.fn(async () => ({ results: [] })),
+    }));
+    const prepare = vi.fn(() => ({ bind }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=assisted_make_share&minGames=5&minMinutes=200&minVolume=0",
+      {},
+      { DB: { prepare } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ metric: "assisted_make_share", min_volume: 50 });
+    expect(bind.mock.calls.every((values) => values.includes(50))).toBe(true);
+  });
+
+  it("does not fabricate assisted splits from the published individual fallback", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 unavailable"); });
+    const fetch = vi.fn();
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=assisted_make_share&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(503);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("fails closed for impossible field-goal fallback values", async () => {

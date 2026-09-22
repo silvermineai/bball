@@ -5,8 +5,16 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl", "ts", "efg", "fg_pct", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "usage_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl", "ts", "efg", "fg_pct", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "usage_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "assisted_make_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
+const metricDefinitions: Partial<Record<Metric, { definition: string; qualification: string; integrity: string; availability: string }>> = {
+  assisted_make_share: {
+    definition: "100 × assisted field goals made / total field goals made",
+    qualification: "At least 50 total field goals made",
+    integrity: "Available only when assisted plus unassisted makes exactly equals total field goals made",
+    availability: "D1 player-box archive only; unavailable in the published individual fallback",
+  },
+};
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
   // The advanced warehouse is Division I only. Parse the requested division
@@ -192,6 +200,7 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
     case "half_ts":
     case "rim_rate":
     case "transition_share":
+    case "assisted_make_share":
     case "unassisted_rate":
     case "unassisted_share":
     case "rapm_net":
@@ -226,6 +235,7 @@ async function publishedRankingsFallback(
         division: "1",
         available_divisions: ["1"],
         metrics,
+        metric_definitions: metricDefinitions,
         classes,
         positions,
         sources: [],
@@ -390,6 +400,8 @@ const aggregate = (where: string) => `
     ${sourceSumAll(["pbacka"])} AS putback_attempts,
     ${sourceSumAll(["pbackm"])} AS putback_makes,
     ${sourceSum("pts_trans")} AS transition_points,
+    ${sourceSumAll(["fgm_ast"])} AS assisted_makes,
+    ${sourceSumAll(["fgm_unast"])} AS unassisted_makes,
     ${sourceSumAll(["fga"])} AS unassisted_total_attempts,
     ${sourceSumAll(["fga_unast"])} AS unassisted_attempts,
     ${sourceSum("pts_unast")} AS unassisted_points,
@@ -444,6 +456,7 @@ export const metricExpression = (metric: Exclude<Metric, "balanced_index" | "imp
   poss_share: "CASE WHEN team_possessions > 0 THEN 100.0 * possessions / team_possessions ELSE NULL END",
   rim_rate: "CASE WHEN fga > 0 THEN 100.0 * rim_attempts / fga ELSE NULL END",
   transition_share: "CASE WHEN points > 0 THEN 100.0 * transition_points / points ELSE NULL END",
+  assisted_make_share: "CASE WHEN fgm > 0 AND assisted_makes >= 0 AND unassisted_makes >= 0 AND assisted_makes + unassisted_makes = fgm THEN 100.0 * assisted_makes / fgm ELSE NULL END",
   unassisted_rate: "CASE WHEN unassisted_total_attempts > 0 AND unassisted_attempts >= 0 AND unassisted_attempts <= unassisted_total_attempts THEN 100.0 * unassisted_attempts / unassisted_total_attempts ELSE NULL END",
   unassisted_share: "CASE WHEN points > 0 THEN 100.0 * unassisted_points / points ELSE NULL END",
   rapm_net: "rapm_net",
@@ -471,6 +484,7 @@ export const volumeColumn = (metric: Metric) => {
   if (metric === "tov_rate" || metric === "ast_rate" || metric === "points_poss" || metric === "poss_share") return "possessions";
   if (metric === "usage_rate") return "usage_events";
   if (metric === "transition_share" || metric === "unassisted_share") return "points";
+  if (metric === "assisted_make_share") return "fgm";
   if (metric === "half_ts") return "half_fga";
   return null;
 };
@@ -622,6 +636,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
         division: "1",
         available_divisions: ["1"],
         metrics,
+        metric_definitions: metricDefinitions,
         classes: classes.results.map((row) => String((row as { value: string }).value)),
         positions: positions.results.map((row) => String((row as { value: string }).value)),
         sources: (sources.results as Array<{ dataset?: unknown; url?: unknown; fetched_at?: unknown; sha256?: unknown }>).map((row) => publicReceipt({
@@ -674,8 +689,9 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const rankOrder = direction === "asc" ? "ASC" : "DESC";
   const qualification = impactQualification(metric);
   const volume = volumeColumn(metric);
+  const effectiveMinVolume = metric === "assisted_make_share" ? Math.max(minVolume, 50) : minVolume;
   const volumeQualification = volume ? `${volume} >= ?` : "1=1";
-  const volumeBinds = volume ? [minVolume] : [];
+  const volumeBinds = volume ? [effectiveMinVolume] : [];
   try {
   const count: { total: number } | null = metric === "balanced_index"
     ? await withTimeout((() => {
@@ -714,7 +730,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       ORDER BY value ${rankOrder}, player_name ASC, player_id ASC
       LIMIT 50 OFFSET ?`,
     ).bind(...binds, minGames, minMinutes, ...volumeBinds, ...playerIds, page * 50).all(), DB_TIMEOUT_MS);
-  const response = c.json({ season, division: "1", metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+  const response = c.json({ season, division: "1", metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: effectiveMinVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
   return response;
