@@ -28,6 +28,16 @@ export type BBMatchupFactors = {
   >>;
   edges: Partial<Record<BBFactorKey, number>>;
 };
+export type BBForecastAnalysisReadiness = {
+  status: "ready" | "partial" | "review";
+  estimate_type: "primary" | "cold_start" | null;
+  prediction: "valid" | "invalid";
+  model_edition: "matched" | "unavailable";
+  matchup_factors: "same_edition" | "other_edition" | "unavailable";
+  schedule: "source_confirmed" | "scheduled" | "time_tbd" | "unavailable";
+  missing: string[];
+  open_items: string[];
+};
 export type BBGame = {
   id: string;
   /** Exact forecast edition attached by the live D1 response after hydration. */
@@ -57,6 +67,8 @@ export type BBGame = {
   matchup_factors_generated_at?: string | null;
   /** False means context is retained but did not produce this forecast edition. */
   matchup_factors_same_edition?: boolean | null;
+  /** Server-side readiness read over prediction and same-edition context. */
+  analysis_readiness?: BBForecastAnalysisReadiness | null;
   /** Licensed, pregame-only quotes matched by the immutable research ledger. */
   market_comparisons?: import("./research-types").Comparison[];
 };

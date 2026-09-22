@@ -1,7 +1,71 @@
 import { describe, expect, it, vi } from "vitest";
-import { basketballForecasts, parseForecastMatchupFactors, parseForecastPrediction } from "../src/basketball-forecasts";
+import { basketballForecasts, forecastAnalysisReadiness, parseForecastMatchupFactors, parseForecastPrediction } from "../src/basketball-forecasts";
 
 describe("basketball forecast availability", () => {
+  it("publishes ready primary analysis when the exact context is present", () => {
+    expect(forecastAnalysisReadiness({
+      predictionIntegrity: "valid",
+      prediction: { home_margin: 4 },
+      forecastModelId: "model-2027",
+      matchupFactorsIntegrity: "valid",
+      matchupFactorsModelId: "model-2027",
+      matchupFactorsSameEdition: true,
+      startsAt: "2026-11-02T05:00:00Z",
+      sourceStart: "2026-11-02T05:00:00Z",
+      sourceTimeValid: true,
+      timeTbd: 0,
+    })).toEqual({
+      status: "ready",
+      estimate_type: "primary",
+      prediction: "valid",
+      model_edition: "matched",
+      matchup_factors: "same_edition",
+      schedule: "source_confirmed",
+      missing: [],
+      open_items: [],
+    });
+  });
+
+  it("keeps cold-start rows partial and names the missing evidence", () => {
+    expect(forecastAnalysisReadiness({
+      predictionIntegrity: "valid",
+      prediction: { home_margin: 4, estimate_type: "cold_start" },
+      forecastModelId: "model-2027",
+      matchupFactorsIntegrity: "unavailable",
+      matchupFactorsModelId: null,
+      matchupFactorsSameEdition: null,
+      startsAt: "2026-11-02T05:00:00Z",
+      timeTbd: 1,
+    })).toMatchObject({
+      status: "partial",
+      estimate_type: "cold_start",
+      model_edition: "matched",
+      matchup_factors: "unavailable",
+      schedule: "time_tbd",
+      missing: ["same-edition Four Factor context"],
+      open_items: ["source-confirmed tip", "trained team history"],
+    });
+  });
+
+  it("marks malformed or unlabelled forecast rows for review", () => {
+    expect(forecastAnalysisReadiness({
+      predictionIntegrity: "invalid",
+      prediction: null,
+      forecastModelId: null,
+      matchupFactorsIntegrity: "invalid",
+      matchupFactorsModelId: null,
+      matchupFactorsSameEdition: null,
+    })).toMatchObject({
+      status: "review",
+      estimate_type: null,
+      prediction: "invalid",
+      model_edition: "unavailable",
+      matchup_factors: "unavailable",
+      schedule: "unavailable",
+      missing: ["valid prediction", "forecast model edition", "same-edition Four Factor context"],
+    });
+  });
+
   it("withholds forecast objects with invalid known numeric fields", () => {
     expect(parseForecastPrediction({})).toEqual({ prediction: null, integrity: "invalid" });
     expect(parseForecastPrediction({ total: 140, pace: 68 })).toEqual({ prediction: null, integrity: "invalid" });
@@ -155,6 +219,16 @@ describe("basketball forecast availability", () => {
       matchup_factors_generated_at: "2026-09-17T10:00:00Z",
       matchup_factors_same_edition: false,
       matchup_factors: { season: 2026, edges: { efg: 0.02 } },
+      analysis_readiness: {
+        status: "partial",
+        estimate_type: "primary",
+        prediction: "valid",
+        model_edition: "matched",
+        matchup_factors: "other_edition",
+        schedule: "scheduled",
+        missing: ["same-edition Four Factor context"],
+        open_items: ["source-confirmed tip"],
+      },
     });
     expect(fetch).toHaveBeenCalledOnce();
   });

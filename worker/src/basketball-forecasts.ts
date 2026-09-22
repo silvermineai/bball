@@ -178,6 +178,74 @@ type MatchupFactorRead = {
   generated_at: string | null;
 };
 
+export type ForecastAnalysisReadiness = {
+  status: "ready" | "partial" | "review";
+  estimate_type: "primary" | "cold_start" | null;
+  prediction: "valid" | "invalid";
+  model_edition: "matched" | "unavailable";
+  matchup_factors: "same_edition" | "other_edition" | "unavailable";
+  schedule: "source_confirmed" | "scheduled" | "time_tbd" | "unavailable";
+  missing: string[];
+  open_items: string[];
+};
+
+/**
+ * Publish one small, machine-readable readiness read beside every forecast.
+ * Consumers should not have to infer whether a row is safe for matchup work
+ * from several nullable fields. Core readiness stays separate from optional
+ * preparation evidence such as a confirmed schedule clock.
+ */
+export function forecastAnalysisReadiness(args: {
+  predictionIntegrity: "valid" | "invalid";
+  prediction: Record<string, unknown> | null;
+  forecastModelId: string | null | undefined;
+  matchupFactorsIntegrity: "valid" | "invalid" | "unavailable";
+  matchupFactorsModelId: string | null | undefined;
+  matchupFactorsSameEdition: boolean | null | undefined;
+  sourceStart?: string | null;
+  sourceTimeValid?: boolean | null;
+  startsAt?: string | null;
+  timeTbd?: number | boolean | null;
+}): ForecastAnalysisReadiness {
+  const estimateType = args.prediction?.estimate_type === "cold_start" ? "cold_start" : args.predictionIntegrity === "valid" ? "primary" : null;
+  const modelEdition = args.forecastModelId ? "matched" : "unavailable";
+  const matchupFactors = args.matchupFactorsIntegrity !== "valid" || !args.matchupFactorsModelId
+    ? "unavailable"
+    : args.matchupFactorsSameEdition === false
+      ? "other_edition"
+      : "same_edition";
+  const schedule = args.sourceTimeValid && args.sourceStart
+    ? "source_confirmed"
+    : args.timeTbd
+      ? "time_tbd"
+      : args.startsAt
+        ? "scheduled"
+        : "unavailable";
+  const missing: string[] = [];
+  if (args.predictionIntegrity !== "valid") missing.push("valid prediction");
+  if (modelEdition === "unavailable") missing.push("forecast model edition");
+  if (matchupFactors === "unavailable") missing.push("same-edition Four Factor context");
+  if (matchupFactors === "other_edition") missing.push("same-edition Four Factor context");
+  const openItems: string[] = [];
+  if (schedule !== "source_confirmed") openItems.push("source-confirmed tip");
+  if (estimateType === "cold_start") openItems.push("trained team history");
+  const status = missing.some((item) => item === "valid prediction" || item === "forecast model edition")
+    ? "review"
+    : missing.length
+      ? "partial"
+      : "ready";
+  return {
+    status,
+    estimate_type: estimateType,
+    prediction: args.predictionIntegrity,
+    model_edition: modelEdition,
+    matchup_factors: matchupFactors,
+    schedule,
+    missing,
+    open_items: openItems,
+  };
+}
+
 /**
  * Validate the four-factor context independently of the score prediction.
  * The publisher uses rates in [0,1] and signed home-team edges; retaining only
@@ -386,6 +454,16 @@ async function publishedForecastFallback(
           source_observed_at: null,
           prediction: checkedPrediction.prediction,
           prediction_integrity: checkedPrediction.integrity,
+          analysis_readiness: forecastAnalysisReadiness({
+            predictionIntegrity: checkedPrediction.integrity,
+            prediction: checkedPrediction.prediction,
+            forecastModelId: modelId,
+            matchupFactorsIntegrity: checkedFactors.integrity,
+            matchupFactorsModelId: checkedFactors.factors ? modelId : null,
+            matchupFactorsSameEdition: checkedFactors.factors ? true : null,
+            startsAt: typeof game.starts_at === "string" ? game.starts_at : null,
+            timeTbd: Number(game.time_tbd || 0),
+          }),
           matchup_factors: checkedFactors.factors,
           matchup_factors_integrity: checkedFactors.integrity,
           matchup_factors_source: checkedFactors.factors ? "published_asset" : null,
@@ -783,6 +861,20 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       source_time_valid: row.source_time_valid == null ? null : row.source_time_valid === 1,
       prediction,
       prediction_integrity: predictionIntegrity,
+      analysis_readiness: forecastAnalysisReadiness({
+        predictionIntegrity,
+        prediction,
+        forecastModelId: row.model_id,
+        matchupFactorsIntegrity: matchupRead.integrity,
+        matchupFactorsModelId: matchupRead.model_id,
+        matchupFactorsSameEdition: matchupRead.factors && matchupRead.model_id
+          ? matchupRead.model_id === row.model_id
+          : null,
+        sourceStart: row.source_start,
+        sourceTimeValid: row.source_time_valid == null ? null : row.source_time_valid === 1,
+        startsAt: row.starts_at,
+        timeTbd: row.time_tbd,
+      }),
       matchup_factors: matchupRead.factors,
       matchup_factors_integrity: matchupRead.integrity,
       matchup_factors_source: matchupRead.source,

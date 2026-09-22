@@ -19,6 +19,8 @@ export type LiveForecastRow = {
   source_time_valid?: boolean | null;
   source_observed_at?: string | null;
   prediction: BBGame["prediction"];
+  /** Server-side readiness read over prediction and same-edition context. */
+  analysis_readiness?: BBGame["analysis_readiness"];
   /** Four Factor context validated by the forecast endpoint. */
   matchup_factors?: BBGame["matchup_factors"];
   /** Edition that produced the attached Four Factor context. */
@@ -337,6 +339,7 @@ export function mergeLiveBasketballForecasts(
       source_time_valid: row.source_time_valid ?? base?.source_time_valid ?? null,
       source_observed_at: row.source_observed_at ?? base?.source_observed_at ?? null,
       matchup_factors: factors,
+      analysis_readiness: row.analysis_readiness ?? base?.analysis_readiness ?? null,
       matchup_factors_model_id: factorsModelId,
       matchup_factors_generated_at: liveFactors
         ? row.created_at ?? null
@@ -416,6 +419,7 @@ export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BB
     source_time_valid: row.source_time_valid ?? game.source_time_valid ?? null,
     source_observed_at: row.source_observed_at ?? game.source_observed_at ?? null,
     matchup_factors: factors,
+    analysis_readiness: row.analysis_readiness ?? game.analysis_readiness ?? null,
     matchup_factors_model_id: factorsModelId,
     matchup_factors_generated_at: liveFactors
       ? row.created_at ?? null

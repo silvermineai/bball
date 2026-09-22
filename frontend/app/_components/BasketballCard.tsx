@@ -196,6 +196,13 @@ export default function BasketballCard({
               Data integrity: <strong>{integrity.label}</strong>
               {integrity.missing.length ? ` · ${integrity.missing.join(", ")}` : " · prediction and lineage checks passed"}
             </small>
+            {g.analysis_readiness && (
+              <small className={g.analysis_readiness.status === "review" ? "analysis-integrity is-review" : "analysis-integrity"}>
+                Live readiness: <strong>{g.analysis_readiness.status}</strong>
+                {g.analysis_readiness.missing.length ? ` · ${g.analysis_readiness.missing.join(", ")}` : " · prediction and same-edition context are ready"}
+                {g.analysis_readiness.open_items.length ? ` · open: ${g.analysis_readiness.open_items.join(", ")}` : ""}
+              </small>
+            )}
           </div>
           <div className="match-detail">
             <span>{g.home_name} win estimate</span>
