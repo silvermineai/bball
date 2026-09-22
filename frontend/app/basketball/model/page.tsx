@@ -4,6 +4,7 @@ import { publicArchiveText } from "../../_lib/public-text";
 import Link from "next/link";
 import ModelIntegrity from "./ModelIntegrity";
 import ForecastCalibrationTable, { readPublishedCalibration } from "./ForecastCalibrationTable";
+import LiveModelEdition from "./LiveModelEdition";
 export const metadata = {
   title: "Basketball model evaluation and data provenance",
 };
@@ -61,6 +62,7 @@ export default function Page() {
           out-of-sample evaluation before generating the 2026–27 slate.
         </p>
       </div>
+      <LiveModelEdition bundledModelId={d.model.id} />
       <p className="note" style={{ marginBottom: 28 }}>
         <Link href="/basketball/evaluation/">
           Inspect the weekly updating challenger →
