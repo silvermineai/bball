@@ -11,6 +11,19 @@ export const divisionSummaryMetrics = [
 
 export type DivisionSummaryMetric = (typeof divisionSummaryMetrics)[number][0];
 
+export type DivisionPlayerEvidenceCoverage = {
+  exact_player_ids: number;
+  names: number;
+  team_ids: number;
+  team_names: number;
+  positions: number;
+  class_years: number;
+  games: number;
+  source_stat_rows: number;
+  source_stat_snapshots: number;
+  metrics: Record<DivisionSummaryMetric, number>;
+};
+
 export type DivisionArchiveSummary = {
   season: number | null;
   generated_at: string | null;
@@ -18,6 +31,7 @@ export type DivisionArchiveSummary = {
   players: number;
   teams: number;
   metrics: Record<DivisionSummaryMetric, number>;
+  playerEvidence: DivisionPlayerEvidenceCoverage;
 };
 
 type ArchiveRow = Record<string, unknown>;
@@ -54,6 +68,33 @@ function validateRows(value: unknown, key: "player_id" | "team_ncaa_id", label: 
 }
 
 const finite = (value: unknown) => typeof value === "number" && Number.isFinite(value);
+const nonBlank = (value: unknown) => typeof value === "string" ? value.trim().length > 0 : typeof value === "number" && Number.isFinite(value);
+
+/**
+ * Report the identity and source-field boundary for one exact division. The
+ * archive can contain a complete player directory while only exposing a
+ * bounded publisher leaderboard for some statistics; keep that distinction
+ * explicit so consumers do not mistake missing values for zero production.
+ */
+function playerEvidenceCoverage(rows: ArchiveRow[]): DivisionPlayerEvidenceCoverage {
+  const sourceStatRows = rows.filter((row) => isRecord(row.source_stats) && Object.keys(row.source_stats).length > 0).length;
+  const sourceStatSnapshots = rows.reduce((count, row) => count + (isRecord(row.source_stats) ? Object.keys(row.source_stats).length : 0), 0);
+  return {
+    exact_player_ids: rows.filter((row) => rowId(row, "player_id") != null).length,
+    names: rows.filter((row) => nonBlank(row.name)).length,
+    team_ids: rows.filter((row) => rowId(row, "team_ncaa_id") != null).length,
+    team_names: rows.filter((row) => nonBlank(row.team_name)).length,
+    positions: rows.filter((row) => nonBlank(row.position)).length,
+    class_years: rows.filter((row) => nonBlank(row.class_year)).length,
+    games: rows.filter((row) => finite(row.games)).length,
+    source_stat_rows: sourceStatRows,
+    source_stat_snapshots: sourceStatSnapshots,
+    metrics: Object.fromEntries(divisionSummaryMetrics.map(([key]) => [
+      key,
+      rows.filter((row) => finite(row[key])).length,
+    ])) as Record<DivisionSummaryMetric, number>,
+  };
+}
 
 /**
  * Summarize the checked-in NCAA individual release without filling missing
@@ -78,5 +119,6 @@ export function summarizeDivisionArchive(value: unknown, division: LowerBasketba
     players: divisionPlayers.length,
     teams: divisionTeams.length,
     metrics,
+    playerEvidence: playerEvidenceCoverage(divisionPlayers),
   };
 }
