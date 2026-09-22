@@ -64,6 +64,8 @@ type ProspectResponse = {
 const prospectSeasons = [2025, 2026, 2027, 2028, 2029, 2030] as const;
 export type ProspectSeason = (typeof prospectSeasons)[number];
 export type ProspectCommitment = "all" | "yes" | "no";
+export type ProspectMovement = "all" | "up" | "down" | "unchanged" | "new" | "unavailable";
+export type ProspectRankMax = "" | "10" | "25" | "50" | "100";
 const prospectPositions = ["PG", "SG", "SF", "PF", "C"] as const;
 export type ProspectPosition = "" | (typeof prospectPositions)[number];
 export type ProspectBoardFilters = {
@@ -71,10 +73,12 @@ export type ProspectBoardFilters = {
   query: string;
   position: ProspectPosition;
   committed: ProspectCommitment;
+  rankMax: ProspectRankMax;
+  movement: ProspectMovement;
   rowLimit: 10 | 25 | 50;
 };
 
-const prospectFilterKeys = ["prospectSeason", "prospectQ", "prospectPosition", "prospectCommitted", "prospectRows"] as const;
+const prospectFilterKeys = ["prospectSeason", "prospectQ", "prospectPosition", "prospectCommitted", "prospectRank", "prospectMovement", "prospectRows"] as const;
 
 /** Parse only this compact dashboard's filters; unrelated sport scope stays untouched. */
 export function parseProspectBoardFilters(params: Pick<URLSearchParams, "get">): ProspectBoardFilters {
@@ -84,6 +88,10 @@ export function parseProspectBoardFilters(params: Pick<URLSearchParams, "get">):
   const position = prospectPositions.includes(positionValue as (typeof prospectPositions)[number]) ? positionValue as ProspectPosition : "";
   const committedValue = params.get("prospectCommitted");
   const committed: ProspectCommitment = committedValue === "yes" || committedValue === "no" ? committedValue : "all";
+  const rankValue = params.get("prospectRank") || "";
+  const rankMax: ProspectRankMax = rankValue === "10" || rankValue === "25" || rankValue === "50" || rankValue === "100" ? rankValue : "";
+  const movementValue = params.get("prospectMovement");
+  const movement: ProspectMovement = movementValue === "up" || movementValue === "down" || movementValue === "unchanged" || movementValue === "new" || movementValue === "unavailable" ? movementValue : "all";
   const rowValue = Number(params.get("prospectRows"));
   const rowLimit: 10 | 25 | 50 = rowValue === 25 || rowValue === 50 ? rowValue : 10;
   return {
@@ -91,6 +99,8 @@ export function parseProspectBoardFilters(params: Pick<URLSearchParams, "get">):
     query: (params.get("prospectQ") || "").slice(0, 120),
     position,
     committed,
+    rankMax,
+    movement,
     rowLimit,
   };
 }
@@ -102,6 +112,8 @@ export function prospectBoardFilterSearch(filters: ProspectBoardFilters) {
   if (filters.query.trim()) params.set("prospectQ", filters.query.trim().slice(0, 120));
   if (filters.position) params.set("prospectPosition", filters.position);
   if (filters.committed !== "all") params.set("prospectCommitted", filters.committed);
+  if (filters.rankMax) params.set("prospectRank", filters.rankMax);
+  if (filters.movement !== "all") params.set("prospectMovement", filters.movement);
   if (filters.rowLimit !== 10) params.set("prospectRows", String(filters.rowLimit));
   return params;
 }
@@ -115,16 +127,22 @@ export function buildProspectParams({
   query = "",
   position = "",
   committed = "all",
+  rankMax = "",
+  movement = "all",
 }: {
   season: number;
   page: number;
   query?: string;
   position?: ProspectPosition;
   committed?: ProspectCommitment;
+  rankMax?: ProspectRankMax;
+  movement?: ProspectMovement;
 }) {
   const params = new URLSearchParams({ season: String(season), page: String(page), committed });
   if (position) params.set("position", position);
   if (query.trim()) params.set("q", query.trim());
+  if (rankMax) params.set("rank_max", rankMax);
+  if (movement !== "all") params.set("movement", movement);
   return params;
 }
 
@@ -251,6 +269,8 @@ export default function LiveBasketballProspectLeaders() {
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState<ProspectPosition>("");
   const [committed, setCommitted] = useState<ProspectCommitment>("all");
+  const [rankMax, setRankMax] = useState<ProspectRankMax>("");
+  const [movementFilter, setMovementFilter] = useState<ProspectMovement>("all");
   const [rowLimit, setRowLimit] = useState<10 | 25 | 50>(10);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
@@ -262,6 +282,8 @@ export default function LiveBasketballProspectLeaders() {
     setQuery(filters.query);
     setPosition(filters.position);
     setCommitted(filters.committed);
+    setRankMax(filters.rankMax);
+    setMovementFilter(filters.movement);
     setRowLimit(filters.rowLimit);
     setHydrated(true);
   }, []);
@@ -270,16 +292,16 @@ export default function LiveBasketballProspectLeaders() {
     if (!hydrated) return;
     const url = new URL(window.location.href);
     prospectFilterKeys.forEach((key) => url.searchParams.delete(key));
-    prospectBoardFilterSearch({ season, query, position, committed, rowLimit }).forEach((value, key) => url.searchParams.set(key, value));
+    prospectBoardFilterSearch({ season, query, position, committed, rankMax, movement: movementFilter, rowLimit }).forEach((value, key) => url.searchParams.set(key, value));
     window.history.replaceState(window.history.state, "", url);
-  }, [committed, hydrated, position, query, rowLimit, season]);
+  }, [committed, hydrated, movementFilter, position, query, rankMax, rowLimit, season]);
 
   const exportProspects = async () => {
     if (!data || exporting) return;
     setExporting(true);
     setExportMessage("");
     try {
-      const params = buildProspectParams({ season, page: 0, query, position, committed });
+      const params = buildProspectParams({ season, page: 0, query, position, committed, rankMax, movement: movementFilter });
       const cohort = `prospect-export-${Date.now()}`;
       params.set("cohort", cohort);
       const totalRows = Number(data.total);
@@ -318,7 +340,7 @@ export default function LiveBasketballProspectLeaders() {
     setStatus("checking");
     setData(null);
     const timer = window.setTimeout(() => {
-      const params = buildProspectParams({ season, page: 0, query, position, committed });
+      const params = buildProspectParams({ season, page: 0, query, position, committed, rankMax, movement: movementFilter });
       fetchJson<ProspectResponse>(
         `/api/basketball/research/recruiting-rankings?${params.toString()}`,
         { signal: controller.signal },
@@ -337,7 +359,7 @@ export default function LiveBasketballProspectLeaders() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [committed, position, query, season]);
+  }, [committed, movementFilter, position, query, rankMax, season]);
 
   return (
     <section className="dashboard-section" aria-labelledby="dashboard-prospects">
@@ -352,6 +374,8 @@ export default function LiveBasketballProspectLeaders() {
           </label>
           <label className="control"><span>POSITION</span><select value={position} onChange={(event) => setPosition(event.target.value as ProspectPosition)} aria-label="Prospect position"><option value="">All positions</option>{prospectPositions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           <label className="control"><span>DESTINATION</span><select value={committed} onChange={(event) => setCommitted(event.target.value as ProspectCommitment)} aria-label="Prospect destination status"><option value="all">All statuses</option><option value="yes">Recorded destination</option><option value="no">No recorded destination</option></select></label>
+          <label className="control"><span>RANK</span><select value={rankMax} onChange={(event) => setRankMax(event.target.value as ProspectRankMax)} aria-label="Maximum prospect rank"><option value="">All ranks</option><option value="10">Top 10</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="100">Top 100</option></select></label>
+          <label className="control"><span>MOVEMENT</span><select value={movementFilter} onChange={(event) => setMovementFilter(event.target.value as ProspectMovement)} aria-label="Prospect rank movement"><option value="all">All movement</option><option value="up">Moved up</option><option value="down">Moved down</option><option value="unchanged">Unchanged</option><option value="new">New to release</option><option value="unavailable">Rank unavailable</option></select></label>
           <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Prospect or destination" aria-label="Search prospect or destination" /></label>
           <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 50)}><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></label>
           <button className="button secondary" type="button" onClick={exportProspects} disabled={exporting || !data?.rows.length}>{exporting ? "Preparing CSV…" : "Download class CSV ↓"}</button>
