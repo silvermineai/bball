@@ -31,6 +31,30 @@ describe("sport navigation", () => {
     expect(isNavItemActive("/football/", footballPredictions!)).toBe(true);
   });
 
+  it("keeps lower-division archive intents attached to the clicked sub-tab", () => {
+    const config = SPORT_NAVIGATION.football;
+    const teams = config.items.find((item) => item.label === "Teams")!;
+    const predictions = config.items.find((item) => item.label === "Predictions")!;
+    const rankings = config.items.find((item) => item.label === "Rankings")!;
+    expect(isNavItemActive("/football/matchups/", teams, "?nav=teams", "#lower-division-results-title")).toBe(true);
+    expect(isNavItemActive("/football/matchups/", predictions, "?nav=teams", "#lower-division-results-title")).toBe(false);
+    expect(isNavItemActive("/football/matchups/", predictions, "?nav=predictions", "#lower-division-results-title")).toBe(true);
+    expect(isNavItemActive("/football/matchups/", rankings, "?nav=rankings", "#lower-division-results-title")).toBe(true);
+    expect(isNavItemActive("/football/matchups/", teams, "", "#lower-division-results-title")).toBe(false);
+    expect(isNavItemActive("/football/matchups/", config.items.find((item) => item.label === "Matches")!, "", "#lower-division-results-title")).toBe(true);
+  });
+
+  it("marks the women’s division desk and its lower-division anchors", () => {
+    const config = SPORT_NAVIGATION["womens-basketball"];
+    const division = config.items.find((item) => item.label === "Division")!;
+    const players = config.items.find((item) => item.label === "Players")!;
+    const rankings = config.items.find((item) => item.label === "Rankings")!;
+    expect(isNavItemActive("/basketball/wbb-readiness/", division)).toBe(true);
+    expect(isNavItemActive("/basketball/wbb-readiness/", players, "?nav=players", "#wbb-lower-player-stats")).toBe(true);
+    expect(isNavItemActive("/basketball/wbb-readiness/", division, "?nav=players", "#wbb-lower-player-stats")).toBe(false);
+    expect(isNavItemActive("/basketball/wbb-readiness/", rankings, "", "#wbb-lower-ranking")).toBe(true);
+  });
+
   it("encodes gender and division while preserving existing filters", () => {
     expect(buildScopeHref("/basketball/players/", "?season=2027", "women", "3"))
       .toBe("/basketball/players/?season=2027&gender=women&division=3");
@@ -54,9 +78,9 @@ describe("sport navigation", () => {
     const teams = SPORT_NAVIGATION.football.items.find((item) => item.label === "Teams")!;
     const predictions = SPORT_NAVIGATION.football.items.find((item) => item.label === "Predictions")!;
     const rankings = SPORT_NAVIGATION.football.items.find((item) => item.label === "Rankings")!;
-    expect(divisionAwareNavHref("football", "2", teams)).toBe("/football/matchups/#lower-division-results-title");
-    expect(divisionAwareNavHref("football", "3", predictions)).toBe("/football/matchups/#lower-division-results-title");
-    expect(divisionAwareNavHref("football", "2", rankings)).toBe("/football/matchups/#lower-division-results-title");
+    expect(divisionAwareNavHref("football", "2", teams)).toBe("/football/matchups/?nav=teams#lower-division-results-title");
+    expect(divisionAwareNavHref("football", "3", predictions)).toBe("/football/matchups/?nav=predictions#lower-division-results-title");
+    expect(divisionAwareNavHref("football", "2", rankings)).toBe("/football/matchups/?nav=rankings#lower-division-results-title");
     expect(divisionAwareNavHref("football", "1", teams)).toBe(teams.href);
     expect(divisionAwareNavHref("mens-basketball", "3", teams)).toBe(teams.href);
   });
@@ -88,8 +112,8 @@ describe("sport navigation", () => {
     };
     for (const [label, section] of Object.entries(expectedSections)) {
       const item = config.items.find((candidate) => candidate.label === label)!;
-      expect(divisionAwareNavHref("womens-basketball", "2", item)).toBe(`/basketball/wbb-readiness/#${section}`);
-      expect(divisionAwareNavHref("womens-basketball", "3", item)).toBe(`/basketball/wbb-readiness/#${section}`);
+      expect(divisionAwareNavHref("womens-basketball", "2", item)).toBe(`/basketball/wbb-readiness/?nav=${label.toLowerCase()}#${section}`);
+      expect(divisionAwareNavHref("womens-basketball", "3", item)).toBe(`/basketball/wbb-readiness/?nav=${label.toLowerCase()}#${section}`);
     }
   });
 

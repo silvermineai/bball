@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   buildScopeHref,
   divisionAwareNavHref,
@@ -31,6 +32,13 @@ export default function SportNavigation() {
   // scope link aligned with the URL after those transitions.
   const searchParams = useSearchParams();
   const currentSearch = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  const [currentHash, setCurrentHash] = useState("");
+  useEffect(() => {
+    const syncHash = () => setCurrentHash(window.location.hash);
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, [pathname]);
   const currentSport = sportForPathname(pathname, searchParams.get("gender"), searchParams.get("sport"));
   const config = SPORT_NAVIGATION[currentSport];
   // Men's and women's basketball are separate sport tabs. Football is a
@@ -79,7 +87,7 @@ export default function SportNavigation() {
             Overview
           </Link>
           {config.items.map((item) => {
-            const active = isNavItemActive(pathname, item);
+            const active = isNavItemActive(pathname, item, currentSearch, currentHash);
             const itemHref = item.label === "Division" ? divisionDeskHref(currentSport) : divisionAwareNavHref(currentSport, division, item);
             return (
               <Link

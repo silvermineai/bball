@@ -107,6 +107,7 @@ export function divisionDeskHref(sport: Sport): string {
 
 /** Keep lower-division football tabs on the exact-division archive desk. */
 export function divisionAwareNavHref(sport: Sport, division: Division, item: SportNavItem): string {
+  const archiveAnchor = (anchor: string) => `/basketball/wbb-readiness/?nav=${encodeURIComponent(item.label.toLowerCase())}#${anchor}`;
   // Women’s D2/D3 already has source-native schedule, team, player and
   // ranking evidence, but the identity-linked dashboard is intentionally not
   // published for those cohorts. Keep every shared tab useful by taking the
@@ -123,10 +124,10 @@ export function divisionAwareNavHref(sport: Sport, division: Division, item: Spo
       Rankings: "wbb-lower-ranking",
     };
     const section = sectionByLabel[item.label];
-    if (section) return `/basketball/wbb-readiness/#${section}`;
+    if (section) return archiveAnchor(section);
   }
   if (sport === "football" && division !== "1" && ["Teams", "Predictions", "Rankings"].includes(item.label)) {
-    return "/football/matchups/#lower-division-results-title";
+    return `/football/matchups/?nav=${encodeURIComponent(item.label.toLowerCase())}#lower-division-results-title`;
   }
   // Keep the men's lower-division tabs on the exact archive desk. The
   // archive contains a schedule, historical ratings, and explicit gates for
@@ -182,7 +183,59 @@ export function sportAvailabilityMessage(sport: Sport, division: Division): stri
   return `Football coverage: D${division} schedule rows, score-derived team records, exact-division ratings, validated forecasts, and an observed player production archive are published. The player archive covers retained game summaries; national player rankings remain separately gated, and no D1 rows are substituted.`;
 }
 
-export function isNavItemActive(pathname: string, item: SportNavItem): boolean {
+const CORE_NAV_LABELS = new Set([
+  "Teams",
+  "Players",
+  "Recruiting",
+  "Matches",
+  "Predictions",
+  "Learn",
+  "Rankings",
+  "Division",
+]);
+
+const ANCHOR_NAV_LABELS: Record<string, string> = {
+  "wbb-lower-ratings": "Teams",
+  "wbb-lower-player-stats": "Players",
+  "wbb-lower-recruiting": "Recruiting",
+  "wbb-lower-schedule": "Matches",
+  "wbb-lower-ranking": "Rankings",
+  "wbb-division-readiness-title": "Division",
+  "lower-division-results-title": "Matches",
+};
+
+/**
+ * Keep a shared sub-tab visibly active when a lower-division tab lands on a
+ * shared archive desk. The pathname alone cannot distinguish those links:
+ * several exact-scope tabs intentionally use the same evidence section.
+ * `nav` is an internal navigation intent added to those links; the hash
+ * fallback still makes directly copied anchor URLs useful.
+ */
+export function isNavItemActive(
+  pathname: string,
+  item: SportNavItem,
+  search = "",
+  hash = "",
+): boolean {
+  const dynamicDesk = pathname === "/basketball/wbb-readiness"
+    || pathname.startsWith("/basketball/wbb-readiness/")
+    || pathname === "/football/matchups"
+    || pathname.startsWith("/football/matchups/")
+    || pathname === "/basketball/matchups"
+    || pathname.startsWith("/basketball/matchups/");
+  const intent = dynamicDesk ? new URLSearchParams(search).get("nav") : null;
+  if (intent && CORE_NAV_LABELS.has(intent.replace(/^./, (character) => character.toUpperCase()))) {
+    return item.label.toLowerCase() === intent.toLowerCase();
+  }
+
+  const anchor = hash.replace(/^#/, "");
+  const anchorLabel = ANCHOR_NAV_LABELS[anchor];
+  if (anchorLabel && dynamicDesk) return item.label === anchorLabel;
+
+  if ((pathname === "/basketball/wbb-readiness" || pathname.startsWith("/basketball/wbb-readiness/")) && item.label === "Division") {
+    return true;
+  }
+
   return item.match.some((prefix) => item.exact
     ? pathname === prefix
     : pathname === prefix || pathname.startsWith(`${prefix}/`));
