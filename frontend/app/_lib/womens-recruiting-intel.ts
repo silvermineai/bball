@@ -33,8 +33,20 @@ export type WomensRecruitingStatusSummary = {
 };
 
 export type WomensRecruitingRelease = {
+  schema_version: 1;
+  sport: "basketball";
+  gender: "women";
+  season: number;
   edition: string;
   captured_at: string;
+  source: {
+    publisher: "ESPN";
+    league: "womens-college-basketball";
+    list_url: string;
+    list_sha256: string;
+    detail_url_template: string;
+    receipt_count: number;
+  };
   coverage: {
     prospects: number;
     graded: number;
@@ -46,6 +58,30 @@ export type WomensRecruitingRelease = {
 
 const releaseDigest = /^[a-f0-9]{64}$/i;
 const sourceId = /^\d{1,15}$/;
+const httpsUrl = /^https:\/\/[^\s]+$/i;
+
+type ValidatedSource = WomensRecruitingRelease["source"];
+
+function validateSource(value: unknown, season: number, recordCount: number): ValidatedSource | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const listUrl = typeof source.list_url === "string" ? source.list_url.trim() : "";
+  const detailUrlTemplate = typeof source.detail_url_template === "string" ? source.detail_url_template.trim() : "";
+  const receiptCount = source.receipt_count;
+  if (source.publisher !== "ESPN" || source.league !== "womens-college-basketball") return null;
+  if (!httpsUrl.test(listUrl) || !listUrl.includes(`/seasons/${season}/recruits`)) return null;
+  if (!httpsUrl.test(detailUrlTemplate) || !detailUrlTemplate.includes("/recruits/{athlete_id}")) return null;
+  if (!releaseDigest.test(String(source.list_sha256 || ""))) return null;
+  if (!Number.isSafeInteger(receiptCount) || receiptCount !== recordCount + 1) return null;
+  return {
+    publisher: "ESPN",
+    league: "womens-college-basketball",
+    list_url: listUrl,
+    list_sha256: String(source.list_sha256).toLowerCase(),
+    detail_url_template: detailUrlTemplate,
+    receipt_count: receiptCount,
+  };
+}
 
 /**
  * Validate the complete source-native women's prospect release before the UI
@@ -56,6 +92,9 @@ const sourceId = /^\d{1,15}$/;
 export function validateWomensRecruitingRelease(value: unknown): WomensRecruitingRelease | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const payload = value as Record<string, unknown>;
+  if (payload.schema_version !== 1 || payload.sport !== "basketball" || payload.gender !== "women") return null;
+  const season = payload.season;
+  if (!Number.isSafeInteger(season) || Number(season) < 2025 || Number(season) > 2035) return null;
   const edition = typeof payload.edition === "string" ? payload.edition.trim().toLowerCase() : "";
   const capturedAt = typeof payload.captured_at === "string" ? payload.captured_at.trim() : "";
   if (!releaseDigest.test(edition) || !capturedAt || Number.isNaN(Date.parse(capturedAt))) return null;
@@ -73,6 +112,8 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
   if (prospects == null || graded == null || ranked == null || committed == null) return null;
   const rawRecords = payload.records;
   if (!Array.isArray(rawRecords) || rawRecords.length === 0 || rawRecords.length !== prospects) return null;
+  const source = validateSource(payload.source, Number(season), rawRecords.length);
+  if (!source) return null;
   const ids = new Set<string>();
   const records: WomensRecruitingProspect[] = [];
   for (const raw of rawRecords) {
@@ -81,6 +122,14 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
     const athleteId = typeof record.athlete_id === "string" ? record.athlete_id.trim() : "";
     const name = typeof record.name === "string" ? record.name.trim() : "";
     if (!sourceId.test(athleteId) || !name || ids.has(athleteId)) return null;
+    const sourceSha256 = typeof record.source_sha256 === "string" ? record.source_sha256.trim().toLowerCase() : "";
+    const sourceUrl = typeof record.source_url === "string" ? record.source_url.trim() : "";
+    const recordCapturedAt = typeof record.captured_at === "string" ? record.captured_at.trim() : "";
+    if (!releaseDigest.test(sourceSha256) || !httpsUrl.test(sourceUrl)
+      || sourceUrl !== source.detail_url_template.replace("{athlete_id}", athleteId)
+      || record.recruiting_class !== season
+      || recordCapturedAt !== capturedAt
+      || Number.isNaN(Date.parse(recordCapturedAt))) return null;
     const grade = record.grade == null ? null : record.grade;
     const rank = record.rank == null ? null : record.rank;
     if (grade != null && (typeof grade !== "number" || !Number.isFinite(grade) || grade < 0)) return null;
@@ -105,7 +154,17 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
     committed: records.filter((record) => record.committed_team_id != null).length,
   };
   if (measured.graded !== graded || measured.ranked !== ranked || measured.committed !== committed) return null;
-  return { edition, captured_at: capturedAt, coverage: { prospects, graded, ranked, committed }, records };
+  return {
+    schema_version: 1,
+    sport: "basketball",
+    gender: "women",
+    season: Number(season),
+    edition,
+    captured_at: capturedAt,
+    source,
+    coverage: { prospects, graded, ranked, committed },
+    records,
+  };
 }
 
 /** Filter and sort the women-specific prospect cohort without inventing ranks. */

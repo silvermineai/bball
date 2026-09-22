@@ -11,6 +11,22 @@ const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[
   ...overrides,
 });
 
+const source = (recordCount: number) => ({
+  publisher: "ESPN",
+  league: "womens-college-basketball",
+  list_url: "https://sports.core.api.espn.com/v2/sports/basketball/leagues/womens-college-basketball/seasons/2027/recruits?limit=200",
+  list_sha256: "c".repeat(64),
+  detail_url_template: "https://sports.core.api.espn.com/v2/sports/basketball/leagues/womens-college-basketball/recruits/{athlete_id}?lang=en&region=us",
+  receipt_count: recordCount + 1,
+});
+
+const sourceFields = (athleteId: string, capturedAt = "2026-09-22T04:10:24.839220Z") => ({
+  source_sha256: "d".repeat(64),
+  source_url: `https://sports.core.api.espn.com/v2/sports/basketball/leagues/womens-college-basketball/recruits/${athleteId}?lang=en&region=us`,
+  recruiting_class: 2027,
+  captured_at: capturedAt,
+});
+
 describe("women's recruiting production context", () => {
   it("sorts source rows by the selected production field and preserves missingness", () => {
     const rows = rankWomensObservedPlayers([
@@ -76,12 +92,17 @@ describe("women's recruiting prospect cohort", () => {
 
   it("admits a receipt-backed complete release when counts and IDs reconcile", () => {
     const release = validateWomensRecruitingRelease({
+      schema_version: 1,
+      sport: "basketball",
+      gender: "women",
+      season: 2027,
       edition: "a".repeat(64),
       captured_at: "2026-09-22T04:10:24.839220Z",
+      source: source(2),
       coverage: { prospects: 2, graded: 1, ranked: 1, committed: 0 },
       records: [
-        { athlete_id: "101", name: "A", grade: 92, rank: 4, committed_team_id: null },
-        { athlete_id: "102", name: "B", grade: null, rank: null, committed_team_id: null },
+        { athlete_id: "101", name: "A", grade: 92, rank: 4, committed_team_id: null, ...sourceFields("101") },
+        { athlete_id: "102", name: "B", grade: null, rank: null, committed_team_id: null, ...sourceFields("102") },
       ],
     });
     expect(release?.records.map((row) => row.athlete_id)).toEqual(["101", "102"]);
@@ -90,12 +111,17 @@ describe("women's recruiting prospect cohort", () => {
 
   it("withholds a truncated, duplicated, or count-mismatched release", () => {
     const base = {
+      schema_version: 1,
+      sport: "basketball",
+      gender: "women",
+      season: 2027,
       edition: "b".repeat(64),
       captured_at: "2026-09-22T04:10:24.839220Z",
+      source: source(2),
       coverage: { prospects: 2, graded: 2, ranked: 0, committed: 0 },
       records: [
-        { athlete_id: "101", name: "A", grade: 92 },
-        { athlete_id: "102", name: "B", grade: 90 },
+        { athlete_id: "101", name: "A", grade: 92, ...sourceFields("101") },
+        { athlete_id: "102", name: "B", grade: 90, ...sourceFields("102") },
       ],
     };
     expect(validateWomensRecruitingRelease(base)?.records).toHaveLength(2);
@@ -103,5 +129,22 @@ describe("women's recruiting prospect cohort", () => {
     expect(validateWomensRecruitingRelease({ ...base, records: [{ ...base.records[0] }, { ...base.records[0] }] })).toBeNull();
     expect(validateWomensRecruitingRelease({ ...base, coverage: { ...base.coverage, graded: 1 } })).toBeNull();
     expect(validateWomensRecruitingRelease({ ...base, edition: "not-a-digest" })).toBeNull();
+  });
+
+  it("rejects a release whose receipt count or row source URL does not reconcile", () => {
+    const base = {
+      schema_version: 1,
+      sport: "basketball",
+      gender: "women",
+      season: 2027,
+      edition: "e".repeat(64),
+      captured_at: "2026-09-22T04:10:24.839220Z",
+      source: source(1),
+      coverage: { prospects: 1, graded: 1, ranked: 0, committed: 0 },
+      records: [{ athlete_id: "101", name: "A", grade: 92, ...sourceFields("101") }],
+    };
+    expect(validateWomensRecruitingRelease({ ...base, source: { ...base.source, receipt_count: 1 } })).toBeNull();
+    expect(validateWomensRecruitingRelease({ ...base, records: [{ ...base.records[0], source_url: "https://example.test/recruit/101" }] })).toBeNull();
+    expect(validateWomensRecruitingRelease({ ...base, records: [{ ...base.records[0], captured_at: "2026-09-22T04:10:24.839221Z" }] })).toBeNull();
   });
 });
