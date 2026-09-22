@@ -36,6 +36,9 @@ export type NationalProspectEvidence = {
   name: string;
   position: string | null;
   rank: number | null;
+  position_rank: number | null;
+  state_rank: number | null;
+  region_rank: number | null;
   previous_rank: number | null;
   previous_captured_at: string | null;
   grade: number | null;
@@ -59,15 +62,20 @@ export function parsePlayerNationalProspectPayload(
     || payload.season !== expectedSeason
     || !/^\d{1,15}$/.test(expectedAthleteId)
     || !Array.isArray(payload.rows)) return null;
-  const matches = payload.rows.filter((value) => isRecord(value) && String(value.athlete_id || "") === expectedAthleteId);
+  const matches = payload.rows.filter((value) => isRecord(value) && value.athlete_id === expectedAthleteId);
   if (matches.length !== 1) return null;
   const row = matches[0];
   if (!isRecord(row) || typeof row.name !== "string" || !row.name.trim()) return null;
   const nullableString = (value: unknown) => value == null ? null : typeof value === "string" ? value : undefined;
   const nullableNumber = (value: unknown) => value == null ? null : typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  const nullableRank = (value: unknown) => value == null ? null : Number.isSafeInteger(value) && Number(value) > 0 ? Number(value) : undefined;
+  const validTimestamp = (value: unknown) => typeof value === "string" && value.trim() !== "" && Number.isFinite(Date.parse(value));
   const position = nullableString(row.position);
-  const rank = nullableNumber(row.rank);
-  const previousRank = nullableNumber(row.previous_rank);
+  const rank = nullableRank(row.rank);
+  const positionRank = nullableRank(row.position_rank);
+  const stateRank = nullableRank(row.state_rank);
+  const regionRank = nullableRank(row.region_rank);
+  const previousRank = nullableRank(row.previous_rank);
   const previousCapturedAt = nullableString(row.previous_captured_at);
   const grade = nullableNumber(row.grade);
   const committedTeamId = nullableString(row.committed_team_id);
@@ -75,15 +83,22 @@ export function parsePlayerNationalProspectPayload(
   const status = nullableString(row.status);
   const capturedAt = nullableString(payload.captured_at);
   const edition = nullableString(payload.edition);
-  if (position === undefined || rank === undefined || previousRank === undefined || previousCapturedAt === undefined || grade === undefined
+  if (position === undefined || rank === undefined || positionRank === undefined || stateRank === undefined || regionRank === undefined
+    || previousRank === undefined || previousCapturedAt === undefined || grade === undefined
     || committedTeamId === undefined || committedTeamName === undefined
-    || status === undefined || capturedAt === undefined || edition === undefined) return null;
+    || status === undefined || capturedAt === undefined || edition === undefined
+    || capturedAt !== null && !validTimestamp(capturedAt)
+    || previousCapturedAt !== null && !validTimestamp(previousCapturedAt)
+    || grade !== null && grade < 0) return null;
   return {
     season: expectedSeason,
     athlete_id: expectedAthleteId,
     name: row.name.trim(),
     position,
     rank,
+    position_rank: positionRank,
+    state_rank: stateRank,
+    region_rank: regionRank,
     previous_rank: previousRank,
     previous_captured_at: previousCapturedAt,
     grade,

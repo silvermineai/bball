@@ -31,11 +31,23 @@ describe("player recruiting context", () => {
       season: 2027,
       edition: "a".repeat(64),
       captured_at: "2026-09-21T12:00:00Z",
-      rows: [{ athlete_id: "123", name: "Exact Prospect", position: "G", rank: 42, previous_rank: 55, previous_captured_at: "2026-09-01T12:00:00Z", grade: 94.5, committed_team_id: "1", committed_team_name: "Example", status: "committed" }],
+      rows: [{ athlete_id: "123", name: "Exact Prospect", position: "G", rank: 42, position_rank: 7, state_rank: null, region_rank: 3, previous_rank: 55, previous_captured_at: "2026-09-01T12:00:00Z", grade: 94.5, committed_team_id: "1", committed_team_name: "Example", status: "committed" }],
     };
-    expect(parsePlayerNationalProspectPayload(payload, 2027, "123")).toMatchObject({ athlete_id: "123", season: 2027, rank: 42, previous_rank: 55, committed_team_id: "1" });
+    expect(parsePlayerNationalProspectPayload(payload, 2027, "123")).toMatchObject({ athlete_id: "123", season: 2027, rank: 42, position_rank: 7, state_rank: null, region_rank: 3, previous_rank: 55, committed_team_id: "1" });
     expect(parsePlayerNationalProspectPayload({ ...payload, rows: [...payload.rows, payload.rows[0]] }, 2027, "123")).toBeNull();
     expect(parsePlayerNationalProspectPayload(payload, 2026, "123")).toBeNull();
+  });
+
+  it("keeps dimensional ranks unavailable when omitted and rejects non-exact IDs", () => {
+    const payload = {
+      season: 2027,
+      edition: "a".repeat(64),
+      captured_at: "2026-09-21T12:00:00Z",
+      rows: [{ athlete_id: "123", name: "Exact Prospect", position: "G", rank: 42, previous_rank: null, previous_captured_at: null, grade: null, committed_team_id: null, committed_team_name: null, status: null }],
+    };
+    expect(parsePlayerNationalProspectPayload(payload, 2027, "123")).toMatchObject({ position_rank: null, state_rank: null, region_rank: null });
+    expect(parsePlayerNationalProspectPayload({ ...payload, rows: [{ ...payload.rows[0], athlete_id: 123 }] }, 2027, "123")).toBeNull();
+    expect(parsePlayerNationalProspectPayload({ ...payload, rows: [{ ...payload.rows[0], position_rank: 0 }] }, 2027, "123")).toBeNull();
   });
 
   it("targets the live retained recruiting and roster editions", () => {
