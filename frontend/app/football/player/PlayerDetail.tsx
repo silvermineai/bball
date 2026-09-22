@@ -7,7 +7,11 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 import { footballPlayerExportHeaders, footballPlayerExportRows } from "../../_lib/football-player-export";
 type Row = {
   dataset: string;
+  season: number;
   game_id: string | null;
+  record_key: string | null;
+  athlete_id: string;
+  team_id: string | null;
   category: string;
   stats: Record<string, string>;
   kickoff: string | null;
@@ -316,7 +320,7 @@ export default function PlayerDetail() {
             >
               Download source rows CSV ↓
             </button>
-            <span className="note">Current page · source field names and values are retained.</span>
+            <span className="note">Current page · source IDs, record keys, field names and values are retained.</span>
           </div>
           {data.rows.map((row, i) => (
             <details key={`${page}-${i}`} open={i === 0}>

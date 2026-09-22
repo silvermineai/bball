@@ -104,6 +104,10 @@ describe("bball api", () => {
               results: [
                 {
                   dataset: "box",
+                  season: 2025,
+                  record_key: "box-401",
+                  athlete_id: "123",
+                  team_id: "10",
                   game_id: "401",
                   category: "rushing",
                   stats_json: JSON.stringify({
@@ -182,8 +186,10 @@ describe("bball api", () => {
         box_rates: Array<{ category: string; games: number; rates: Record<string, number> }>;
       };
       source_receipts: Array<Record<string, unknown>>;
+      rows: Array<Record<string, unknown>>;
     };
     expect(body.name).toBe("Example Player");
+    expect(body.rows[0]).toMatchObject({ dataset: "box", season: 2025, record_key: "box-401", athlete_id: "123", team_id: "10", game_id: "401" });
     expect(body.summary.production[0]).toMatchObject({
       category: "rushing",
       epa: 12.5,

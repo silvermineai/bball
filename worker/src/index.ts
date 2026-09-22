@@ -530,10 +530,10 @@ app.get("/api/football/players/:id", zValidator("query", footballPlayerQuery), a
   const db = footballDb(c.env);
   const [count, result, summaryResult, receiptResult] = await Promise.all([
     db.prepare("SELECT count(*) AS total FROM football_stats WHERE athlete_id=? AND season=?").bind(id, season).first<{ total: number }>(),
-    db.prepare(`SELECT s.dataset,s.game_id,s.category,s.stats_json,g.kickoff,g.home_name,g.away_name
+    db.prepare(`SELECT s.dataset,s.season,s.record_key,s.athlete_id,s.team_id,s.game_id,s.category,s.stats_json,g.kickoff,g.home_name,g.away_name
       FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
       WHERE s.athlete_id=? AND s.season=? ORDER BY g.kickoff DESC,s.dataset,s.record_key LIMIT 50 OFFSET ?`)
-      .bind(id, season, page * 50).all<{ dataset: string; game_id: string | null; category: string; stats_json: string; kickoff: string | null; home_name: string | null; away_name: string | null }>(),
+      .bind(id, season, page * 50).all<{ dataset: string; season: number; record_key: string; athlete_id: string; team_id: string | null; game_id: string | null; category: string; stats_json: string; kickoff: string | null; home_name: string | null; away_name: string | null }>(),
     db.prepare(`SELECT dataset,category,team_id,stats_json
       FROM football_stats
       WHERE athlete_id=? AND season=? AND dataset IN ('passing','rushing','receiving','box')

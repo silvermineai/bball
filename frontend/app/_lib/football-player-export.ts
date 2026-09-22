@@ -3,7 +3,11 @@ import type { CsvCell } from "./csv";
 /** One page of exact-athlete rows returned by the football player dossier. */
 export type FootballPlayerExportRow = {
   dataset: string;
+  season: number;
   game_id: string | null;
+  record_key: string | null;
+  athlete_id: string;
+  team_id: string | null;
   category: string;
   stats: Record<string, unknown>;
   kickoff: string | null;
@@ -13,7 +17,11 @@ export type FootballPlayerExportRow = {
 
 const contextHeaders = [
   "Dataset",
+  "Season",
   "Game ID",
+  "Record key",
+  "Athlete ID",
+  "Team ID",
   "Kickoff",
   "Away",
   "Home",
@@ -51,7 +59,11 @@ export function footballPlayerExportRows(
   const fields = headers.slice(contextHeaders.length).map((header) => header.slice("source.".length));
   return rows.map((row) => [
     row.dataset,
+    row.season,
     row.game_id,
+    row.record_key,
+    row.athlete_id,
+    row.team_id,
     row.kickoff,
     row.away_name,
     row.home_name,
