@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { forecastBoardEvidence, forecastCsvRows, matchupFactorContextLabel, matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
+import { dashboardForecastCalibration, forecastBoardEvidence, forecastCsvRows, matchupFactorContextLabel, matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -99,6 +99,20 @@ describe("forecastBoardEvidence", () => {
     expect(complete.present).toBe(3);
     expect(complete.missing).toEqual(["same-edition Four Factors"]);
     expect(complete.market).toBe("verified");
+  });
+});
+
+describe("dashboardForecastCalibration", () => {
+  const buckets = [{ lower: 0.5, upper: 0.6, games: 120, predicted: 0.54, observed: 0.51 }];
+
+  it("attaches the held-out band to the exact primary edition", () => {
+    expect(dashboardForecastCalibration({ ...games[0], forecast_model_id: "edition" }, buckets, "edition", "edition"))
+      .toMatchObject({ side: "Home", games: 120, predicted: 0.54, observed: 0.51, observed_gap_pp: -3 });
+  });
+
+  it("withholds stale edition and cold-start calibration context", () => {
+    expect(dashboardForecastCalibration({ ...games[1], forecast_model_id: "older" }, buckets, "edition", "edition")).toBeNull();
+    expect(dashboardForecastCalibration({ ...games[1], prediction: null, fallback_prediction: { ...games[1].prediction!, estimate_type: "cold_start" } }, buckets, "edition", "edition")).toBeNull();
   });
 });
 

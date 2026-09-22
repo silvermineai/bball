@@ -20,6 +20,7 @@ import { loadLiveBasketballMarketComparisons } from "../_lib/live-basketball-for
 import type { Comparison } from "../_lib/research-types";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 import { forecastEvidenceCoverage, forecastEvidenceLabel } from "../_lib/forecast-lab-analysis";
+import { basketballCalibrationContext, type BasketballCalibrationBucket, type BasketballCalibrationContext } from "../_lib/basketball-calibration";
 
 const predictionFor = (game: BBGame) => game.prediction || game.fallback_prediction;
 const latestTip = (game: BBGame) =>
@@ -104,6 +105,23 @@ export function forecastBoardEvidence(
   });
 }
 
+/**
+ * Attach held-out probability-band evidence only to a primary forecast from
+ * the exact edition that produced the calibration replay. A live refresh can
+ * move ahead of the bundled dashboard, so an edition mismatch stays blank.
+ */
+export function dashboardForecastCalibration(
+  game: BBGame,
+  buckets: readonly BasketballCalibrationBucket[],
+  calibrationModelId: string | null | undefined,
+  publishedModelId: string,
+): BasketballCalibrationContext | null {
+  if (!game.prediction || !calibrationModelId) return null;
+  const forecastModelId = game.forecast_model_id || publishedModelId;
+  if (forecastModelId !== calibrationModelId) return null;
+  return basketballCalibrationContext(game.prediction.home_win_probability, buckets);
+}
+
 export const forecastCsvHeaders = [
   "Game ID", "Tip", "Away", "Home", "Estimate type", "Away score", "Home score", "Home win probability",
   "Projected margin", "Margin low", "Margin high", "Projected total", "Pace", "Away efficiency", "Home efficiency", "eFG edge", "TO edge", "ORB edge",
@@ -181,11 +199,15 @@ export default function LiveDashboardForecastTable({
   rosterScenarios = [],
   ratings = [],
   publishedModelId,
+  calibrationBuckets = [],
+  calibrationModelId = null,
 }: {
   initialGames: BBGame[];
   rosterScenarios?: BBRosterScenario[];
   ratings?: BBTeam[];
   publishedModelId: string;
+  calibrationBuckets?: readonly BasketballCalibrationBucket[];
+  calibrationModelId?: string | null;
 }) {
   const [games, setGames] = useState(initialGames);
   const [sort, setSort] = useState<ForecastBoardSort>("start");
@@ -287,7 +309,7 @@ export default function LiveDashboardForecastTable({
       <div className="dashboard-table-wrap">
       <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Tip</th><th>Model</th><th>Analysis packet</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Tempo</th><th className="numeric">Efficiency</th><th className="numeric">Factor edge</th><th className="numeric">Team ratings</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Tip</th><th>Model</th><th>Analysis packet</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Held-out band</th><th className="numeric">Margin</th><th className="numeric">Tempo</th><th className="numeric">Efficiency</th><th className="numeric">Factor edge</th><th className="numeric">Team ratings</th><th className="numeric">Roster lens</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
@@ -299,6 +321,7 @@ export default function LiveDashboardForecastTable({
             const marketTiming = marketTimingLabel(marketComparisons[game.id] || [], game.starts_at);
             const factorEdges = matchupFactorEdges(game);
             const evidence = forecastBoardEvidence(game, rosterScenario, hasQualifiedMarketComparison(market));
+            const calibration = dashboardForecastCalibration(game, calibrationBuckets, calibrationModelId, publishedModelId);
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/basketball/matchups/?game=${encodeURIComponent(game.id)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link><small><Link href={`/blog/basketball-game-${encodeURIComponent(game.id)}/`}>Read game notebook →</Link></small></th>
@@ -307,6 +330,7 @@ export default function LiveDashboardForecastTable({
                 <td aria-label={`Analysis packet: ${forecastEvidenceLabel(evidence)}`}><strong>{evidence.present}/{evidence.total} core</strong><small>{evidence.market === "verified" ? "Verified market attached" : "Market pending"}</small>{evidence.missing.length > 0 && <small title={evidence.missing.join(", ")}>Missing: {evidence.missing.slice(0, 2).join(", ")}{evidence.missing.length > 2 ? "…" : ""}</small>}</td>
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong><small>{prediction.home_win_probability >= 0.5 ? game.home_name : game.away_name} projected winner</small></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
+                <td className="numeric">{calibration ? <><strong>{calibration.side} {fmt(calibration.confidence_lower * 100, 0)}–{fmt(calibration.confidence_upper * 100, 0)}%</strong><small>{calibration.games.toLocaleString()} held-out · {calibration.observed == null ? "observed rate unavailable" : `${fmt(calibration.observed * 100, 1)}% observed`}</small>{calibration.observed_gap_pp == null ? null : <small>{calibration.observed_gap_pp >= 0 ? "+" : ""}{fmt(calibration.observed_gap_pp, 1)} pp observed vs model</small>}</> : <span className="note">Unavailable</span>}</td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
                 <td className="numeric"><strong>{fmt(prediction.pace)}</strong><small>possessions</small></td>
                 <td className="numeric">{prediction.away_efficiency == null && prediction.home_efficiency == null ? "—" : <><span>{fmt(prediction.away_efficiency, 1)} / {fmt(prediction.home_efficiency, 1)}</span><small>A / H pts per 100</small></>}</td>
