@@ -114,7 +114,7 @@ export default function WomensRecruiting({ release: initialRelease, history }: {
           </div>
           <span className="note">{release.coverage.graded.toLocaleString()} graded rows</span>
         </div>
-        <p className="note">These bands summarize ESPN&apos;s recorded grade field. They are descriptive source buckets, not a Silvermine rank or a projection. Missing grades remain unavailable.</p>
+        <p className="note">These bands summarize the recorded grade field. They are descriptive data buckets, not a Silvermine rank or a projection. Missing grades remain unavailable.</p>
         <div className="table-scroll">
           <table className="data-table">
             <thead><tr><th>Source grade</th><th className="numeric">Prospects</th><th className="numeric">Share</th></tr></thead>
@@ -130,12 +130,12 @@ export default function WomensRecruiting({ release: initialRelease, history }: {
           </div>
           <span className="note">No national rank inferred</span>
         </div>
-        <p className="note">Rows are ordered by recorded grade, then name and ESPN athlete ID. Ties stay ties; the table does not manufacture ordinal ranks. The current release carries no source-ranked national ranks or destination IDs.</p>
+        <p className="note">Rows are ordered by recorded grade, then name and athlete ID. Ties stay ties; the table does not manufacture ordinal ranks. The current release carries no source-ranked national ranks or destination IDs.</p>
         <div className="table-scroll">
           <table className="data-table">
             <thead><tr><th>Prospect</th><th>Position</th><th className="numeric">Source grade</th><th>Status</th><th>Destination</th></tr></thead>
             <tbody>{gradeLeaders.map((record) => <tr key={record.athlete_id}>
-              <th scope="row"><strong>{record.name}</strong><small>ESPN athlete ID {record.athlete_id}</small></th>
+              <th scope="row"><strong>{record.name}</strong><small>Athlete ID {record.athlete_id}</small></th>
               <td>{display(record.position)}</td>
               <td className="numeric"><strong>{display(record.grade)}</strong></td>
               <td>{display(record.status)}</td>

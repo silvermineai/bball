@@ -238,7 +238,7 @@ export default function Dossier({
               </table>
             </div>
             <p className="note" style={{ marginTop: 12 }}>
-              This is descriptive NCAA source data joined by exact ESPN team ID. Missing source fields stay unavailable; it does not change the forecast or imply a current roster.
+              This is descriptive shot profile data joined by an exact team ID. Missing fields stay unavailable; it does not change the forecast or imply a current roster.
             </p>
           </section>
         )}
