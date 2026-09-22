@@ -28,6 +28,9 @@ function ProductionTable({ production, context }: { production: ProspectProducti
     ["TS%", "ts", percent(production.ts)],
     ["3P%", "three_pct", percent(production.three_pct)],
     ["FT%", "ft_pct", percent(production.ft_pct)],
+    ["3PA rate", "three_rate", percent(production.three_rate)],
+    ["FT rate", "ft_rate", percent(production.ft_rate)],
+    ["TO rate", "tov_rate", percent(production.tov_rate)],
   ] as const satisfies readonly [string, ProspectProductionMetric, string][];
   return <div className="table-scroll"><table className="data-table"><thead><tr><th>Observed prior production</th><th className="numeric">Value</th><th className="numeric">Within-edition rank</th></tr></thead><tbody>{rows.map(([label, metric, value]) => { const comparison = context[metric]; return <tr key={label}><th scope="row">{label}</th><td className="numeric"><strong>{value}</strong></td><td className="numeric">{comparison ? <><strong>#{comparison.rank}</strong><small>of {comparison.cohort} exact-ID links</small></> : "—"}</td></tr>; })}</tbody></table></div>;
 }
@@ -76,6 +79,7 @@ export default function ProspectProductionBridge({ athleteId, season }: { athlet
         <div><strong>{number(production.mpg)}</strong><span>Minutes / game</span></div>
       </div>
       <ProductionTable production={production} context={release?.productionContext || {}} />
+      <p className="note" style={{ marginTop: 12 }}>Source completeness: {production.incomplete_box_games.toLocaleString()} recorded game row{production.incomplete_box_games === 1 ? "" : "s"} had incomplete box data. That count is shown for audit context and is excluded from within-edition metric ranks.</p>
       <p className="note" style={{ marginTop: 12 }}>Edition <span className="source-hash">{release?.edition}</span> · reviewed {release ? new Date(release.reviewedAt).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" }) : "date unavailable"} · exact athlete ID {production.id}. {production.identity_basis} Within-edition ranks are descending raw-metric comparisons among unique exact-ID production links; they are not player grades, projections or role claims.</p>
     </>}
   </section>;

@@ -43,6 +43,10 @@ describe("prospect production release", () => {
     expect(result?.production?.team).toBe("Seton Hall");
     expect(result?.production?.games).toBe(31);
     expect(result?.production?.three_pct).toBeNull();
+    expect(result?.production?.three_rate).toBe(0);
+    expect(result?.production?.ft_rate).toBe(0.43);
+    expect(result?.production?.tov_rate).toBe(0.13);
+    expect(result?.production?.incomplete_box_games).toBe(0);
     expect(result?.productionContext.ppg).toEqual({ rank: 2, cohort: 2 });
     expect(result?.productionContext.games).toEqual({ rank: 1, cohort: 2 });
     expect(result?.productionContext.three_pct).toBeUndefined();
