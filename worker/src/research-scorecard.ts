@@ -99,6 +99,39 @@ function iso(value: unknown): string | null {
   return Number.isFinite(time) ? new Date(time).toISOString() : null;
 }
 
+/**
+ * A schedule clock is eligible to clear a canonical TBD flag only when the
+ * retained audit payload still proves the exact event and participants that
+ * were validated by the collector. The scorecard never treats a bare
+ * source_start column as enough evidence: malformed or manually inserted
+ * rows fail closed and leave the forecast excluded.
+ */
+function validatedSourceClock(
+  clock: Json | undefined,
+  row: Json,
+  state: Json | null,
+  payload: Json,
+): { sourceStart: string; observedAt: string | null } | null {
+  if (!clock || String(clock.provider || "") !== "ESPN Scoreboard" || clock.source_time_valid !== 1) return null;
+  const sourcePayload = parse(clock.payload_json);
+  const sourceStart = iso(clock.source_start);
+  const canonicalStart = iso(row.starts_at);
+  const stateStart = iso(state?.starts_at);
+  const observedAt = iso(clock.observed_at);
+  if (!sourcePayload || !sourceStart || !canonicalStart || !stateStart || !observedAt) return null;
+  const gameId = String(row.game_id ?? "");
+  const homeId = String(payload.home_id ?? "");
+  const awayId = String(payload.away_id ?? "");
+  if (!gameId || !homeId || !awayId) return null;
+  if (String(sourcePayload.event_id ?? "") !== gameId || String(sourcePayload.game_id ?? "") !== gameId) return null;
+  if (String(sourcePayload.home_id ?? "") !== homeId || String(sourcePayload.away_id ?? "") !== awayId) return null;
+  if (Number(sourcePayload.season) !== Number(payload.season)) return null;
+  if (sourcePayload.source_time_valid !== true || String(sourcePayload.source_start ?? "") !== String(clock.source_start ?? "")) return null;
+  if (iso(sourcePayload.local_start) !== canonicalStart || iso(sourcePayload.local_start) !== stateStart) return null;
+  if (sourceStart.slice(0, 10) !== canonicalStart.slice(0, 10) || sourceStart.slice(0, 10) !== stateStart.slice(0, 10)) return null;
+  return { sourceStart, observedAt };
+}
+
 function mean(values: number[]): number | null {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 }
@@ -569,12 +602,12 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
   // preserving the exact source-date checks below.
   const clockResult = await db.prepare(`
     WITH latest_clock AS (
-      SELECT sport,game_id,source_start,source_time_valid,observed_at,
+      SELECT sport,game_id,provider,source_start,source_time_valid,observed_at,payload_json,
              ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS clock_rank
         FROM audit_schedule_times
        WHERE sport=? AND observed_at<=?
     )
-    SELECT sport,game_id,source_start,source_time_valid,observed_at
+    SELECT sport,game_id,provider,source_start,source_time_valid,observed_at,payload_json
       FROM latest_clock WHERE clock_rank=1
   `).bind(sport, now).all();
   const clockByGame = new Map<string, Record<string, unknown>>();
@@ -603,14 +636,9 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     const state = parse(row.state_json);
     const prediction = object(payload.prediction) || {};
     const sourceClock = clockByGame.get(String(row.game_id));
-    const sourceStart = sourceClock?.source_time_valid === 1 ? iso(sourceClock.source_start) : null;
-    const canonicalStart = iso(row.starts_at);
-    const stateStart = iso(state?.starts_at);
-    const sourceClockResolved = Boolean(
-      state && sourceStart && canonicalStart && stateStart
-      && sourceStart.slice(0, 10) === canonicalStart.slice(0, 10)
-      && sourceStart.slice(0, 10) === stateStart.slice(0, 10),
-    );
+    const validatedClock = validatedSourceClock(sourceClock, row, state, payload);
+    const sourceStart = validatedClock?.sourceStart || null;
+    const sourceClockResolved = validatedClock !== null;
     const effectiveStartsAt = sourceClockResolved && sourceStart ? sourceStart : row.starts_at;
     const effectiveState = sourceClockResolved && state && sourceStart
       ? { ...state, starts_at: sourceStart, time_tbd: 0 }
@@ -632,9 +660,11 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
     const item: Json = {
       id: row.id, sport, game_id: row.game_id, model_id: row.model_id, generated_at: row.generated_at, registered_at: row.registered_at, starts_at: effectiveStartsAt,
       canonical_starts_at: row.starts_at,
+      canonical_time_tbd: Number(row.time_tbd || 0),
       source_starts_at: sourceStart,
       source_time_valid: sourceClockResolved ? true : sourceClock?.source_time_valid == null ? null : sourceClock.source_time_valid === 1,
-      source_observed_at: iso(sourceClock?.observed_at),
+      source_observed_at: validatedClock?.observedAt || null,
+      schedule_time_basis: sourceClockResolved ? "validated_source_clock" : sourceClock ? "source_clock_rejected" : "canonical_schedule",
       time_tbd: sourceClockResolved ? 0 : Number(row.time_tbd || 0), home_name: payload.home_name || "Unknown", away_name: payload.away_name || "Unknown", season: Number(payload.season || season),
       home_margin: number(prediction.home_margin), total: number(prediction.total), home_win_probability: probability(prediction.home_win_probability), margin_low: validMarginInterval ? marginLow : null, margin_high: validMarginInterval ? marginHigh : null,
       status, exclusion, actual_margin: status === "settled" && homeScore !== null && awayScore !== null ? homeScore - awayScore : null,

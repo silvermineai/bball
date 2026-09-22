@@ -720,9 +720,11 @@ export default function Scorecard() {
                       {g.away_name} at {g.home_name}
                     </Link>
                     <small>
-                      {g.time_tbd
-                        ? date(g.starts_at) + " · time TBD"
-                        : kick(g.starts_at)}
+                      {g.schedule_time_basis === "validated_source_clock"
+                        ? `${kick(g.starts_at)} · verified source clock${g.canonical_time_tbd ? " · canonical time TBD" : ""}`
+                        : g.time_tbd
+                          ? date(g.starts_at) + " · time TBD"
+                          : kick(g.starts_at)}
                     </small>
                   </td>
                   <td>

@@ -34,6 +34,10 @@ export type LedgerGame = {
   source_starts_at?: string | null;
   source_time_valid?: boolean | null;
   source_observed_at?: string | null;
+  /** Canonical schedule flag, retained even when an exact source clock resolves a TBD row. */
+  canonical_time_tbd?: number;
+  /** Explains whether the displayed start came from the immutable source clock or canonical schedule. */
+  schedule_time_basis?: "canonical_schedule" | "validated_source_clock" | "source_clock_rejected";
   time_tbd: number;
   home_name: string;
   away_name: string;

@@ -482,7 +482,7 @@ describe("live research scorecard", () => {
             return sql.includes("FROM audit_predictions p")
               ? { results: [selected] }
               : sql.includes("audit_schedule_times")
-                ? { results: [{ sport: "basketball", game_id: "game-clocked", source_start: "2026-11-02T18:00:00.000000Z", source_time_valid: 1, observed_at: "2026-09-19T12:00:00.000000Z" }] }
+                ? { results: [{ sport: "basketball", game_id: "game-clocked", provider: "ESPN Scoreboard", source_start: "2026-11-02T18:00:00.000000Z", source_time_valid: 1, observed_at: "2026-09-19T12:00:00.000000Z", payload_json: JSON.stringify({ event_id: "game-clocked", game_id: "game-clocked", season: 2027, home_id: "home-clocked", away_id: "away-clocked", local_start: "2026-11-02T05:00:00.000000Z", source_start: "2026-11-02T18:00:00.000000Z", source_time_valid: true }) }] }
                 : sql.includes("SELECT id,sport,game_id,provider")
                   ? { results: [quote] }
                   : { results: [] };
@@ -505,6 +505,8 @@ describe("live research scorecard", () => {
       canonical_starts_at: "2026-11-02T05:00:00.000000Z",
       source_starts_at: "2026-11-02T18:00:00.000Z",
       source_time_valid: true,
+      canonical_time_tbd: 1,
+      schedule_time_basis: "validated_source_clock",
       comparisons: [expect.objectContaining({ market: "spreads", model_difference: 1.5 })],
     });
     expect(body.sports.basketball.comparison_readiness).toMatchObject({
@@ -514,6 +516,30 @@ describe("live research scorecard", () => {
       selected_comparisons: 1,
     });
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("audit_schedule_times") && String(sql).includes("latest_clock"))).toBe(true);
+
+    const mismatchedClock = vi.fn((sql: string) => {
+      const first = async () => sql.includes("audit_predictions") ? { total: 1 } : { total: 0 };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => sql.includes("FROM audit_predictions p")
+            ? { results: [{ ...selected, exclusion: "unconfirmed_start" }] }
+            : sql.includes("audit_schedule_times")
+              ? { results: [{ sport: "basketball", game_id: "game-clocked", provider: "ESPN Scoreboard", source_start: "2026-11-02T18:00:00.000000Z", source_time_valid: 1, observed_at: "2026-09-19T12:00:00.000000Z", payload_json: JSON.stringify({ event_id: "game-clocked", game_id: "game-clocked", season: 2027, home_id: "wrong-home", away_id: "away-clocked", local_start: "2026-11-02T05:00:00.000000Z", source_start: "2026-11-02T18:00:00.000000Z", source_time_valid: true }) }] }
+              : sql.includes("SELECT id,sport,game_id,provider")
+                ? { results: [quote] }
+                : { results: [] },
+        }),
+      };
+    });
+    const mismatchedResponse = await researchScorecard.request(
+      "/?sport=basketball&season=2027&model=model-clocked&limit=5000",
+      {},
+      { RESEARCH_DB: { prepare: mismatchedClock } as never },
+    );
+    const mismatchedBody = await mismatchedResponse.json() as { games: Array<Record<string, unknown>> };
+    expect(mismatchedBody.games[0]).toMatchObject({ status: "excluded", exclusion: "unconfirmed_start", time_tbd: 1, canonical_time_tbd: 1, schedule_time_basis: "source_clock_rejected", comparisons: [] });
 
     const unconfirmed = { ...selected, source_start: null, source_time_valid: 0, exclusion: "unconfirmed_start" };
     const unconfirmedPrepare = vi.fn((sql: string) => {
