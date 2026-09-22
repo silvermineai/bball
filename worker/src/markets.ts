@@ -102,6 +102,9 @@ type ResearchCapture = {
   summary_with_odds?: number;
   eligible_games?: number;
   candidate_games?: number;
+  candidate_confirmed_start_games?: number;
+  selected_confirmed_start_games?: number;
+  selected_unconfirmed_start_games?: number;
   capture_limit?: number;
   capture_truncated?: boolean;
   selection_strategy?: "all_candidates" | "nearest_two_thirds_plus_uniform_tail";
@@ -207,6 +210,15 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     }
     if (typeof payload.candidate_games === "number" && Number.isInteger(payload.candidate_games) && payload.candidate_games >= 0) {
       result.candidate_games = payload.candidate_games;
+    }
+    if (typeof payload.candidate_confirmed_start_games === "number" && Number.isInteger(payload.candidate_confirmed_start_games) && payload.candidate_confirmed_start_games >= 0) {
+      result.candidate_confirmed_start_games = payload.candidate_confirmed_start_games;
+    }
+    if (typeof payload.selected_confirmed_start_games === "number" && Number.isInteger(payload.selected_confirmed_start_games) && payload.selected_confirmed_start_games >= 0) {
+      result.selected_confirmed_start_games = payload.selected_confirmed_start_games;
+    }
+    if (typeof payload.selected_unconfirmed_start_games === "number" && Number.isInteger(payload.selected_unconfirmed_start_games) && payload.selected_unconfirmed_start_games >= 0) {
+      result.selected_unconfirmed_start_games = payload.selected_unconfirmed_start_games;
     }
     if (typeof payload.capture_limit === "number" && Number.isInteger(payload.capture_limit) && payload.capture_limit >= 1 && payload.capture_limit <= 300) {
       result.capture_limit = payload.capture_limit;

@@ -430,6 +430,9 @@ def fetch_upcoming(
         # request limits without treating an unrequested game as a failed read.
         "eligible_games": len(games),
         "candidate_games": len(candidate_games),
+        "candidate_confirmed_start_games": sum(1 for game in candidate_games if not bool(game.get("time_tbd"))),
+        "selected_confirmed_start_games": sum(1 for game in games if not bool(game.get("time_tbd"))),
+        "selected_unconfirmed_start_games": sum(1 for game in games if bool(game.get("time_tbd"))),
         "capture_limit": limit,
         "selection_strategy": "nearest_two_thirds_plus_uniform_tail" if len(candidate_games) > len(games) else "all_candidates",
         "near_term_games": min(len(candidate_games), max(1, (limit * 2) // 3)),

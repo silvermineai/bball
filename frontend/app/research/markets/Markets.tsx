@@ -32,6 +32,9 @@ type Meta = {
     summary_with_odds?: number;
     eligible_games?: number;
     candidate_games?: number;
+    candidate_confirmed_start_games?: number;
+    selected_confirmed_start_games?: number;
+    selected_unconfirmed_start_games?: number;
     capture_limit?: number;
     capture_truncated?: boolean;
     selection_strategy?: "all_candidates" | "nearest_two_thirds_plus_uniform_tail";
@@ -53,6 +56,9 @@ type Meta = {
     summary_with_odds?: number;
     eligible_games?: number;
     candidate_games?: number;
+    candidate_confirmed_start_games?: number;
+    selected_confirmed_start_games?: number;
+    selected_unconfirmed_start_games?: number;
     capture_limit?: number;
     capture_truncated?: boolean;
     selection_strategy?: "all_candidates" | "nearest_two_thirds_plus_uniform_tail";
@@ -291,6 +297,9 @@ export default function Markets() {
               <tr><th scope="row">Future summaries checked</th><td className="numeric">{(meta.research_capture?.summary_count || 0).toLocaleString()}</td><td>Scheduled games inspected by the capture</td></tr>
               <tr><th scope="row">Eligible games</th><td className="numeric">{meta.research_capture?.eligible_games == null ? "—" : meta.research_capture.eligible_games.toLocaleString()}</td><td>Confirmed future games in the requested capture window</td></tr>
               {meta.research_capture?.candidate_games != null ? <tr><th scope="row">Candidate games</th><td className="numeric">{meta.research_capture.candidate_games.toLocaleString()}</td><td>Eligible games available before the bounded request limit</td></tr> : null}
+              {meta.research_capture?.candidate_confirmed_start_games != null ? <tr><th scope="row">Confirmed start candidates</th><td className="numeric">{meta.research_capture.candidate_confirmed_start_games.toLocaleString()}</td><td>Candidate games whose canonical start was already confirmed</td></tr> : null}
+              {meta.research_capture?.selected_confirmed_start_games != null ? <tr><th scope="row">Confirmed starts requested</th><td className="numeric">{meta.research_capture.selected_confirmed_start_games.toLocaleString()}</td><td>Requested games eligible for direct pregame comparison without source-clock promotion</td></tr> : null}
+              {meta.research_capture?.selected_unconfirmed_start_games != null ? <tr><th scope="row">TBD starts requested</th><td className="numeric">{meta.research_capture.selected_unconfirmed_start_games.toLocaleString()}</td><td>Requested games still requiring a validated source clock before comparison</td></tr> : null}
               {meta.research_capture?.capture_truncated ? <tr><th scope="row">Capture bound</th><td className="numeric">{meta.research_capture.capture_limit == null ? "Bounded" : meta.research_capture.capture_limit.toLocaleString()}</td><td>Only this many candidates were requested; remaining games were not treated as failed reads</td></tr> : null}
               {meta.research_capture?.selection_strategy === "nearest_two_thirds_plus_uniform_tail" ? <tr><th scope="row">Slate selection</th><td className="numeric">{meta.research_capture.near_term_games == null ? "Bounded" : meta.research_capture.near_term_games.toLocaleString()}</td><td>Nearest games receive most requests; the remaining budget samples later candidates across the full window</td></tr> : null}
               <tr><th scope="row">Summary requests failed</th><td className="numeric">{(meta.research_capture?.summary_fetch_failures || 0).toLocaleString()}</td><td>Games whose public summary could not be read; these remain unresolved</td></tr>
