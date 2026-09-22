@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["volume", "fg_pct", "3p_pct", "rim_pct", "mid_pct", "distance"] as const;
+const metrics = ["volume", "fg_pct", "3p_pct", "rim_pct", "mid_pct", "distance", "rim_share", "paint_share", "mid_share", "three_share"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2019).max(2026).default(2026),
@@ -45,6 +45,13 @@ const expression = (metric: Metric) => ({
   rim_pct: "CASE WHEN json_extract(stats_json,'$.zones.rim.attempts') > 0 THEN 100.0 * json_extract(stats_json,'$.zones.rim.makes') / json_extract(stats_json,'$.zones.rim.attempts') END",
   mid_pct: "CASE WHEN json_extract(stats_json,'$.zones.mid.attempts') > 0 THEN 100.0 * json_extract(stats_json,'$.zones.mid.makes') / json_extract(stats_json,'$.zones.mid.attempts') END",
   distance: "CASE WHEN json_extract(stats_json,'$.distance_count') > 0 THEN json_extract(stats_json,'$.distance_sum') / json_extract(stats_json,'$.distance_count') END",
+  // Shot-diet shares describe where the recorded attempts came from. Each
+  // numerator must be source-present; a missing zone remains unavailable
+  // instead of being coerced to a zero share.
+  rim_share: "CASE WHEN json_extract(stats_json,'$.attempts') > 0 AND json_extract(stats_json,'$.zones.rim.attempts') IS NOT NULL THEN 100.0 * json_extract(stats_json,'$.zones.rim.attempts') / json_extract(stats_json,'$.attempts') END",
+  paint_share: "CASE WHEN json_extract(stats_json,'$.attempts') > 0 AND json_extract(stats_json,'$.zones.paint.attempts') IS NOT NULL THEN 100.0 * json_extract(stats_json,'$.zones.paint.attempts') / json_extract(stats_json,'$.attempts') END",
+  mid_share: "CASE WHEN json_extract(stats_json,'$.attempts') > 0 AND json_extract(stats_json,'$.zones.mid.attempts') IS NOT NULL THEN 100.0 * json_extract(stats_json,'$.zones.mid.attempts') / json_extract(stats_json,'$.attempts') END",
+  three_share: "CASE WHEN json_extract(stats_json,'$.attempts') > 0 AND json_extract(stats_json,'$.zones.abovebreak3.attempts') IS NOT NULL AND json_extract(stats_json,'$.zones.corner3.attempts') IS NOT NULL THEN 100.0 * (json_extract(stats_json,'$.zones.abovebreak3.attempts') + json_extract(stats_json,'$.zones.corner3.attempts')) / json_extract(stats_json,'$.attempts') END",
 }[metric]);
 const qualification = (metric: Metric) => ({
   volume: "json_extract(stats_json,'$.attempts')",
@@ -53,6 +60,10 @@ const qualification = (metric: Metric) => ({
   rim_pct: "COALESCE(json_extract(stats_json,'$.zones.rim.attempts'),0)",
   mid_pct: "COALESCE(json_extract(stats_json,'$.zones.mid.attempts'),0)",
   distance: "json_extract(stats_json,'$.distance_count')",
+  rim_share: "json_extract(stats_json,'$.zones.rim.attempts')",
+  paint_share: "json_extract(stats_json,'$.zones.paint.attempts')",
+  mid_share: "json_extract(stats_json,'$.zones.mid.attempts')",
+  three_share: "CASE WHEN json_extract(stats_json,'$.zones.abovebreak3.attempts') IS NOT NULL AND json_extract(stats_json,'$.zones.corner3.attempts') IS NOT NULL THEN json_extract(stats_json,'$.zones.abovebreak3.attempts') + json_extract(stats_json,'$.zones.corner3.attempts') END",
 }[metric]);
 
 /** Stream the exact NCAA shot release whose receipt is active in D1. */
