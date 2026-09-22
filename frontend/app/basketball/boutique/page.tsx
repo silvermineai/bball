@@ -9,5 +9,8 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <Suspense fallback={<p>Loading boutique model archive…</p>}><Boutique ratings={getBasketball().ratings} /></Suspense>;
+  const overview = getBasketball();
+  // The overview is the upcoming 2026–27 edition; its retained team ratings
+  // are the completed 2025–26 baseline used by the independent desk.
+  return <Suspense fallback={<p>Loading boutique model archive…</p>}><Boutique ratings={overview.ratings} independentSeason={overview.season - 1} /></Suspense>;
 }
