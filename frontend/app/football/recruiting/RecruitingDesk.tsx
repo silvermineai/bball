@@ -5,9 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import { date, fmt } from "../../_lib/format";
 import { downloadCsv } from "../../_lib/csv";
 import { footballRecruitingCsv, type FootballRecruitingView } from "../../_lib/football-recruiting-export";
+import {
+  footballRecruitingDivisionParam,
+  parseFootballRecruitingDivision,
+  type FootballRecruitingDivision,
+} from "../../_lib/football-recruiting-scope";
 
 type View = "rosters" | "recruits" | "talent" | "returning";
-type Division = "all" | "fbs" | "fcs" | "d2" | "d3" | "naia" | "unknown";
+type Division = FootballRecruitingDivision;
 type Receipt = { dataset: string; season: number; fetched_at: string; sha256: string };
 type Meta = { seasons: number[]; datasets: Array<{ dataset: string; season: number; rows: number }>; receipts: Receipt[]; views: Array<{ view: View; dataset: string; label: string }>; coverage?: { completeness: "not_established"; note: string } };
 type Row = Record<string, unknown> & { id?: string | null; team_id?: string | null; division?: string | null; raw?: Record<string, unknown>; record_key?: string };
@@ -85,8 +90,7 @@ export default function RecruitingDesk() {
     if (params.get("season")) setSeason(params.get("season")!);
     setQuery(params.get("q") || "");
     setTeam(params.get("team") || "");
-    const requestedDivision = params.get("division") as Division | null;
-    if (requestedDivision && requestedDivision in divisionLabels) setDivision(requestedDivision);
+    setDivision(parseFootballRecruitingDivision(params.get("division")));
     const requestedPage = Number(params.get("page"));
     if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < 1000) setPage(requestedPage);
     setHydrated(true);
@@ -106,7 +110,8 @@ export default function RecruitingDesk() {
     if (season === "2026") url.searchParams.delete("season"); else url.searchParams.set("season", season);
     if (query.trim()) url.searchParams.set("q", query.trim()); else url.searchParams.delete("q");
     if (team.trim()) url.searchParams.set("team", team.trim()); else url.searchParams.delete("team");
-    if (division === "all") url.searchParams.delete("division"); else url.searchParams.set("division", division);
+    const divisionParam = footballRecruitingDivisionParam(division);
+    if (divisionParam == null) url.searchParams.delete("division"); else url.searchParams.set("division", divisionParam);
     if (page) url.searchParams.set("page", String(page)); else url.searchParams.delete("page");
     window.history.replaceState(window.history.state, "", url);
   }, [division, hydrated, meta, page, query, season, team, view]);

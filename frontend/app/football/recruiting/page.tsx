@@ -1,29 +1,5 @@
 import Link from "next/link";
-import fs from "node:fs";
-import path from "node:path";
 import RecruitingDesk from "./RecruitingDesk";
-
-type PersonnelPreview = {
-  id?: string | null;
-  name?: string | null;
-  team?: string | null;
-  position?: string | null;
-  experience?: string | null;
-  status?: string | null;
-  height?: number | null;
-  weight?: number | null;
-};
-
-function getPersonnelPreview(): PersonnelPreview[] {
-  const file = path.join(process.cwd(), "public/data/football/personnel-preview-2026.json");
-  if (!fs.existsSync(file)) return [];
-  try {
-    const payload = JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
-    return Array.isArray(payload) ? payload as PersonnelPreview[] : [];
-  } catch {
-    return [];
-  }
-}
 
 export const metadata = {
   title: "College football recruiting and roster context",
@@ -31,33 +7,9 @@ export const metadata = {
   alternates: { canonical: "/football/recruiting/" },
 };
 
-export default async function Page() {
-  const preview = await getPersonnelPreview();
+export default function Page() {
   return <>
     <p className="note" style={{ marginBottom: 24 }}>Personnel rows stay separate from the production rankings and forecast model. For basketball recruiting, use the <Link href="/basketball/recruiting/">basketball recruiting board →</Link>.</p>
-    {preview.length > 0 && <section className="paper-panel" aria-labelledby="football-personnel-preview" style={{ marginBottom: 24 }}>
-      <div className="section-heading" style={{ marginBottom: 12 }}>
-        <div>
-          <div className="eyebrow">Current personnel / 2026</div>
-          <h2 id="football-personnel-preview">Roster rows, already in the page</h2>
-        </div>
-        <Link href="/football/recruiting/?view=rosters">Open the full personnel desk →</Link>
-      </div>
-      <p className="note">A compact view of the retained current-season roster release. Use the desk below to search every row, team and personnel view.</p>
-      <div className="table-scroll">
-        <table className="data-table">
-          <thead><tr><th>Player</th><th>Program</th><th>Position</th><th>Experience</th><th>Status</th><th>Listed size</th></tr></thead>
-          <tbody>{preview.map((row, index) => <tr key={`${row.id || row.name || "player"}-${index}`}>
-            <th scope="row">{row.id ? <Link href={`/football/player/?id=${encodeURIComponent(row.id)}&season=2026`}>{row.name || row.id} →</Link> : row.name || "Unknown player"}<small>{row.id ? `Athlete ${row.id}` : "No stable athlete ID"}</small></th>
-            <td>{row.team || "—"}</td>
-            <td>{row.position || "—"}</td>
-            <td>{row.experience || "—"}</td>
-            <td>{row.status || "—"}</td>
-            <td>{row.height == null && row.weight == null ? "—" : `${row.height == null ? "—" : `${row.height} in`} · ${row.weight == null ? "—" : `${row.weight} lb`}`}</td>
-          </tr>)}</tbody>
-        </table>
-      </div>
-    </section>}
     <RecruitingDesk />
   </>;
 }
