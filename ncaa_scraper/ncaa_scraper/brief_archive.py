@@ -30,8 +30,11 @@ def compact(value):
 
 
 class Capture:
-    def __init__(self, build):
+    def __init__(self, build, fallback_build=None):
         self.build = Path(build).resolve()
+        self.fallback_build = (
+            Path(fallback_build).resolve() if fallback_build is not None else None
+        )
         self.objects = {}
         self.paths = {}
 
@@ -56,6 +59,10 @@ class Capture:
             or not file.is_relative_to(self.build)
         ):
             raise ValueError("Archive dependency must be a local build file")
+        if not file.is_file() and self.fallback_build is not None:
+            fallback = (self.fallback_build / url.path.lstrip("/")).resolve()
+            if fallback.is_relative_to(self.fallback_build) and fallback.is_file():
+                file = fallback
         data = file.read_bytes()
         mime = mimetypes.guess_type(file.name)[0] or "application/octet-stream"
         if file.suffix == ".css":
@@ -224,7 +231,11 @@ class Capture:
 
 
 def build_capture(build=BUILD):
-    capture = Capture(build)
+    # The research ledger is intentionally excluded from Workers Assets because
+    # it exceeds Cloudflare's per-file limit. Keep it available to the archive
+    # capturer from the local static output while the live API remains the
+    # public reader.
+    capture = Capture(build, fallback_build=ROOT / "frontend/out")
     versions = []
     for sport in ["football", "basketball"]:
         overview = json.loads((Path(build) / f"data/{sport}/overview.json").read_text())

@@ -72,6 +72,14 @@ class BriefArchiveTests(unittest.TestCase):
         self.assertIn("Home by 12", frozen.get_text())
         self.assertIn("model-1", frozen.get_text())
 
+    def test_asset_can_read_an_explicit_local_fallback_build(self):
+        fallback = self.root / "fallback"
+        (fallback / "data/research").mkdir(parents=True)
+        (fallback / "data/research/ledger.json").write_text('{"capture":1}')
+        capture = Capture(self.root, fallback_build=fallback)
+        digest = capture.asset("/data/research/ledger.json")
+        self.assertEqual(capture.objects[digest][1], b'{"capture":1}')
+
     def test_pack_ranges_replay_and_corruption(self):
         capture, _ = self.capture()
         bundle, records = pack(capture, {}, self.root)
