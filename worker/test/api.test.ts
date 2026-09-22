@@ -1716,8 +1716,8 @@ describe("bball api", () => {
       division_scope: { basis: "exact ESPN IDs from the retained D1 team index", team_count: 2 },
       rows: [{ id: "150", rank: 1 }],
     });
-    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("team_id IN (?,?)"))).toBe(true);
-    expect(binds.some((args) => args.includes("150") && args.includes("248"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("team_id IN (SELECT value FROM json_each(?))"))).toBe(true);
+    expect(binds.some((args) => args.some((value) => typeof value === "string" && value.includes("150") && value.includes("248")))).toBe(true);
   });
 
   it("fails closed when a lower-division team-season release is not published", async () => {

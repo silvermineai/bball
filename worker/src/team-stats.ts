@@ -200,8 +200,12 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
   const binds: Array<string | number> = [season];
   if (divisionIndex) {
     const scopedIds = [...divisionIndex.ids];
-    whereParts.push(`team_id IN (${scopedIds.map(() => "?").join(",")})`);
-    binds.push(...scopedIds);
+    // D1 rejects a several-hundred-ID placeholder list on the production
+    // binding limit. Keep the verified exact-ID cohort as one JSON parameter
+    // and let SQLite's JSON1 table-valued function perform the membership
+    // test without changing the source boundary.
+    whereParts.push("team_id IN (SELECT value FROM json_each(?))");
+    binds.push(JSON.stringify(scopedIds));
   }
   if (search) {
     whereParts.push("(team_name LIKE ? OR team_id LIKE ?)");
