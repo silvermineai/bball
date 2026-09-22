@@ -127,6 +127,19 @@ describe("market connector readiness", () => {
     expect(formatMarketComparisonReadiness(undefined)).toBe("");
   });
 
+  it("surfaces the dominant rejection reason when no quote can qualify", () => {
+    expect(formatMarketComparisonReadiness({
+      retained_observations: 1447,
+      selected_game_observations: 675,
+      outside_selected_cohort: 772,
+      eligible_observations: 0,
+      comparable_observations: 0,
+      superseded_observations: 0,
+      selected_comparisons: 0,
+      rejection_counts: { captured_before_registration: 675 },
+    })).toContain("Rejection detail: 675 Captured before forecast registration.");
+  });
+
   it("pins the scorecard to the active forecast edition", () => {
     expect(modelScopedScorecardPath("football", " ridge-team-v2 ")).toBe("/api/research/scorecard?sport=football&model=ridge-team-v2&limit=1");
     expect(modelScopedScorecardPath("basketball", "edition/unsafe")).toBe("/api/research/scorecard?sport=basketball&model=edition%2Funsafe&limit=1");

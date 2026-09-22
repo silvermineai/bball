@@ -1,4 +1,5 @@
 import type { MarketCaptureStatus } from "./market-availability";
+import { reasons } from "./research-types";
 import type { SportSummary } from "./research-types";
 
 /** Build the scorecard request for the exact active forecast edition. */
@@ -305,5 +306,12 @@ export function formatMarketComparisonReadiness(readiness: ComparisonReadiness |
     comparable > eligible ||
     superseded !== comparable - selectedComparisons
   ) return "";
-  return `Comparison funnel: ${selected.toLocaleString()} of ${retained.toLocaleString()} retained quote rows matched the selected forecast cohort (${outside.toLocaleString()} outside it); ${eligible.toLocaleString()} passed pregame, participant and freshness checks; ${comparable.toLocaleString()} passed model and line validation; ${selectedComparisons.toLocaleString()} remain after provider, bookmaker and market selection${superseded ? ` (${superseded.toLocaleString()} superseded)` : ""}.`;
+  const rejectionDetails = Object.entries(readiness.rejection_counts || {})
+    .map(([reason, value]) => [reason, count(value)] as const)
+    .filter((entry): entry is readonly [string, number] => entry[1] !== null && entry[1] > 0)
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, 3)
+    .map(([reason, value]) => `${value.toLocaleString()} ${reasons[reason] || reason}`)
+    .join(" · ");
+  return `Comparison funnel: ${selected.toLocaleString()} of ${retained.toLocaleString()} retained quote rows matched the selected forecast cohort (${outside.toLocaleString()} outside it); ${eligible.toLocaleString()} passed pregame, participant and freshness checks; ${comparable.toLocaleString()} passed model and line validation; ${selectedComparisons.toLocaleString()} remain after provider, bookmaker and market selection${superseded ? ` (${superseded.toLocaleString()} superseded)` : ""}.${rejectionDetails ? ` Rejection detail: ${rejectionDetails}.` : ""}`;
 }
