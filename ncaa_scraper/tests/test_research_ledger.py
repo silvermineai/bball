@@ -142,6 +142,10 @@ class LedgerTests(unittest.TestCase):
         register(self.c, "football", game(), model(), T0, T1)
         row = self.c.execute("select * from audit_predictions").fetchone()
         self.assertEqual(row["registered_at"], timestamp(T0))
+        diagnostic = game()
+        diagnostic["prediction"]["home_efficiency"] = 114.2
+        diagnostic["prediction"]["away_efficiency"] = 101.7
+        register(self.c, "football", diagnostic, model(), T0, T1)
         g = game()
         g["prediction"]["home_margin"] = 99
         with self.assertRaises(ValueError):

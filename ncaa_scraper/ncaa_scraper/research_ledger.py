@@ -22,6 +22,25 @@ DB = ROOT / ".local/research-ledger.sqlite3"
 OUT = ROOT / "frontend/public/data/research"
 POLICY = "first-eligible-registration-v1"
 SPORTS = ("football", "basketball")
+# These fields define the registered estimate.  Forecast artifacts may gain
+# explanatory diagnostics (for example component efficiencies) over time;
+# those diagnostics do not change the prediction that was evaluated.  Keep
+# the estimate comparison explicit so additive metadata cannot make a valid
+# append-only ledger rebuild fail, while any change to a published forecast
+# output still raises below.
+PREDICTION_FIELDS = (
+    "home_margin",
+    "total",
+    "home_win_probability",
+    "home_score",
+    "away_score",
+    "pace",
+    "margin_low",
+    "margin_high",
+    "margin_half_width",
+    "estimate_type",
+    "unknown_teams",
+)
 BASKETBALL_SOURCE_MIGRATIONS = (
     "0009_basketball_research.sql",
     "0017_basketball_team_season.sql",
@@ -70,6 +89,21 @@ def client_ledger(report):
 
 def digest(value):
     return hashlib.sha256(encoded(value).encode()).hexdigest()
+
+
+def prediction_signature(prediction):
+    """Return only forecast fields that define the registered estimate.
+
+    The public forecast payload can add diagnostic context without changing
+    its evaluated estimate. Missing fields remain distinct from explicit nulls
+    so a model cannot silently rewrite an output by dropping a prediction
+    component.
+    """
+    return {
+        key: prediction[key]
+        for key in PREDICTION_FIELDS
+        if key in prediction
+    }
 
 
 def timestamp(value):
@@ -205,7 +239,7 @@ def register(conn, sport, game, model, generated_at, now):
         # Existing registration keeps both its original clock and original schedule.
         # Re-using a model ID for changed estimates is an error, not an overwrite.
         old = json.loads(prior["payload_json"])
-        if old["prediction"] != p or old["model_cutoff"] != cutoff:
+        if prediction_signature(old["prediction"]) != prediction_signature(p) or old["model_cutoff"] != cutoff:
             raise ValueError("An existing model/game estimate cannot be rewritten")
         return identity
     conn.execute(
