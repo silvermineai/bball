@@ -214,7 +214,7 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
 
 async function publishedRankingsFallback(
   c: Context<{ Bindings: Bindings }>,
-  args: { season: number; metric: Metric; minGames: number; minMinutes: number; minVolume: number; q?: string; playerIds?: string[]; classYear?: string; position?: string; page: number; meta: string },
+  args: { season: number; division: string; metric: Metric; minGames: number; minMinutes: number; minVolume: number; q?: string; playerIds?: string[]; classYear?: string; position?: string; page: number; meta: string },
 ): Promise<Response | null> {
   if (!c.env.ASSETS || args.season !== 2026 || (args.meta !== "1" && !publishedSupportedMetrics.has(args.metric))) return null;
   try {
@@ -228,12 +228,13 @@ async function publishedRankingsFallback(
       ? catalog.players.filter((value): value is PublishedIndividualPlayer => Boolean(value && typeof value === "object"))
       : [];
     if (args.meta === "1") {
-      const classes = [...new Set(players.map((player) => typeof player.class_year === "string" ? player.class_year : "").filter(Boolean))].sort();
-      const positions = [...new Set(players.map((player) => typeof player.position === "string" ? player.position : "").filter(Boolean))].sort();
+      const selectedPlayers = players.filter((player) => finite(player.division) === Number(args.division));
+      const classes = [...new Set(selectedPlayers.map((player) => typeof player.class_year === "string" ? player.class_year : "").filter(Boolean))].sort();
+      const positions = [...new Set(selectedPlayers.map((player) => typeof player.position === "string" ? player.position : "").filter(Boolean))].sort();
       const response = c.json({
         seasons: [2026],
-        division: "1",
-        available_divisions: ["1"],
+        division: args.division,
+        available_divisions: ["1", "2", "3"],
         metrics,
         metric_definitions: metricDefinitions,
         classes,
@@ -266,7 +267,7 @@ async function publishedRankingsFallback(
       return undefined;
     };
     const filteredPlayers = players
-      .filter((player) => finite(player.division) === 1)
+      .filter((player) => finite(player.division) === Number(args.division))
       .filter((player) => {
         const sample = publishedMetricSample(player, args.metric);
         if (!sample) return false;
@@ -299,7 +300,7 @@ async function publishedRankingsFallback(
       : rankedRows.slice(start, start + 50);
     const response = c.json({
       season: 2026,
-      division: "1",
+      division: args.division,
       metric: args.metric,
       direction: args.metric === "topg" || args.metric === "tov_rate" ? "asc" : "desc",
       min_games: args.minGames,
@@ -604,11 +605,17 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const { season, division, metric, minGames, minMinutes, minVolume, q, playerIds: playerIdsQuery, classYear, position, page, meta } = c.req.valid("query");
   if (division !== "1") {
+    // The archived NCAA individual release contains source rows for all three
+    // divisions. Use that exact release for lower-division ranking views
+    // rather than silently serving D-I rows or forcing readers to a less
+    // capable endpoint. Advanced derived metrics remain D-I-only below.
+    const fallback = await publishedRankingsFallback(c, { season, division, metric, minGames, minMinutes, minVolume, q, playerIds: playerIdsQuery?.split(",").filter(Boolean) || [], classYear, position, page, meta });
+    if (fallback) return fallback;
     return c.json({
-      error: "Advanced NCAA player rankings are published for Division I only.",
-      code: "division_not_published",
+      error: "This NCAA player ranking metric is unavailable for the requested division.",
+      code: "division_metric_unavailable",
       requested_division: division,
-      available_divisions: ["1"],
+      available_divisions: ["1", "2", "3"],
       alternative: `/api/basketball/research/ncaa-leaders?division=${division}`,
     }, 409, { "Cache-Control": "no-store" });
   }
@@ -650,7 +657,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
       return response;
     } catch {
-      const fallback = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
+      const fallback = await publishedRankingsFallback(c, { season, division, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
       if (fallback) return fallback;
       return c.json({ error: "The NCAA player rankings catalog is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
     }
@@ -661,7 +668,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   // edition for this count so a healthy D1 database cannot silently turn a
   // legally retained player stat into an empty board.
   if (metric === "dbl_dbl" && season === 2026) {
-    const published = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
+    const published = await publishedRankingsFallback(c, { season, division, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
     if (published) return published;
   }
   const clauses = ["s.season=?"];
@@ -735,7 +742,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
   return response;
   } catch {
-    const fallback = await publishedRankingsFallback(c, { season, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
+    const fallback = await publishedRankingsFallback(c, { season, division, metric, minGames, minMinutes, minVolume, q, playerIds, classYear, position, page, meta });
     if (fallback) return fallback;
     return c.json({ error: "The NCAA player rankings are temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }

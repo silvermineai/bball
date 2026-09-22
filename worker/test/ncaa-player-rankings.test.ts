@@ -2,26 +2,48 @@ import { describe, expect, it, vi } from "vitest";
 import { metricExpression, ncaaPlayerRankings, volumeColumn } from "../src/ncaa-player-rankings";
 
 describe("NCAA player rankings availability", () => {
-  it.each(["2", "3"])("fails closed for Division %s instead of serving Division I rows", async (division) => {
+  it.each(["2", "3"])("ranks retained Division %s rows without leaking another division", async (division) => {
     const prepare = vi.fn();
-    const fetch = vi.fn();
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [
+        { division: 1, player_id: 1, team_ncaa_id: 10, name: "D-I player", team_name: "D-I U", games: 20, mins: 600, ppg: 30 },
+        { division: 2, player_id: 2, team_ncaa_id: 20, name: "D-II player", team_name: "D-II U", games: 20, mins: 600, ppg: 20 },
+        { division: 3, player_id: 3, team_ncaa_id: 30, name: "D-III player", team_name: "D-III U", games: 20, mins: 600, ppg: 10 },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
     const response = await ncaaPlayerRankings.request(
       `/?season=2026&division=${division}&metric=ppg`,
       {},
       { DB: { prepare }, ASSETS: { fetch } } as never,
     );
 
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      division,
+      total: 1,
+      rows: [{ player_name: division === "2" ? "D-II player" : "D-III player", value: division === "2" ? 20 : 10, rank: 1 }],
+    });
+    expect(prepare).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails closed when a lower-division ranking release is unavailable", async () => {
+    const prepare = vi.fn();
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&division=2&metric=ppg",
+      {},
+      { DB: { prepare } } as never,
+    );
+
     expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toEqual({
-      error: "Advanced NCAA player rankings are published for Division I only.",
-      code: "division_not_published",
-      requested_division: division,
-      available_divisions: ["1"],
-      alternative: `/api/basketball/research/ncaa-leaders?division=${division}`,
+    await expect(response.json()).resolves.toMatchObject({
+      code: "division_metric_unavailable",
+      requested_division: "2",
+      available_divisions: ["1", "2", "3"],
     });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(prepare).not.toHaveBeenCalled();
-    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("exposes the retained NCAA double-double count as a ranking metric", () => {
