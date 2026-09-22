@@ -126,7 +126,7 @@ export function validRecruitingRankDistribution(result: RecruitingBoardResult): 
 }
 type Result = RecruitingBoardResult;
 type CommitmentDestination = NonNullable<Result["commitment_destinations"]>[number];
-type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "edition" | "source_receipt" | "rank_movement" | "rank_distribution"> & { season: string };
+type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "destination_coverage" | "edition" | "source_receipt" | "rank_movement" | "rank_distribution"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
 
 export type RecruitingClassDestinationRow = CommitmentDestination & {
@@ -195,6 +195,18 @@ export type RecruitingClassCommitmentTrend = {
   priorSeason: string | null;
   commitmentDelta: number | null;
   commitmentShareDelta: number | null;
+  receipt: RecruitingClassSnapshotReceipt;
+};
+
+export type RecruitingClassDestinationCoverage = {
+  season: string;
+  returned: number;
+  total: number;
+  limit: number;
+  complete: boolean;
+  retainedCommitments: number;
+  recordedCommitments: number;
+  retainedCommitmentShare: number | null;
   receipt: RecruitingClassSnapshotReceipt;
 };
 
@@ -567,6 +579,50 @@ export function classCommitmentTrend(snapshots: ClassSnapshot[]): RecruitingClas
 }
 
 /**
+ * Make the bounded destination response visible across class releases. The
+ * response is useful only when its row count, coverage metadata, commitment
+ * totals and release receipt agree; omitted destinations remain unknown.
+ */
+export function classDestinationCoverageRows(snapshots: ClassSnapshot[]): RecruitingClassDestinationCoverage[] {
+  return snapshots.flatMap((snapshot) => {
+    const receipt = classSnapshotReceipt(snapshot);
+    const coverage = snapshot.destination_coverage;
+    const committed = snapshot.cohort?.committed;
+    const destinations = snapshot.commitment_destinations;
+    if (
+      !receipt
+      || !coverage
+      || !Array.isArray(destinations)
+      || typeof committed !== "number"
+      || !Number.isSafeInteger(committed)
+      || committed < 0
+      || !Number.isSafeInteger(coverage.returned)
+      || coverage.returned < 0
+      || coverage.returned !== destinations.length
+      || !Number.isSafeInteger(coverage.total)
+      || coverage.total < coverage.returned
+      || !Number.isSafeInteger(coverage.limit)
+      || coverage.limit < 1
+      || typeof coverage.complete !== "boolean"
+      || coverage.complete !== (coverage.returned === coverage.total)
+    ) return [];
+    const identity = classDestinationIdentityCoverage([snapshot])[0];
+    if (!identity || identity.retainedCommitments > committed || (coverage.complete && identity.retainedCommitments !== committed)) return [];
+    return [{
+      season: snapshot.season,
+      returned: coverage.returned,
+      total: coverage.total,
+      limit: coverage.limit,
+      complete: coverage.complete,
+      retainedCommitments: identity.retainedCommitments,
+      recordedCommitments: committed,
+      retainedCommitmentShare: committed > 0 ? identity.retainedCommitments / committed : null,
+      receipt,
+    }];
+  });
+}
+
+/**
  * Summarize the recorded rank bins only when the complete class release and
  * its aggregate denominator reconcile. This is a source concentration view,
  * not a Silvermine talent score, and it never treats an unavailable rank as
@@ -909,9 +965,9 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   useEffect(() => {
     const controller = new AbortController();
     Promise.allSettled(["2025", "2026", "2027", "2028", "2029", "2030"].map(async (classYear) => {
-      const value = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all`, { signal: controller.signal });
+      const value = await fetchJson<Result>(`/api/basketball/research/recruiting-rankings?season=${classYear}&page=0&committed=all&destination_limit=200`, { signal: controller.signal });
       if (value.unavailable_reason) throw new Error(value.unavailable_reason);
-      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations, edition: value.edition, source_receipt: value.source_receipt, rank_movement: value.rank_movement, rank_distribution: value.rank_distribution } satisfies ClassSnapshot;
+      return { season: classYear, total: value.total, cohort: value.cohort, captured_at: value.captured_at, position_breakdown: value.position_breakdown, commitment_destinations: value.commitment_destinations, destination_coverage: value.destination_coverage, edition: value.edition, source_receipt: value.source_receipt, rank_movement: value.rank_movement, rank_distribution: value.rank_distribution } satisfies ClassSnapshot;
     })).then((settled) => {
       if (controller.signal.aborted) return;
       setClassSnapshots(settled.flatMap((item) => item.status === "fulfilled" ? [item.value] : []).sort((a, b) => a.season.localeCompare(b.season)));
@@ -955,6 +1011,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const movementRows = classMovementRows(classSnapshots);
   const rankConcentrationRows = classRankConcentration(classSnapshots);
   const commitmentTrendRows = classCommitmentTrend(classSnapshots);
+  const destinationCoverageRows = classDestinationCoverageRows(classSnapshots);
   const positionColumns = Array.from(new Set(positionMixRows.flatMap((row) => row.positions.map((position) => position.position)))).sort((a, b) => {
     const order = ["PG", "SG", "SF", "PF", "C", "G", "F", "W", "UNKNOWN"];
     return (order.indexOf(a) < 0 ? order.length : order.indexOf(a)) - (order.indexOf(b) < 0 ? order.length : order.indexOf(b)) || a.localeCompare(b);
@@ -1064,6 +1121,24 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             <td className="numeric">{row.noRecordedDestination.toLocaleString()}</td>
             <td className="numeric">{(row.recordedCommitmentShare * 100).toFixed(1)}%</td>
             <td className="numeric">{row.commitmentDelta == null ? "—" : <><strong>{row.commitmentDelta > 0 ? "+" : ""}{row.commitmentDelta.toLocaleString()}</strong><small>{row.commitmentShareDelta == null ? "" : `${row.commitmentShareDelta > 0 ? "+" : ""}${(row.commitmentShareDelta * 100).toFixed(1)} pts vs ${row.priorSeason}`}</small></>}</td>
+            <td><small>Verified digest · {row.receipt.sourceRows.toLocaleString()} rows</small><small className="source-hash">{row.receipt.sha256.slice(0, 12)}…</small></td>
+          </tr>)}</tbody>
+        </table></div>
+      </section>}
+      {destinationCoverageRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-destination-coverage-title" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Destination coverage / verified national class releases</div><h3 id="recruiting-destination-coverage-title">See how much of each class can be joined to destinations.</h3></div>
+          <span className="note">{destinationCoverageRows.filter((row) => row.complete).length} complete · {destinationCoverageRows.length} verified</span>
+        </div>
+        <p className="note">The class snapshots request up to 200 destinations. “Partial” means the source returned fewer rows than its destination total; omitted programs are unknown and are never treated as zero. Retained commitment share is measured only against the recorded commitment denominator.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Class</th><th className="numeric">Destinations returned</th><th className="numeric">Recorded commitments retained</th><th className="numeric">Retained share</th><th>Coverage</th><th>Evidence</th></tr></thead>
+          <tbody>{destinationCoverageRows.map((row) => <tr key={`destination-coverage-${row.season}`}>
+            <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(row.season); setPage(0); }}>{row.season}</button><small>{row.recordedCommitments.toLocaleString()} recorded commitments</small></th>
+            <td className="numeric"><strong>{row.returned.toLocaleString()}</strong><small>of {row.total.toLocaleString()} destinations</small></td>
+            <td className="numeric">{row.retainedCommitments.toLocaleString()}<small>of {row.recordedCommitments.toLocaleString()}</small></td>
+            <td className="numeric">{row.retainedCommitmentShare == null ? "—" : `${(row.retainedCommitmentShare * 100).toFixed(1)}%`}</td>
+            <td>{row.complete ? <><strong>Complete</strong><small>All recorded destination rows returned</small></> : <><strong>Partial</strong><small>Request limit {row.limit.toLocaleString()}</small></>}</td>
             <td><small>Verified digest · {row.receipt.sourceRows.toLocaleString()} rows</small><small className="source-hash">{row.receipt.sha256.slice(0, 12)}…</small></td>
           </tr>)}</tbody>
         </table></div>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classDestinationRows,
+  classDestinationCoverageRows,
   classDestinationRecurrence,
   classDestinationIdentityCoverage,
   classCommitmentTrend,
@@ -283,6 +284,75 @@ describe("recruiting commitment pipeline", () => {
     expect(classCommitmentTrend([{ ...valid, cohort: { ...valid.cohort, committed: 11 } }])).toEqual([]);
     expect(classCommitmentTrend([{ ...valid, source_receipt: null }])).toEqual([]);
     expect(classCommitmentTrend([valid, valid])).toEqual([]);
+  });
+});
+
+describe("recruiting destination coverage", () => {
+  const makeSnapshot = (season: string, digest: string, destinationCoverage: RecruitingBoardResult["destination_coverage"], destinations: NonNullable<RecruitingBoardResult["commitment_destinations"]>, committed = 2) => ({
+    season,
+    total: 10,
+    cohort: { ranked: 8, graded: 10, committed },
+    captured_at: "2026-09-18T00:00:00Z",
+    edition: digest,
+    source_receipt: {
+      dataset: "recruiting_rankings" as const,
+      captured_at: "2026-09-18T00:00:00Z",
+      source_rows: 10,
+      sha256: digest,
+      sha256_scope: "release_edition" as const,
+      integrity: "verified" as const,
+    },
+    position_breakdown: [],
+    commitment_destinations: destinations,
+    destination_coverage: destinationCoverage,
+  });
+  const destination = (teamId: string, total: number) => ({
+    team_id: teamId,
+    team: `State ${teamId}`,
+    total,
+    ranked_total: total,
+    top100_total: total,
+    source_rank_points: 100,
+    best_rank: 1,
+    average_rank: 1,
+  });
+
+  it("reports complete and partial destination evidence against recorded commitments", () => {
+    expect(classDestinationCoverageRows([
+      makeSnapshot("2027", "a".repeat(64), { returned: 2, total: 2, limit: 200, complete: true }, [destination("7", 1), destination("8", 1)]),
+      makeSnapshot("2028", "b".repeat(64), { returned: 1, total: 3, limit: 1, complete: false }, [destination("7", 1)], 3),
+    ])).toEqual([
+      {
+        season: "2027",
+        returned: 2,
+        total: 2,
+        limit: 200,
+        complete: true,
+        retainedCommitments: 2,
+        recordedCommitments: 2,
+        retainedCommitmentShare: 1,
+        receipt: { sourceRows: 10, sha256: "a".repeat(64) },
+      },
+      {
+        season: "2028",
+        returned: 1,
+        total: 3,
+        limit: 1,
+        complete: false,
+        retainedCommitments: 1,
+        recordedCommitments: 3,
+        retainedCommitmentShare: 1 / 3,
+        receipt: { sourceRows: 10, sha256: "b".repeat(64) },
+      },
+    ]);
+  });
+
+  it("withholds coverage when metadata, rows, or commitment totals disagree", () => {
+    const valid = makeSnapshot("2027", "a".repeat(64), { returned: 2, total: 2, limit: 200, complete: true }, [destination("7", 1), destination("8", 1)]);
+    expect(classDestinationCoverageRows([{ ...valid, destination_coverage: { returned: 1, total: 2, limit: 200, complete: true } }])).toEqual([]);
+    expect(classDestinationCoverageRows([{ ...valid, destination_coverage: { returned: 2, total: 2, limit: 200, complete: false } }])).toEqual([]);
+    expect(classDestinationCoverageRows([{ ...valid, cohort: { ...valid.cohort, committed: 3 } }])).toEqual([]);
+    expect(classDestinationCoverageRows([{ ...valid, source_receipt: null }])).toEqual([]);
   });
 });
 
