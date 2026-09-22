@@ -247,15 +247,15 @@ export default function BasketballNotebook({
       <section className="section" aria-labelledby="notebook-evidence-chain">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">Evidence chain / retained releases</div>
-            <h2 id="notebook-evidence-chain">What this game read is built from.</h2>
+            <div className="eyebrow">Data behind the read</div>
+            <h2 id="notebook-evidence-chain">What this game analysis uses.</h2>
           </div>
-          <Link href="/basketball/source-stats/">Open source coverage →</Link>
+          <Link href="/basketball/source-stats/">Open data coverage →</Link>
         </div>
         <p className="note">
           Read the forecast, historical workload, shot map and roster signals in
           separate columns. A model edition identifies the registered estimate;
-          a SHA-256 receipt identifies the retained source release. Missing or
+          an internal receipt identifies the retained data edition. Missing or
           mismatched evidence stays visible as unavailable.
         </p>
         <div className="table-scroll">
