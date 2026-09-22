@@ -325,6 +325,77 @@ describe("live basketball forecast merge", () => {
     expect(merged[1].prediction).toBeNull();
   });
 
+  it("does not carry a static market quote across forecast editions", () => {
+    const quote = [{
+      provider: "licensed",
+      bookmaker: "book",
+      market: "spreads" as const,
+      captured_at: "2026-09-10T12:00:00Z",
+      updated_at: "2026-09-10T12:00:00Z",
+      line: -2.5,
+      model_difference: 1,
+      market_home_probability: null,
+    }];
+    const staticGame = {
+      ...game("market", "2026-11-02T05:00:00Z", prediction(4)),
+      forecast_model_id: "model-old",
+      market_comparisons: quote,
+    };
+    const liveRow = {
+      game_id: "market",
+      model_id: "model-new",
+      season: 2027,
+      starts_at: "2026-11-02T05:00:00Z",
+      home_id: "market-home",
+      away_id: "market-away",
+      home_name: "Home market",
+      away_name: "Away market",
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(5),
+    } satisfies LiveForecastRow;
+    expect(mergeLiveBasketballForecasts([staticGame], [liveRow])[0].market_comparisons).toEqual([]);
+
+    const sameEdition = mergeLiveBasketballForecasts([staticGame], [{ ...liveRow, model_id: "model-old" }], "model-old");
+    expect(sameEdition[0].market_comparisons).toEqual(quote);
+  });
+
+  it("does not carry a static market quote into a one-game live refresh", () => {
+    const quote = [{
+      provider: "licensed",
+      bookmaker: "book",
+      market: "h2h" as const,
+      captured_at: "2026-09-10T12:00:00Z",
+      updated_at: "2026-09-10T12:00:00Z",
+      line: null,
+      model_difference: 0,
+      market_home_probability: 0.58,
+    }];
+    const staticGame = {
+      ...game("featured-market", "2026-11-02T05:00:00Z", prediction(4)),
+      forecast_model_id: "model-old",
+      market_comparisons: quote,
+    };
+    const row = {
+      game_id: "featured-market",
+      model_id: "model-new",
+      season: 2027,
+      starts_at: "2026-11-02T05:00:00Z",
+      home_id: "featured-market-home",
+      away_id: "featured-market-away",
+      home_name: "Home featured-market",
+      away_name: "Away featured-market",
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(5),
+    } satisfies LiveForecastRow;
+    expect(mergeLiveForecast(staticGame, row).market_comparisons).toEqual([]);
+  });
+
   it("keeps featured-card factors on the live forecast edition", () => {
     const staticFactors: NonNullable<BBGame["matchup_factors"]> = {
       season: 2026,

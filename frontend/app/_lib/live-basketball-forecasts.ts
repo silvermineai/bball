@@ -301,6 +301,15 @@ export function mergeLiveBasketballForecasts(
       : staticFactors
         ? staticModelId || base?.forecast_model_id || null
         : null;
+    // A market comparison is useful only beside the exact forecast edition
+    // that produced the prediction. A live refresh can replace the static
+    // forecast while the scorecard request is still pending (or unavailable),
+    // so never carry a quote from an older edition into the new row.
+    const staticMarketComparisons = base
+      && row.model_id
+      && (base.forecast_model_id || staticModelId) === row.model_id
+      ? base.market_comparisons
+      : [];
     return [{
       ...(base || {
         id: row.game_id,
@@ -337,6 +346,7 @@ export function mergeLiveBasketballForecasts(
       matchup_factors_same_edition: factors
         ? Boolean(factorsModelId && row.model_id && factorsModelId === row.model_id)
         : null,
+      market_comparisons: staticMarketComparisons,
       // The API stores one row per game, including cold-start estimates. Keep
       // the distinction used by the static release so cards and filters do
       // not promote an exploratory estimate to the primary model field.
@@ -385,6 +395,10 @@ export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BB
     : staticFactors
       ? game.matchup_factors_model_id || null
       : null;
+  const staticMarketComparisons = game.forecast_model_id && row.model_id
+    && game.forecast_model_id === row.model_id
+    ? game.market_comparisons
+    : [];
   return {
     ...game,
     forecast_model_id: row.model_id || game.forecast_model_id || null,
@@ -411,6 +425,7 @@ export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BB
     matchup_factors_same_edition: factors
       ? Boolean(factorsModelId && row.model_id && factorsModelId === row.model_id)
       : null,
+    market_comparisons: staticMarketComparisons,
     prediction: coldStart ? game.prediction : row.prediction,
     fallback_prediction: coldStart ? row.prediction : game.fallback_prediction ?? null,
   } satisfies BBGame;
