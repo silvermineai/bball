@@ -159,7 +159,18 @@ jobs:
         if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
         run: |
           for season in 2025 2026 2027 2028 2029 2030; do
-            python -m ncaa_scraper.espn_recruiting --season "$season" --workers 4
+            set +e
+            python -m ncaa_scraper.espn_recruiting --season "$season" --workers 4 >"/tmp/espn-recruiting-${season}.log" 2>&1
+            status=$?
+            cat "/tmp/espn-recruiting-${season}.log"
+            set -e
+            if [ "$status" -ne 0 ]; then
+              if grep -Eqi "ESPN robots(\.txt| policy)|cannot verify ESPN robots|no page requested|disallows this request" "/tmp/espn-recruiting-${season}.log"; then
+                echo "::warning::ESPN recruiting robots policy could not be verified for ${season}; retaining the cached recruiting edition."
+                continue
+              fi
+              exit "$status"
+            fi
             python scripts/sync-espn-recruiting.py
           done
 

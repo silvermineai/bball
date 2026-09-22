@@ -20,6 +20,7 @@ from pathlib import Path
 import requests
 
 from .football_sources import ROOT
+from .espn_robots import DEFAULT_USER_AGENT, verify_robots_policy
 
 PROVIDER = "ESPN Recruiting"
 BASE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball"
@@ -31,7 +32,7 @@ TEAM_CACHE = ROOT / ".local/recruiting/espn-teams"
 MIGRATION = ROOT / "worker/migrations/0033_espn_recruiting.sql"
 DEFAULT_SQL = ROOT / ".local/espn-recruiting.sql"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
-USER_AGENT = "SilvermineResearch/1.0 (bball.silvermine.dev)"
+USER_AGENT = DEFAULT_USER_AGENT
 MAX_FETCH_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 0.4
 # Keep pagination bounded so a malformed source cannot turn a refresh into an
@@ -298,7 +299,14 @@ def _fetch_team_names(team_ids: set[str], season: int, workers: int) -> dict[str
     return resolved
 
 
-def normalize_detail(detail: dict, season: int, captured_at: str, team_names: dict[str, str], raw_body: bytes) -> dict:
+def normalize_detail(
+    detail: dict,
+    season: int,
+    captured_at: str,
+    team_names: dict[str, str],
+    raw_body: bytes,
+    robots_policy: dict[str, object] | None = None,
+) -> dict:
     athlete = detail.get("athlete")
     if not isinstance(athlete, dict) or not str(athlete.get("id", "")).isdigit():
         raise ValueError("Missing ESPN recruit identity")
@@ -355,6 +363,8 @@ def normalize_detail(detail: dict, season: int, captured_at: str, team_names: di
     payload["source_sha256"] = hashlib.sha256(raw_body).hexdigest()
     payload["source_url"] = DETAIL_URL.format(athlete_id=athlete_id)
     payload["captured_at"] = captured_at
+    if robots_policy is not None:
+        payload["robots_policy"] = robots_policy
     return payload
 
 
@@ -363,6 +373,10 @@ def fetch_release(season: int = 2027, workers: int = 4) -> dict:
         raise ValueError("Recruiting season must be between 2025 and 2035")
     if not 1 <= workers <= 8:
         raise ValueError("workers must be between 1 and 8")
+    # The listing, detail, and team endpoints share this exact API origin.
+    # Require a receipt-backed, permissive policy before making any source
+    # request; an unknown policy state must not turn into a crawl.
+    robots_policy = verify_robots_policy(BASE, USER_AGENT)
     athlete_ids, listing_body = _fetch_listing(season)
     captured_at = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     CACHE.mkdir(parents=True, exist_ok=True)
@@ -374,7 +388,7 @@ def fetch_release(season: int = 2027, workers: int = 4) -> dict:
         try:
             detail, body = _fetch(url)
             (CACHE / f"{season}-{athlete_id}.json").write_bytes(body)
-            return athlete_id, normalize_detail(detail, season, captured_at, team_names, body)
+            return athlete_id, normalize_detail(detail, season, captured_at, team_names, body, robots_policy)
         except (OSError, RuntimeError, TypeError, ValueError, UnicodeError, json.JSONDecodeError, requests.RequestException):
             return athlete_id, None
 
@@ -411,6 +425,7 @@ def fetch_release(season: int = 2027, workers: int = 4) -> dict:
         "season": season,
         "edition": edition,
         "captured_at": captured_at,
+        "robots_policy": robots_policy,
         "list_url": LIST_URL.format(season=season),
         "list_sha256": hashlib.sha256(listing_body).hexdigest(),
         "records": records,

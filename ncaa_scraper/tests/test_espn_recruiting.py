@@ -127,6 +127,9 @@ class EspnRecruitingTests(unittest.TestCase):
         ), patch(
             "ncaa_scraper.espn_recruiting._team_names", return_value={}
         ), patch(
+            "ncaa_scraper.espn_recruiting.verify_robots_policy",
+            return_value={"robots_url": "https://sports.core.api.espn.com/robots.txt", "robots_status": 200, "robots_sha256": "a" * 64, "crawl_delay_seconds": None},
+        ), patch(
             "ncaa_scraper.espn_recruiting._fetch",
             side_effect=[(listing, b"listing"), (detail, b"detail"), RuntimeError("source unavailable")],
         ):
@@ -135,6 +138,21 @@ class EspnRecruitingTests(unittest.TestCase):
                 "1 of 2 prospect records failed; refusing to replace the current edition",
             ):
                 fetch_release(2027, workers=1)
+
+    def test_refresh_verifies_exact_api_origin_before_listing(self):
+        from ncaa_scraper.espn_recruiting import fetch_release
+
+        with patch(
+            "ncaa_scraper.espn_recruiting.verify_robots_policy",
+            side_effect=RuntimeError("ESPN robots.txt disallows this request; no page requested"),
+        ) as verify, patch("ncaa_scraper.espn_recruiting._fetch") as fetch:
+            with self.assertRaisesRegex(RuntimeError, "robots"):
+                fetch_release(2027, workers=1)
+        verify.assert_called_once_with(
+            "https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball",
+            "SilvermineResearch/1.0 (bball.silvermine.dev)",
+        )
+        fetch.assert_not_called()
 
     def test_invalid_and_ungraded_source_ranks_are_not_national_ranks(self):
         self.assertIsNone(_national_rank({"rank": 0}, 95))
