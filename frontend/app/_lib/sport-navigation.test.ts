@@ -167,10 +167,13 @@ describe("sport navigation", () => {
     const explore = SPORT_NAVIGATION["mens-basketball"].explore;
     const shooting = explore.find((item) => item.label === "Player shooting profiles");
     const recruitingFit = explore.find((item) => item.label === "Recruiting fit");
+    const boutique = explore.find((item) => item.label === "Boutique metrics");
     expect(shooting?.href).toBe("/basketball/ncaa-shooting/");
     expect(recruitingFit?.href).toBe("/basketball/recruiting/fit/");
     expect(isNavItemActive("/basketball/ncaa-shooting/", shooting!)).toBe(true);
     expect(isNavItemActive("/basketball/recruiting/fit/", recruitingFit!)).toBe(true);
+    expect(boutique?.href).toBe("/basketball/boutique/");
+    expect(isNavItemActive("/basketball/boutique/", boutique!)).toBe(true);
   });
 
   it("keeps football notebooks inside the football desk", () => {

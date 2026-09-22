@@ -36,6 +36,7 @@ const BASKETBALL_EXPLORE: SportNavItem[] = [
   { label: "Recruiting fit", href: "/basketball/recruiting/fit/", match: ["/basketball/recruiting/fit"] },
   { label: "Lineups", href: "/basketball/lineups/", match: [] },
   { label: "Impact", href: "/basketball/impact/", match: [] },
+  { label: "Boutique metrics", href: "/basketball/boutique/", match: ["/basketball/boutique"] },
   { label: "Journal", href: "/basketball/blog/", match: ["/basketball/blog", "/blog"] },
   { label: "Data coverage", href: "/research/coverage/", match: [] },
 ];
