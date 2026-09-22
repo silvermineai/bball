@@ -47,8 +47,9 @@ describe("football model evidence", () => {
       { DB: { prepare } as never },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { total: number; rows: Array<Record<string, unknown>> };
+    const body = await response.json() as { total: number; resolved_model_id: string | null; rows: Array<Record<string, unknown>> };
     expect(body.total).toBe(1);
+    expect(body.resolved_model_id).toBe("football-model-game");
     expect(body.rows[0]).toMatchObject({ game_id: "401", model_id: "football-model-game", prediction_integrity: "valid" });
     expect(prepare.mock.calls.filter(([sql]) => String(sql).includes("p.game_id=?")).length).toBeGreaterThanOrEqual(2);
   });

@@ -375,6 +375,22 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
   const intervalWidth = selectedModel
     ? marginHalfWidth(selectedModel.artifact_json)
     : null;
+  // Keep the edition selected by the query explicit at the response level.
+  // `model=latest` is a query alias, so clients comparing predictions with
+  // market observations must not infer an edition from that alias or from a
+  // single row's model_id. `all` only reports an ID when its bounded page
+  // happens to contain one edition.
+  const pageModelIds = new Set(
+    rows.results.flatMap((row) => {
+      const modelId = (row as Record<string, unknown>).model_id;
+      return typeof modelId === "string" && modelId.length ? [modelId] : [];
+    }),
+  );
+  const resolvedModelId = model === "latest"
+    ? latestModel?.id || null
+    : model === "all"
+      ? pageModelIds.size === 1 ? [...pageModelIds][0] : null
+      : selectedModel?.id || null;
   c.header("Cache-Control", "public, max-age=300");
   return c.json({
     season,
@@ -384,6 +400,7 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     page,
     page_size: limit,
     total: Number(count?.total || 0),
+    resolved_model_id: resolvedModelId,
     latest_model: latestModel ? {
       model_id: latestModel.id,
       created_at: latestModel.created_at,
