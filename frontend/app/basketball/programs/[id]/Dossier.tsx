@@ -9,6 +9,7 @@ import {
   type SplitKey,
 } from "../../../_lib/scouting-types";
 import type { PossessionStyleRow } from "../../../_lib/possession-style";
+import type { NcaaTeamShotProfile } from "../../../_lib/ncaa-team-box";
 import EfficiencyChart from "./EfficiencyChart";
 const prompts: Record<string, string> = {
   off_efg:
@@ -30,9 +31,11 @@ const prompts: Record<string, string> = {
 export default function Dossier({
   profile: p,
   possessionStyle,
+  teamShotProfile,
 }: {
   profile: ScoutProfile;
   possessionStyle?: PossessionStyleRow | null;
+  teamShotProfile?: NcaaTeamShotProfile | null;
 }) {
   const [split, setSplit] = useState<SplitKey>("season"),
     [qualified, setQualified] = useState(true),
@@ -199,6 +202,43 @@ export default function Dossier({
             </div>
             <p className="note" style={{ marginTop: 12 }}>
               {possessionStyle.possessions.toLocaleString()} possession rows across {possessionStyle.games.toLocaleString()} recorded team-games. These are descriptive aggregates: they do not assign individual credit or enter the forecast.
+            </p>
+          </section>
+        )}
+        {teamShotProfile && (
+          <section className="paper-panel" style={{ marginTop: 24 }}>
+            <div className="section-heading" style={{ marginBottom: 8 }}>
+              <div>
+                <div className="eyebrow">Shot profile / retained team-box edition</div>
+                <h3>Where the shots come from.</h3>
+              </div>
+              <Link href="/basketball/ncaa-team-box/">Open team-box archive →</Link>
+            </div>
+            <p className="note">
+              {teamShotProfile.games} recorded games · source averages from the {teamShotProfile.season - 1}–{String(teamShotProfile.season).slice(-2)} team-box edition. Shares describe attempt mix; percentages describe conversion. Opponent rows are what this team allowed in the same sample.
+            </p>
+            <div className="table-scroll" style={{ marginTop: 12 }}>
+              <table className="data-table">
+                <thead><tr><th>Zone</th><th className="numeric">Own share</th><th className="numeric">Own FG%</th><th className="numeric">Opponent share</th><th className="numeric">Opponent FG%</th></tr></thead>
+                <tbody>
+                  {([
+                    ["At rim", "rim_share", "rim_pct"],
+                    ["Mid-range", "mid_share", "mid_pct"],
+                    ["Three-point", "three_share", "three_pct"],
+                  ] as const).map(([label, share, pct]) => (
+                    <tr key={share}>
+                      <th scope="row">{label}</th>
+                      <td className="numeric">{shotRate(teamShotProfile.offense[share])}</td>
+                      <td className="numeric">{shotRate(teamShotProfile.offense[pct])}</td>
+                      <td className="numeric">{shotRate(teamShotProfile.defense[share])}</td>
+                      <td className="numeric">{shotRate(teamShotProfile.defense[pct])}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="note" style={{ marginTop: 12 }}>
+              This is descriptive NCAA source data joined by exact ESPN team ID. Missing source fields stay unavailable; it does not change the forecast or imply a current roster.
             </p>
           </section>
         )}
@@ -404,4 +444,8 @@ export default function Dossier({
       </section>
     </>
   );
+}
+
+function shotRate(value: number | null): string {
+  return value == null ? "—" : `${(value * 100).toFixed(1)}%`;
 }

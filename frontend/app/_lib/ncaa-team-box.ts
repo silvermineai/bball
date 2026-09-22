@@ -53,6 +53,60 @@ export type NcaaTeamBoxRow = {
 export type NcaaTeamBoxEdition = { season: number; generated_at: string; source: Record<string, unknown>; coverage: { source_rows: number; teams: number; contests: number; edition: string }; methodology: string; teams: NcaaTeamBoxRow[] };
 
 /**
+ * The team-box release carries a more useful shot-mix view than a single 3PA
+ * rate. Keep this projection separate from the adjusted rating fields: these
+ * are descriptive source averages for the same recorded season.
+ */
+export type NcaaTeamShotProfile = {
+  season: number;
+  team_id: string;
+  team: string;
+  games: number;
+  contests: number;
+  source_edition: string | null;
+  offense: { rim_share: number | null; mid_share: number | null; three_share: number | null; rim_pct: number | null; mid_pct: number | null; three_pct: number | null };
+  defense: { rim_share: number | null; mid_share: number | null; three_share: number | null; rim_pct: number | null; mid_pct: number | null; three_pct: number | null };
+};
+
+function finiteOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** Match the source's ESPN team ID without guessing from a team name. */
+export function findNcaaTeamBoxRow(edition: NcaaTeamBoxEdition, espnTeamId: string): NcaaTeamBoxRow | null {
+  const id = String(espnTeamId);
+  return edition.teams.find((row) => row.espn_team_id != null && String(row.espn_team_id) === id) ?? null;
+}
+
+export function teamBoxShotProfile(row: NcaaTeamBoxRow, sourceEdition?: string | null): NcaaTeamShotProfile {
+  const source = row.source_averages || {};
+  return {
+    season: row.season,
+    team_id: row.team_id,
+    team: row.team,
+    games: row.games,
+    contests: row.contests,
+    source_edition: sourceEdition ?? null,
+    offense: {
+      rim_share: finiteOrNull(source.rim_rate),
+      mid_share: finiteOrNull(source.mid_rate),
+      three_share: finiteOrNull(source.tp_rate),
+      rim_pct: finiteOrNull(source.rim_pct),
+      mid_pct: finiteOrNull(source.mid_pct),
+      three_pct: finiteOrNull(source.tpp),
+    },
+    defense: {
+      rim_share: finiteOrNull(source.d_rim_rate),
+      mid_share: finiteOrNull(source.d_mid_rate),
+      three_share: finiteOrNull(source.d_tp_rate),
+      rim_pct: finiteOrNull(source.d_rim_pct),
+      mid_pct: finiteOrNull(source.d_mid_pct),
+      three_pct: finiteOrNull(source.d_tpp),
+    },
+  };
+}
+
+/**
  * Return the retained source aggregates in stable key order.
  *
  * The public team table shows a compact set of derived rates, but each row

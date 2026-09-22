@@ -12,6 +12,7 @@ import PublisherProgramContext from "./PublisherProgramContext";
 import LiveProgramSchedule from "./LiveProgramSchedule";
 import ProgramProspects from "./ProgramProspects";
 import type { PossessionStyleCatalog, PossessionStyleRow } from "../../../_lib/possession-style";
+import { findNcaaTeamBoxRow, teamBoxShotProfile, type NcaaTeamBoxEdition, type NcaaTeamShotProfile } from "../../../_lib/ncaa-team-box";
 export function generateStaticParams() {
   return getScoutIndex().teams.map((t) => ({ id: t.id }));
 }
@@ -43,6 +44,7 @@ export default async function Page({
     rosters = getRosters(),
     rosterReadiness = buildRosterLabRows(rosters, overview).find((row) => row.teamId === id);
   let possessionStyle: PossessionStyleRow | null = null;
+  let teamShotProfile: NcaaTeamShotProfile | null = null;
   try {
     const catalog = JSON.parse(
       fs.readFileSync(
@@ -55,6 +57,18 @@ export default async function Page({
     if (edition && row) possessionStyle = { ...row, season: edition.season };
   } catch {
     // The dossier remains useful when the optional descriptive archive is unavailable.
+  }
+  try {
+    const teamBox = JSON.parse(
+      fs.readFileSync(
+        path.join(process.cwd(), "public/data/basketball/ncaa-team-box-2026.json"),
+        "utf8",
+      ),
+    ) as NcaaTeamBoxEdition;
+    const row = findNcaaTeamBoxRow(teamBox, id);
+    if (row) teamShotProfile = teamBoxShotProfile(row, teamBox.coverage.edition);
+  } catch {
+    // Keep the dossier available when the optional team-box edition is absent.
   }
   return (
     <>
@@ -129,7 +143,7 @@ export default async function Page({
         </div>
       </div>
       <PublisherProgramContext teamId={id} programName={p.name} />
-      <Dossier profile={p} possessionStyle={possessionStyle} />
+      <Dossier profile={p} possessionStyle={possessionStyle} teamShotProfile={teamShotProfile} />
       <ProgramRecruiting
         teamId={id}
         programName={p.name}
