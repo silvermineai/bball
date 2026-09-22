@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl", "ts", "efg", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "usage_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
+const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl", "ts", "efg", "fg_pct", "half_ts", "per40", "ast_to", "stocks40", "tov_rate", "usage_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "rim_pct", "mid_pct", "putback_pct", "ft_rate", "ast_rate", "points_poss", "orb40", "drb40", "reb40", "poss_share", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "rapm_net", "orapm", "drapm", "balanced_index", "impact_index"] as const;
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
@@ -117,7 +117,7 @@ const publishedBoxSample = (player: PublishedIndividualPlayer): PublishedIndivid
 // exact-ID box sample because the publisher leader tables can cover a
 // different number of games than the archived box rows.
 const publishedBoxMetrics = new Set<Metric>([
-  "orpg", "drpg", "fpg", "topg", "ts", "efg", "per40", "ast_to", "stocks40",
+  "orpg", "drpg", "fpg", "topg", "ts", "efg", "fg_pct", "per40", "ast_to", "stocks40",
   "tov_rate", "three_rate", "three_pct", "two_pct", "ft_pct", "ft_rate",
   "orb40", "drb40", "reb40", "points_poss", "ast_rate",
 ]);
@@ -129,7 +129,7 @@ const publishedMetricSample = (
 
 const publishedSupportedMetrics = new Set<Metric>([
   "ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg", "topg", "dbl_dbl",
-  "ts", "efg", "per40", "ast_to", "stocks40", "three_pct", "two_pct", "ft_pct", "ft_rate",
+  "ts", "efg", "fg_pct", "per40", "ast_to", "stocks40", "three_pct", "two_pct", "ft_pct", "ft_rate",
   "orb40", "drb40", "reb40", "points_poss", "ast_rate", "tov_rate", "three_rate",
 ]);
 
@@ -164,6 +164,7 @@ const playerMetric = (player: PublishedIndividualPlayer, metric: Metric): number
     case "topg": return games > 0 && turnovers != null ? turnovers / games : null;
     case "ts": return fga != null && fta != null && points != null && (fga + 0.475 * fta) > 0 ? 100 * points / (2 * (fga + 0.475 * fta)) : null;
     case "efg": return fga != null && fga > 0 && fgm != null && tpm != null ? 100 * (fgm + 0.5 * tpm) / fga : null;
+    case "fg_pct": return fga != null && fga > 0 && fgm != null && fgm >= 0 && fgm <= fga ? 100 * fgm / fga : null;
     case "per40": return minutes != null && minutes > 0 && points != null ? 40 * points / minutes : null;
     case "ast_to": return turnovers != null && turnovers > 0 && finite(sample.ast) != null ? (finite(sample.ast) as number) / turnovers : null;
     case "stocks40": return minutes != null && minutes > 0 && finite(sample.stl) != null && finite(sample.blk) != null ? 40 * ((finite(sample.stl) as number) + (finite(sample.blk) as number)) / minutes : null;
@@ -239,7 +240,7 @@ async function publishedRankingsFallback(
     const volume = (player: PublishedIndividualPlayer): number | null | undefined => {
       const sample = publishedMetricSample(player, args.metric);
       if (!sample) return null;
-      if (["ts", "efg", "three_rate", "ft_rate"].includes(args.metric)) return finite(sample.fga);
+      if (["ts", "efg", "fg_pct", "three_rate", "ft_rate"].includes(args.metric)) return finite(sample.fga);
       if (args.metric === "three_pct") return finite(sample.tpa);
       if (args.metric === "two_pct") {
         const fga = finite(sample.fga);
@@ -367,8 +368,8 @@ const aggregate = (where: string) => `
     ${sourceSum("blk")} AS blocks,
     ${sourceSum("dbl_dbl")} AS double_doubles,
     ${sourceSum("pf")} AS fouls,
-    ${sourceSum("fga")} AS fga,
-    ${sourceSum("fgm")} AS fgm,
+    ${sourceSumAll(["fga"])} AS fga,
+    ${sourceSumAll(["fgm"])} AS fgm,
     ${sourceSum("tpa")} AS tpa,
     ${sourceSum("tpm")} AS tpm,
     ${sourceSum("fta")} AS fta,
@@ -420,6 +421,7 @@ export const metricExpression = (metric: Exclude<Metric, "balanced_index" | "imp
   topg: "turnovers / games",
   ts: "CASE WHEN (fga + 0.475 * fta) > 0 THEN 100.0 * points / (2 * (fga + 0.475 * fta)) ELSE NULL END",
   efg: "CASE WHEN fga > 0 THEN 100.0 * (fgm + 0.5 * tpm) / fga ELSE NULL END",
+  fg_pct: "CASE WHEN fga > 0 AND fgm >= 0 AND fgm <= fga THEN 100.0 * fgm / fga ELSE NULL END",
   half_ts: "CASE WHEN (half_fga + 0.475 * half_fta) > 0 THEN 100.0 * half_points / (2 * (half_fga + 0.475 * half_fta)) ELSE NULL END",
   per40: "CASE WHEN minutes > 0 THEN 40.0 * points / minutes ELSE NULL END",
   ast_to: "CASE WHEN turnovers > 0 THEN assists / turnovers ELSE NULL END",
@@ -457,7 +459,7 @@ const impactMetric = (metric: Metric) => metric === "rapm_net" || metric === "or
 const rankingDirection = (metric: Metric): "asc" | "desc" => metric === "tov_rate" || metric === "topg" ? "asc" : "desc";
 const impactQualification = (metric: Metric) => impactMetric(metric) ? "off_poss >= 500 AND def_poss >= 500" : "1=1";
 export const volumeColumn = (metric: Metric) => {
-  if (metric === "ts" || metric === "efg" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate") return "fga";
+  if (metric === "ts" || metric === "efg" || metric === "fg_pct" || metric === "three_rate" || metric === "ft_rate" || metric === "rim_rate") return "fga";
   if (metric === "unassisted_rate") return "unassisted_total_attempts";
   if (metric === "three_pct") return "tpa";
   if (metric === "two_pct") return "(fga - tpa)";

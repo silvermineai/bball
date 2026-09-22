@@ -36,6 +36,7 @@ describe("homepage NCAA player export", () => {
     expect(playerCsvHeaders.slice(0, 10)).toEqual(["Rank", "Player ID", "Team ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG"]);
     expect(values.slice(0, 10)).toEqual([4, "p-1", "team-1", "A Player", "A University", "G", "JR", 20, 600, 30]);
     expect(values[playerCsvHeaders.indexOf("PPG")]).toBe(15);
+    expect(values[playerCsvHeaders.indexOf("FG%")]).toBe(50);
     expect(values[playerCsvHeaders.indexOf("eFG%")]).toBe(58);
     expect(values[playerCsvHeaders.indexOf("3P%")]).toBe(40);
     expect(values[playerCsvHeaders.indexOf("FT%")]).toBe(80);
@@ -59,6 +60,11 @@ describe("homepage NCAA player export", () => {
     expect(effectiveFieldGoalPercent(100, 32, 200)).toBe(58);
     const values = playerCsvRows([{ ...row, fgm: null }], "efg")[0];
     expect(values[playerCsvHeaders.indexOf("eFG%")]).toBeNull();
+  });
+
+  it("keeps overall FG% unavailable for an impossible make/attempt pair", () => {
+    const values = playerCsvRows([{ ...row, fga: 100, fgm: 101 }], "fg_pct")[0];
+    expect(values[playerCsvHeaders.indexOf("FG%")]).toBeNull();
   });
 
   it("reports partial source coverage without converting unavailable fields to zero", () => {

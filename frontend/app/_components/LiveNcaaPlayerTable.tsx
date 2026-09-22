@@ -6,7 +6,7 @@ import { fmt } from "../_lib/format";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
-export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "dbl_dbl" | "ts" | "efg" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "usage_rate" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
+export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "dbl_dbl" | "ts" | "efg" | "fg_pct" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "usage_rate" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
 type Metric = LiveNCAAMetric;
 
 export type LiveNCAAPlayerRow = {
@@ -218,6 +218,7 @@ const metrics: Array<{ key: Metric; label: string; description: string; volume: 
   { key: "dbl_dbl", label: "Double-doubles", description: "recorded double-double count", volume: 0 },
   { key: "ts", label: "True shooting", description: "scoring efficiency", volume: 100 },
   { key: "efg", label: "Effective FG", description: "shot efficiency", volume: 100 },
+  { key: "fg_pct", label: "Field-goal accuracy", description: "FG%", volume: 100 },
   { key: "half_ts", label: "Half-court TS", description: "half-court true shooting", volume: 100 },
   { key: "three_pct", label: "3-point accuracy", description: "3P%", volume: 50 },
   { key: "two_pct", label: "2-point accuracy", description: "2P%", volume: 50 },
@@ -263,6 +264,7 @@ const metricGuidance: Record<Metric, string> = {
   dbl_dbl: "Double-doubles is the publisher-recorded season count; unavailable rows are not treated as zero.",
   ts: "True shooting uses points divided by twice (FGA + 0.475 × FTA); rows without attempts stay unavailable.",
   efg: "Effective field-goal percentage credits a made three as 1.5 field goals: (FGM + 0.5 × 3PM) / FGA.",
+  fg_pct: "Field-goal accuracy is FGM / FGA and requires a valid recorded make and attempt total.",
   half_ts: "Half-court true shooting is a source-provided shot-context efficiency rate.",
   three_pct: "Three-point accuracy is 3PM / 3PA and keeps players without attempts out of the qualified ranking.",
   two_pct: "Two-point accuracy is made two-point shots divided by two-point attempts.",
@@ -314,7 +316,7 @@ export const playerCsvHeaders = [
   "Rank", "Player ID", "Team ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
   "Points", "PPG", "Rebounds", "RPG", "Offensive rebounds", "OR/G", "Defensive rebounds", "DR/G",
   "Assists", "APG", "Steals", "SPG", "Blocks", "BPG", "Double-doubles", "Fouls", "PF/G", "Turnovers", "TO/G",
-  "FGA", "FGM", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value", "Core stat fields recorded", "Offensive possessions", "Team possessions", "Usage events", "Team usage events", "Team minutes",
+  "FGA", "FGM", "FG%", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value", "Core stat fields recorded", "Offensive possessions", "Team possessions", "Usage events", "Team usage events", "Team minutes",
 ];
 
 /** Keep the homepage export aligned with the visible player table and retain raw denominators. */
@@ -331,6 +333,9 @@ export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCel
     const bpg = perGame(row.blocks, row.games);
     const fpg = perGame(row.fouls, row.games);
     const topg = perGame(row.turnovers, row.games);
+    const fgPct = row.fgm != null && row.fga != null && row.fgm >= 0 && row.fgm <= row.fga
+      ? percentage(row.fgm, row.fga)
+      : null;
     const efg = effectiveFieldGoalPercent(row.fgm, row.tpm, row.fga);
     const threePct = percentage(row.tpm, row.tpa);
     const ftPct = percentage(row.ftm, row.fta);
@@ -339,7 +344,7 @@ export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCel
       row.rank, row.player_id, row.team_id, row.player_name, row.team_name, row.position, row.class_year,
       row.games, row.minutes, mpg, row.points, ppg, row.rebounds, rpg, row.offensive_rebounds, orpg,
       row.defensive_rebounds, drpg, row.assists, apg, row.steals, spg, row.blocks, bpg, row.double_doubles, row.fouls, fpg,
-      row.turnovers, topg, row.fga, row.fgm, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts,
+      row.turnovers, topg, row.fga, row.fgm, fgPct, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts,
       metric, row.value, `${coverage.observed}/${coverage.total}`, row.possessions ?? row.off_poss, row.team_possessions, row.usage_events, row.team_usage_events, row.team_minutes,
     ];
   });
@@ -395,7 +400,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
   }, [metric, query, season]);
 
   const active = metrics.find((candidate) => candidate.key === metric)!;
-  const percentageMetric = ["ts", "efg", "half_ts", "three_pct", "two_pct", "ft_pct", "tov_rate", "usage_rate", "three_rate", "ft_rate", "ast_rate", "rim_pct", "mid_pct", "putback_pct", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "poss_share"].includes(metric);
+  const percentageMetric = ["ts", "efg", "fg_pct", "half_ts", "three_pct", "two_pct", "ft_pct", "tov_rate", "usage_rate", "three_rate", "ft_rate", "ast_rate", "rim_pct", "mid_pct", "putback_pct", "rim_rate", "transition_share", "unassisted_rate", "unassisted_share", "poss_share"].includes(metric);
   const displayMetric = (row: PlayerRow) => {
     if (metric === "balanced_index") return fmt(row.value, 2);
     const value = row.value;

@@ -118,6 +118,11 @@ describe("NCAA player rankings availability", () => {
     expect(volumeColumn("two_pct")).toBe("(fga - tpa)");
   });
 
+  it("derives overall field-goal accuracy from a valid exact make/attempt pair", () => {
+    expect(metricExpression("fg_pct")).toBe("CASE WHEN fga > 0 AND fgm >= 0 AND fgm <= fga THEN 100.0 * fgm / fga ELSE NULL END");
+    expect(volumeColumn("fg_pct")).toBe("fga");
+  });
+
   it("derives self-created shot share from exact unassisted and total attempts", () => {
     expect(metricExpression("unassisted_rate")).toBe("CASE WHEN unassisted_total_attempts > 0 AND unassisted_attempts >= 0 AND unassisted_attempts <= unassisted_total_attempts THEN 100.0 * unassisted_attempts / unassisted_total_attempts ELSE NULL END");
     expect(volumeColumn("unassisted_rate")).toBe("unassisted_total_attempts");
@@ -146,6 +151,31 @@ describe("NCAA player rankings availability", () => {
     expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.pbackm')) = COUNT(*)");
     expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga_unast')) = COUNT(*)");
     expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga')) = COUNT(*)");
+    expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fgm')) = COUNT(*)");
+  });
+
+  it("fails closed for impossible field-goal fallback values", async () => {
+    const prepare = vi.fn(() => { throw new Error("D1 unavailable"); });
+    const base = { division: 1, team_ncaa_id: 42, team_name: "Example U", games: 20, mins: 600 };
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      season: 2026,
+      players: [
+        { ...base, player_id: 7, name: "Valid", box_sample: { games: 20, mins: 600, fga: 200, fgm: 100 } },
+        { ...base, player_id: 8, name: "Impossible", box_sample: { games: 20, mins: 600, fga: 100, fgm: 101 } },
+        { ...base, player_id: 9, name: "Missing", box_sample: { games: 20, mins: 600, fga: 100, fgm: null } },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=fg_pct&minGames=5&minMinutes=200&minVolume=100",
+      {},
+      { DB: { prepare, batch: vi.fn() }, ASSETS: { fetch } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      metric: "fg_pct",
+      total: 1,
+      rows: [{ player_id: "7", value: 50, rank: 1, fga: 200, fgm: 100 }],
+    });
   });
 
   it.each(["ppg", "balanced_index", "impact_index"])("ranks an exact-ID %s comparison against the full qualified cohort", async (metric) => {
