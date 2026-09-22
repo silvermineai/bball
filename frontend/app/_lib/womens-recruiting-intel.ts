@@ -17,8 +17,19 @@ export type WomensRecruitingProspect = {
   grade?: number | null;
   rank?: number | null;
   status?: string | null;
+  committed_team_id?: string | null;
+  committed_team_name?: string | null;
   high_school?: string | null;
   hometown?: string | null;
+};
+
+export type WomensRecruitingStatusSummary = {
+  status: string;
+  prospects: number;
+  graded: number;
+  averageGrade: number | null;
+  exactIds: number;
+  destinationIds: number;
 };
 
 /** Filter and sort the women-specific prospect cohort without inventing ranks. */
@@ -33,6 +44,43 @@ export function rankWomensRecruitingProspects(
     .filter((row) => !needle || `${row.name} ${row.position || ""} ${row.high_school || ""} ${row.hometown || ""} ${row.athlete_id}`.toLowerCase().includes(needle))
     .sort((left, right) => (right.grade ?? -Infinity) - (left.grade ?? -Infinity) || left.name.localeCompare(right.name) || left.athlete_id.localeCompare(right.athlete_id))
     .slice(0, safeLimit);
+}
+
+/**
+ * Summarize the source status field without promoting it to a destination or
+ * commitment join. Duplicate or blank source IDs invalidate the summary so a
+ * status trend cannot double-count a prospect.
+ */
+export function summarizeWomensRecruitingProspects(
+  records: WomensRecruitingProspect[],
+): WomensRecruitingStatusSummary[] {
+  if (!records.every((row) => typeof row.name === "string" && row.name.trim())) return [];
+  const ids = records.map((row) => typeof row.athlete_id === "string" ? row.athlete_id.trim() : "");
+  if (ids.some((id) => !id) || new Set(ids).size !== ids.length) return [];
+  const byStatus = new Map<string, { prospects: number; graded: number; gradeTotal: number; exactIds: number; destinationIds: number }>();
+  records.forEach((row) => {
+    const status = row.status?.trim() || "Status unavailable";
+    const grade = typeof row.grade === "number" && Number.isFinite(row.grade) ? row.grade : null;
+    const current = byStatus.get(status) || { prospects: 0, graded: 0, gradeTotal: 0, exactIds: 0, destinationIds: 0 };
+    current.prospects += 1;
+    current.exactIds += 1;
+    if (grade != null) {
+      current.graded += 1;
+      current.gradeTotal += grade;
+    }
+    if (row.committed_team_id?.trim()) current.destinationIds += 1;
+    byStatus.set(status, current);
+  });
+  return Array.from(byStatus.entries())
+    .map(([status, value]) => ({
+      status,
+      prospects: value.prospects,
+      graded: value.graded,
+      averageGrade: value.graded > 0 ? value.gradeTotal / value.graded : null,
+      exactIds: value.exactIds,
+      destinationIds: value.destinationIds,
+    }))
+    .sort((left, right) => right.prospects - left.prospects || left.status.localeCompare(right.status));
 }
 
 /**

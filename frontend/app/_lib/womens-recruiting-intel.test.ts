@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankWomensObservedPlayers, rankWomensRecruitingProspects } from "./womens-recruiting-intel";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects } from "./womens-recruiting-intel";
 
 const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[0][number]> = {}) => ({
   player_id: "p-1",
@@ -44,5 +44,25 @@ describe("women's recruiting prospect cohort", () => {
     ], "north", 5);
     expect(rows.map((row) => row.athlete_id)).toEqual(["2", "3"]);
     expect(rows[1].grade).toBeNull();
+  });
+
+  it("summarizes source statuses without turning verbal labels into destinations", () => {
+    const rows = summarizeWomensRecruitingProspects([
+      { athlete_id: "1", name: "A", grade: 95, status: "Verbal", committed_team_id: null },
+      { athlete_id: "2", name: "B", grade: 90, status: "Undecided", committed_team_id: null },
+      { athlete_id: "3", name: "C", grade: null, status: "Verbal", committed_team_id: "7" },
+    ]);
+    expect(rows).toEqual([
+      { status: "Verbal", prospects: 2, graded: 1, averageGrade: 95, exactIds: 2, destinationIds: 1 },
+      { status: "Undecided", prospects: 1, graded: 1, averageGrade: 90, exactIds: 1, destinationIds: 0 },
+    ]);
+  });
+
+  it("fails closed on blank or duplicate prospect IDs", () => {
+    expect(summarizeWomensRecruitingProspects([{ athlete_id: "", name: "Missing" }])).toEqual([]);
+    expect(summarizeWomensRecruitingProspects([
+      { athlete_id: "1", name: "A" },
+      { athlete_id: "1", name: "Duplicate" },
+    ])).toEqual([]);
   });
 });
