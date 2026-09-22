@@ -27,8 +27,34 @@ export type MarginDisagreementDirection = PairedErrorRecord & {
   label: string;
 };
 
+export type FootballMarketBenchmarkMetric = {
+  margin_mae: number | null;
+  margin_rmse: number | null;
+  total_mae: number | null;
+  winner_accuracy: number | null;
+};
+
+export type TimingQualifiedFootballMarketMetrics = {
+  games: number;
+  model: FootballMarketBenchmarkMetric;
+  archived_line: FootballMarketBenchmarkMetric;
+};
+
+/**
+ * Return retrospective model-versus-line metrics only when the artifact
+ * identifies a non-empty timing-qualified cohort. Top-level archive metrics
+ * can remain available for source audit, but they cannot support a market
+ * comparison without a verified pregame observation clock.
+ */
+export function timingQualifiedFootballMarketMetrics(
+  metrics: TimingQualifiedFootballMarketMetrics | null | undefined,
+): TimingQualifiedFootballMarketMetrics | null {
+  if (!metrics || !Number.isInteger(metrics.games) || metrics.games <= 0) return null;
+  return metrics;
+}
+
 /** Keep market comparisons on the same timing-qualified cohort as the scorecard. */
-export function timingQualifiedFootballMarketRows(rows: FootballMarketBenchmarkRow[]) {
+export function timingQualifiedFootballMarketRows<T extends FootballMarketBenchmarkRow>(rows: T[]): T[] {
   return rows.filter((row) => row.is_pregame);
 }
 

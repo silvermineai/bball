@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marginDisagreementBands, marginDisagreementDirections, pairedFootballMarketErrors, timingQualifiedFootballMarketRows, type FootballMarketBenchmarkRow } from "./football-market-benchmark";
+import { marginDisagreementBands, marginDisagreementDirections, pairedFootballMarketErrors, timingQualifiedFootballMarketMetrics, timingQualifiedFootballMarketRows, type FootballMarketBenchmarkRow, type TimingQualifiedFootballMarketMetrics } from "./football-market-benchmark";
 
 const row = (values: Partial<FootballMarketBenchmarkRow>): FootballMarketBenchmarkRow => ({
   actual_margin: 0,
@@ -13,6 +13,16 @@ const row = (values: Partial<FootballMarketBenchmarkRow>): FootballMarketBenchma
 });
 
 describe("football market benchmark analysis", () => {
+  it("withholds retrospective comparison metrics when no line has verified pregame timing", () => {
+    const metric = { margin_mae: 4, margin_rmse: 5, total_mae: 6, winner_accuracy: 0.6 };
+    const empty = { games: 0, model: metric, archived_line: metric } satisfies TimingQualifiedFootballMarketMetrics;
+    const qualified = { games: 12, model: metric, archived_line: metric } satisfies TimingQualifiedFootballMarketMetrics;
+
+    expect(timingQualifiedFootballMarketMetrics(undefined)).toBeNull();
+    expect(timingQualifiedFootballMarketMetrics(empty)).toBeNull();
+    expect(timingQualifiedFootballMarketMetrics(qualified)).toBe(qualified);
+  });
+
   it("keeps only rows with verified pregame timing in the benchmark cohort", () => {
     expect(timingQualifiedFootballMarketRows([
       row({ is_pregame: false }),

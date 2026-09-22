@@ -7,14 +7,20 @@ import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from
 import { marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccessLabel, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { comparisonGapDirectionLabel, comparisonGapLabel, comparisonTimingLabel } from "../../_lib/market-display";
 import { gameMarketReadinessExport, gameMarketReadinessLabel } from "../../_lib/game-market-readiness";
+import { timingQualifiedFootballMarketMetrics, type FootballMarketBenchmarkMetric } from "../../_lib/football-market-benchmark";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Estimate type", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Market status", "Market readiness", "Retained market observations", "Eligible market observations", "Comparable market observations", "Selected market comparisons", "Quote count", "Quotes JSON"];
 const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.estimate_type || "unknown", g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, ...gameMarketReadinessExport(g.market_readiness), g.comparisons.length, JSON.stringify(g.comparisons)];
 type RetrospectiveBenchmark = {
-  coverage: { evaluation_games: number; market_games: number; pregame_market_games: number };
+  coverage: { evaluation_games: number; market_games: number; pregame_market_games: number; timing_qualified_games?: number };
   metrics: {
-    model: { margin_mae: number | null; winner_accuracy: number | null };
-    archived_line: { margin_mae: number | null; winner_accuracy: number | null };
+    model: FootballMarketBenchmarkMetric;
+    archived_line: FootballMarketBenchmarkMetric;
+    timing_qualified?: {
+      games: number;
+      model: FootballMarketBenchmarkMetric;
+      archived_line: FootballMarketBenchmarkMetric;
+    };
   };
 };
 type ForecastCatalog = {
@@ -197,6 +203,7 @@ export default function Scorecard() {
         .includes(query.toLowerCase()),
   );
   const pendingMarketMetrics = summary.pending_market_metrics || [];
+  const qualifiedBenchmark = timingQualifiedFootballMarketMetrics(benchmark?.metrics.timing_qualified);
   const marketReadiness = marketReadinessState(
     marketMetadata,
     marketMetadataStatus === "checking",
@@ -670,14 +677,21 @@ export default function Scorecard() {
             <Link className="hero-link" href="/research/markets/">Open full benchmark →</Link>
           </div>
           <p className="note">
-            {benchmark.coverage.market_games.toLocaleString()} of {benchmark.coverage.evaluation_games.toLocaleString()} held-out 2025 games have an exact archived line. The archive has {benchmark.coverage.pregame_market_games.toLocaleString()} verified pregame captures, so this is descriptive reference evidence and stays outside the prospective scorecard.
+            {benchmark.coverage.market_games.toLocaleString()} of {benchmark.coverage.evaluation_games.toLocaleString()} held-out 2025 games have an exact archived line. The archive has {benchmark.coverage.pregame_market_games.toLocaleString()} verified pregame captures. Only that timing-qualified cohort can support a retrospective model-versus-line comparison.
           </p>
-          <div className="stat-grid" style={{ marginTop: 16 }}>
-            <div><strong>{fmt(benchmark.metrics.model.margin_mae)}</strong><span>model margin MAE</span></div>
-            <div><strong>{fmt(benchmark.metrics.archived_line.margin_mae)}</strong><span>archived line margin MAE</span></div>
-            <div><strong>{benchmark.metrics.model.winner_accuracy == null ? "—" : `${fmt(benchmark.metrics.model.winner_accuracy * 100)}%`}</strong><span>model winner accuracy</span></div>
-            <div><strong>{benchmark.metrics.archived_line.winner_accuracy == null ? "—" : `${fmt(benchmark.metrics.archived_line.winner_accuracy * 100)}%`}</strong><span>archived line winner accuracy</span></div>
-          </div>
+          {qualifiedBenchmark ? (
+            <div className="stat-grid" style={{ marginTop: 16 }}>
+              <div><strong>{qualifiedBenchmark.games.toLocaleString()}</strong><span>timing-qualified games</span></div>
+              <div><strong>{fmt(qualifiedBenchmark.model.margin_mae)}</strong><span>model margin MAE</span></div>
+              <div><strong>{fmt(qualifiedBenchmark.archived_line.margin_mae)}</strong><span>archived line margin MAE</span></div>
+              <div><strong>{qualifiedBenchmark.model.winner_accuracy == null ? "—" : `${fmt(qualifiedBenchmark.model.winner_accuracy * 100)}%`}</strong><span>model winner accuracy</span></div>
+              <div><strong>{qualifiedBenchmark.archived_line.winner_accuracy == null ? "—" : `${fmt(qualifiedBenchmark.archived_line.winner_accuracy * 100)}%`}</strong><span>archived line winner accuracy</span></div>
+            </div>
+          ) : (
+            <p className="notice" role="status" style={{ marginTop: 16 }}>
+              Retrospective performance comparison withheld: no archived line has a verified pregame capture clock. The retained rows remain available for source audit, but their model-versus-line errors are not scorecard evidence.
+            </p>
+          )}
         </section>
       )}
       <section className="section">

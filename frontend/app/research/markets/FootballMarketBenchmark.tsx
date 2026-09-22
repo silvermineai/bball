@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { date, fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-import { marginDisagreementBands, marginDisagreementDirections, pairedFootballMarketErrors } from "../../_lib/football-market-benchmark";
+import { marginDisagreementBands, marginDisagreementDirections, pairedFootballMarketErrors, timingQualifiedFootballMarketRows } from "../../_lib/football-market-benchmark";
 
 type BenchmarkRow = { game_id: string; starts_at: string; home_name: string; away_name: string; home_score: number; away_score: number; actual_margin: number; actual_total: number; model_margin: number; model_total: number; model_home_win_probability: number; archived_home_spread: number | null; archived_margin: number | null; archived_total: number | null; model_margin_edge: number | null; model_pick_correct: boolean | null; market_pick_correct: boolean | null; observed_at: string | null; source: string | null; is_pregame: boolean };
 type BenchmarkMetric = { margin_mae: number | null; margin_rmse: number | null; total_mae: number | null; winner_accuracy: number | null };
@@ -24,12 +24,83 @@ function TimingQualifiedPanel({ data }: { data: Benchmark }) {
 }
 
 export default function FootballMarketBenchmark() {
-  const [data, setData] = useState<Benchmark | null>(null), [error, setError] = useState(""), [sort, setSort] = useState<"edge" | "date">("edge");
+  const [data, setData] = useState<Benchmark | null>(null), [error, setError] = useState(""), [sort, setSort] = useState<"edge" | "date">("date");
   useEffect(() => { fetch("/data/football/market-benchmark.json").then((response) => { if (!response.ok) throw new Error("The football benchmark is unavailable."); return response.json() as Promise<Benchmark>; }).then(setData).catch((reason: Error) => setError(reason.message)); }, []);
-  const rows = useMemo(() => [...(data?.rows || [])].sort((a, b) => sort === "edge" ? Math.abs(b.model_margin_edge ?? 0) - Math.abs(a.model_margin_edge ?? 0) : b.starts_at.localeCompare(a.starts_at)).slice(0, 12), [data, sort]);
-  const paired = useMemo(() => pairedFootballMarketErrors(data?.rows || []), [data]);
-  const disagreementBands = useMemo(() => marginDisagreementBands(data?.rows || []), [data]);
-  const disagreementDirections = useMemo(() => marginDisagreementDirections(data?.rows || []), [data]);
-  const download = () => { if (!data) return; downloadCsv("football-model-market-benchmark-2025.csv", toCsv(["Game ID", "Start", "Away", "Home", "Actual margin", "Model margin", "Archived margin", "Model total", "Archived total", "Model difference vs line", "Model pick correct", "Archived line pick correct", "Observed at", "Pregame flag"], data.rows.map((row) => [row.game_id, row.starts_at, row.away_name, row.home_name, row.actual_margin, row.model_margin, row.archived_margin, row.model_total, row.archived_total, row.model_margin_edge, row.model_pick_correct == null ? null : String(row.model_pick_correct), row.market_pick_correct == null ? null : String(row.market_pick_correct), row.observed_at, String(row.is_pregame)]))); };
-  return <section className="section paper-panel" aria-labelledby="football-market-benchmark-title"><div className="section-heading"><div><div className="eyebrow">Football / retrospective benchmark</div><h2 id="football-market-benchmark-title">Model beside the archived line.</h2></div><div className="button-row"><button className="button secondary" type="button" onClick={() => setSort((value) => value === "edge" ? "date" : "edge")} disabled={!data}>{sort === "edge" ? "Show newest games" : "Show largest disagreements"}</button><button className="button secondary" type="button" onClick={download} disabled={!data}>Download benchmark CSV ↓</button></div></div>{error ? <p className="status-error" role="alert">{error}</p> : !data ? <p className="empty" role="status">Loading football benchmark…</p> : <><p className="note">{data.coverage.market_games.toLocaleString()} of {data.coverage.evaluation_games.toLocaleString()} held-out 2025 games have an exact archived line. The archive has {data.coverage.pregame_market_games.toLocaleString()} verified pregame captures, so these comparisons are descriptive reference evidence rather than a live betting record.</p><div className="stat-grid" style={{ marginTop: 18 }}><div><strong>{metric(data.metrics.model.margin_mae)}</strong><span>model margin MAE</span></div><div><strong>{metric(data.metrics.archived_line.margin_mae)}</strong><span>archived line margin MAE</span></div><div><strong>{metric(data.metrics.model.total_mae)}</strong><span>model total MAE</span></div><div><strong>{metric(data.metrics.archived_line.total_mae)}</strong><span>archived line total MAE</span></div><div><strong>{metric(data.metrics.model.winner_accuracy, "%")}</strong><span>model winner accuracy</span></div><div><strong>{metric(data.metrics.archived_line.winner_accuracy, "%")}</strong><span>archived line winner accuracy</span></div></div><TimingQualifiedPanel data={data} /><section style={{ marginTop: 24 }} aria-labelledby="football-paired-errors"><div className="section-heading"><div><div className="eyebrow">Same-game error comparison</div><h3 id="football-paired-errors">Which estimate finished closer?</h3></div><span className="note">Paired finals only</span></div><p className="note">This counts absolute forecast error on the same games. It measures historical fit, not returns or a recommended side.</p><div className="table-scroll"><table className="data-table"><thead><tr><th>Target</th><th className="numeric">Paired games</th><th className="numeric">Model closer</th><th className="numeric">Archive closer</th><th className="numeric">Tied</th><th className="numeric">Model MAE</th><th className="numeric">Archive MAE</th></tr></thead><tbody>{([['Margin', paired.margin], ['Total', paired.total]] as const).map(([label, record]) => <tr key={label}><th scope="row">{label}</th><td className="numeric">{record.games.toLocaleString()}</td><td className="numeric">{record.model_better.toLocaleString()}</td><td className="numeric">{record.archive_better.toLocaleString()}</td><td className="numeric">{record.ties.toLocaleString()}</td><td className="numeric">{metric(record.model_mae)}</td><td className="numeric">{metric(record.archive_mae)}</td></tr>)}</tbody></table></div><div className="table-scroll" style={{ marginTop: 18 }}><table className="data-table"><thead><tr><th>Model / line disagreement</th><th className="numeric">Games</th><th className="numeric">Model closer</th><th className="numeric">Archive closer</th><th className="numeric">Model MAE</th><th className="numeric">Archive MAE</th></tr></thead><tbody>{disagreementBands.map((band) => <tr key={band.key}><th scope="row">{band.label}</th><td className="numeric">{band.games.toLocaleString()}</td><td className="numeric">{band.model_better.toLocaleString()}</td><td className="numeric">{band.archive_better.toLocaleString()}</td><td className="numeric">{metric(band.model_mae)}</td><td className="numeric">{metric(band.archive_mae)}</td></tr>)}</tbody></table></div><div className="table-scroll" style={{ marginTop: 18 }}><table className="data-table"><thead><tr><th>Direction of model difference</th><th className="numeric">Games</th><th className="numeric">Model closer</th><th className="numeric">Archive closer</th><th className="numeric">Tied</th><th className="numeric">Model MAE</th><th className="numeric">Archive MAE</th></tr></thead><tbody>{disagreementDirections.map((direction) => <tr key={direction.key}><th scope="row">{direction.label}</th><td className="numeric">{direction.games.toLocaleString()}</td><td className="numeric">{direction.model_better.toLocaleString()}</td><td className="numeric">{direction.archive_better.toLocaleString()}</td><td className="numeric">{direction.ties.toLocaleString()}</td><td className="numeric">{metric(direction.model_mae)}</td><td className="numeric">{metric(direction.archive_mae)}</td></tr>)}</tbody></table></div></section><div className="table-scroll" style={{ marginTop: 18 }}><table className="data-table"><thead><tr><th>Game</th><th>Final</th><th>Model</th><th>Archived home spread</th><th>Difference</th><th>Evidence timing</th></tr></thead><tbody>{rows.map((row) => <tr key={row.game_id}><td><Link href={`/research/game/?sport=football&id=${encodeURIComponent(row.game_id)}`}><strong>{row.away_name}</strong><br /><span className="muted">at {row.home_name}</span></Link><small>{date(row.starts_at)} · {row.game_id}</small></td><td className="numeric">{row.away_score}–{row.home_score}<small>margin {fmt(row.actual_margin)} · total {fmt(row.actual_total)}</small></td><td className="numeric">{fmt(row.model_margin)}<small>{(row.model_home_win_probability * 100).toFixed(1)}% home · total {fmt(row.model_total)}</small></td><td className="numeric">{row.archived_home_spread == null ? "—" : fmt(row.archived_home_spread)}<small>{row.archived_total == null ? "total —" : `total ${fmt(row.archived_total)}`}</small></td><td className="numeric">{row.model_margin_edge == null ? "—" : `${row.model_margin_edge > 0 ? "+" : ""}${fmt(row.model_margin_edge)}`}<small>model margin minus implied line margin</small></td><td><strong>{row.is_pregame ? "Verified pregame" : "Archive reference"}</strong><small>{row.observed_at ? `retained ${date(row.observed_at)}` : "capture time unavailable"}</small><small>{row.source ? `source ${row.source}` : "source unavailable"}</small><span className="status-pill">{row.is_pregame ? "Eligible timing" : "Timing unverified"}</span></td></tr>)}</tbody></table></div><p className="section-note">{data.methodology}</p></>}</section>;
+  const qualifiedRows = useMemo(() => timingQualifiedFootballMarketRows(data?.rows || []), [data]);
+  const rows = useMemo(() => [...(sort === "edge" ? qualifiedRows : data?.rows || [])].sort((a, b) => sort === "edge" ? Math.abs(b.model_margin_edge ?? 0) - Math.abs(a.model_margin_edge ?? 0) : b.starts_at.localeCompare(a.starts_at)).slice(0, 12), [data, qualifiedRows, sort]);
+  const paired = useMemo(() => pairedFootballMarketErrors(qualifiedRows), [qualifiedRows]);
+  const disagreementBands = useMemo(() => marginDisagreementBands(qualifiedRows), [qualifiedRows]);
+  const disagreementDirections = useMemo(() => marginDisagreementDirections(qualifiedRows), [qualifiedRows]);
+  const download = () => { if (!data) return; downloadCsv("football-model-market-benchmark-2025.csv", toCsv(["Game ID", "Start", "Away", "Home", "Actual margin", "Model margin", "Archived margin", "Model total", "Archived total", "Qualified model difference vs line", "Model pick correct", "Archived line pick correct", "Observed at", "Pregame flag"], data.rows.map((row) => [row.game_id, row.starts_at, row.away_name, row.home_name, row.actual_margin, row.model_margin, row.archived_margin, row.model_total, row.archived_total, row.is_pregame ? row.model_margin_edge : null, row.is_pregame && row.model_pick_correct != null ? String(row.model_pick_correct) : null, row.is_pregame && row.market_pick_correct != null ? String(row.market_pick_correct) : null, row.observed_at, String(row.is_pregame)]))); };
+  return (
+    <section className="section paper-panel" aria-labelledby="football-market-benchmark-title">
+      <div className="section-heading">
+        <div>
+          <div className="eyebrow">Football / retrospective benchmark</div>
+          <h2 id="football-market-benchmark-title">Model beside the archived line.</h2>
+        </div>
+        <div className="button-row">
+          <button className="button secondary" type="button" onClick={() => setSort((value) => value === "edge" ? "date" : "edge")} disabled={!data || qualifiedRows.length === 0}>
+            {sort === "edge" ? "Show newest archive rows" : "Show qualified disagreements"}
+          </button>
+          <button className="button secondary" type="button" onClick={download} disabled={!data}>Download benchmark CSV ↓</button>
+        </div>
+      </div>
+      {error ? (
+        <p className="status-error" role="alert">{error}</p>
+      ) : !data ? (
+        <p className="empty" role="status">Loading football benchmark…</p>
+      ) : (
+        <>
+          <p className="note">
+            {data.coverage.market_games.toLocaleString()} of {data.coverage.evaluation_games.toLocaleString()} held-out 2025 games have an exact archived line. The archive has {data.coverage.pregame_market_games.toLocaleString()} verified pregame captures. Rows without that clock remain source-audit records; model differences and performance comparisons are withheld.
+          </p>
+          <TimingQualifiedPanel data={data} />
+          {qualifiedRows.length > 0 ? (
+            <section style={{ marginTop: 24 }} aria-labelledby="football-paired-errors">
+              <div className="section-heading">
+                <div><div className="eyebrow">Same-game error comparison</div><h3 id="football-paired-errors">Which estimate finished closer?</h3></div>
+                <span className="note">{qualifiedRows.length.toLocaleString()} timing-qualified rows</span>
+              </div>
+              <p className="note">This counts absolute forecast error only where the archived observation has verified pregame timing. It measures historical fit, not returns or a recommended side.</p>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead><tr><th>Target</th><th className="numeric">Paired games</th><th className="numeric">Model closer</th><th className="numeric">Archive closer</th><th className="numeric">Tied</th><th className="numeric">Model MAE</th><th className="numeric">Archive MAE</th></tr></thead>
+                  <tbody>{([['Margin', paired.margin], ['Total', paired.total]] as const).map(([label, record]) => <tr key={label}><th scope="row">{label}</th><td className="numeric">{record.games.toLocaleString()}</td><td className="numeric">{record.model_better.toLocaleString()}</td><td className="numeric">{record.archive_better.toLocaleString()}</td><td className="numeric">{record.ties.toLocaleString()}</td><td className="numeric">{metric(record.model_mae)}</td><td className="numeric">{metric(record.archive_mae)}</td></tr>)}</tbody>
+                </table>
+              </div>
+              <div className="table-scroll" style={{ marginTop: 18 }}>
+                <table className="data-table">
+                  <thead><tr><th>Model / line disagreement</th><th className="numeric">Games</th><th className="numeric">Model closer</th><th className="numeric">Archive closer</th><th className="numeric">Model MAE</th><th className="numeric">Archive MAE</th></tr></thead>
+                  <tbody>{disagreementBands.map((band) => <tr key={band.key}><th scope="row">{band.label}</th><td className="numeric">{band.games.toLocaleString()}</td><td className="numeric">{band.model_better.toLocaleString()}</td><td className="numeric">{band.archive_better.toLocaleString()}</td><td className="numeric">{metric(band.model_mae)}</td><td className="numeric">{metric(band.archive_mae)}</td></tr>)}</tbody>
+                </table>
+              </div>
+              <div className="table-scroll" style={{ marginTop: 18 }}>
+                <table className="data-table">
+                  <thead><tr><th>Direction of model difference</th><th className="numeric">Games</th><th className="numeric">Model closer</th><th className="numeric">Archive closer</th><th className="numeric">Tied</th><th className="numeric">Model MAE</th><th className="numeric">Archive MAE</th></tr></thead>
+                  <tbody>{disagreementDirections.map((direction) => <tr key={direction.key}><th scope="row">{direction.label}</th><td className="numeric">{direction.games.toLocaleString()}</td><td className="numeric">{direction.model_better.toLocaleString()}</td><td className="numeric">{direction.archive_better.toLocaleString()}</td><td className="numeric">{direction.ties.toLocaleString()}</td><td className="numeric">{metric(direction.model_mae)}</td><td className="numeric">{metric(direction.archive_mae)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </section>
+          ) : (
+            <p className="notice" role="status" style={{ marginTop: 24 }}>Same-game model-versus-line analysis is withheld because this archive contains no verified pregame capture clocks.</p>
+          )}
+          <div className="table-scroll" style={{ marginTop: 18 }}>
+            <table className="data-table">
+              <thead><tr><th>Game</th><th>Final</th><th>Model</th><th>Archived home spread</th><th>Qualified difference</th><th>Evidence timing</th></tr></thead>
+              <tbody>{rows.map((row) => <tr key={row.game_id}>
+                <td><Link href={`/research/game/?sport=football&id=${encodeURIComponent(row.game_id)}`}><strong>{row.away_name}</strong><br /><span className="muted">at {row.home_name}</span></Link><small>{date(row.starts_at)} · {row.game_id}</small></td>
+                <td className="numeric">{row.away_score}–{row.home_score}<small>margin {fmt(row.actual_margin)} · total {fmt(row.actual_total)}</small></td>
+                <td className="numeric">{row.is_pregame ? <>{fmt(row.model_margin)}<small>{(row.model_home_win_probability * 100).toFixed(1)}% home · total {fmt(row.model_total)}</small></> : <><strong>Withheld</strong><small>capture clock unverified</small></>}</td>
+                <td className="numeric">{row.archived_home_spread == null ? "—" : fmt(row.archived_home_spread)}<small>{row.archived_total == null ? "total —" : `total ${fmt(row.archived_total)}`}</small></td>
+                <td className="numeric">{row.is_pregame && row.model_margin_edge != null ? `${row.model_margin_edge > 0 ? "+" : ""}${fmt(row.model_margin_edge)}` : "—"}<small>{row.is_pregame ? "model margin minus implied line margin" : "not timing-qualified"}</small></td>
+                <td><strong>{row.is_pregame ? "Verified pregame" : "Archive reference"}</strong><small>{row.observed_at ? `retained ${date(row.observed_at)}` : "capture time unavailable"}</small><small>{row.source ? `source ${row.source}` : "source unavailable"}</small><span className="status-pill">{row.is_pregame ? "Eligible timing" : "Timing unverified"}</span></td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <p className="section-note">{data.methodology}</p>
+        </>
+      )}
+    </section>
+  );
 }
