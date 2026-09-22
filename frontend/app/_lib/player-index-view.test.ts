@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePlayerIndexFilters, playerIndexFilterSearch, playerIndexScopeSearch, playerProfileCoverageLabel, rankPlayerProfiles } from "./player-index-view";
+import { parsePlayerIndexFilters, playerIndexFilterSearch, playerIndexScopeSearch, playerIndexSortValue, playerProfileCoverageLabel, rankPlayerProfiles } from "./player-index-view";
 
 describe("historical player index URL state", () => {
   it("parses supported season, search, sort, qualification and page", () => {
@@ -37,6 +37,13 @@ describe("historical player index URL state", () => {
   it("round-trips the profile sort control", () => {
     expect(parsePlayerIndexFilters("?sort=profile", [2026])).toMatchObject({ sort: "profile" });
     expect(playerIndexFilterSearch({ season: "2026", query: "", sort: "profile", qualified: true, page: 0 })).toBe("?sort=profile");
+  });
+
+  it("accepts retained turnover and foul rate sorts", () => {
+    expect(parsePlayerIndexFilters("?sort=topg", [2026])).toMatchObject({ sort: "topg" });
+    expect(parsePlayerIndexFilters("?sort=fpg", [2026])).toMatchObject({ sort: "fpg" });
+    expect(playerIndexSortValue(1.2, "topg")).toBe(-1.2);
+    expect(playerIndexSortValue(2.4, "fpg")).toBe(2.4);
   });
 
   it("ranks an explainable profile index with lower turnover rate favorable", () => {

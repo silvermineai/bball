@@ -15,6 +15,7 @@ import {
 } from "../../_lib/careers";
 import {
   parsePlayerIndexFilters,
+  playerIndexSortValue,
   playerIndexScopeSearch,
   rankPlayerProfiles,
   type PlayerIndexSort,
@@ -121,6 +122,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     | "spg"
     | "bpg"
     | "fpg"
+    | "topg"
     | "efg"
     | "three_pct"
     | "ft_rate"
@@ -130,7 +132,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
     ? profileRows
     : rankProduction(basePlayers, (p) => {
       const value = p[sortKey] ?? null;
-      return sortKey === "tov_rate" && value != null ? -value : value;
+      return playerIndexSortValue(value, sort);
     }).map((p) => ({
       ...p,
       ...profileByKey.get(`${p.id}-${p.team_id}`),
@@ -225,6 +227,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
             <option value="spg">Steals per game</option>
             <option value="bpg">Blocks per game</option>
             <option value="fpg">Fouls per game</option>
+            <option value="topg">Turnovers per game · lower is better</option>
             <option value="efg">Effective FG%</option>
             <option value="three_pct">Three-point FG%</option>
             <option value="ft_rate">Free-throw attempt rate</option>
@@ -377,6 +380,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         "Offensive rebounds per game",
                         "Defensive rebounds per game",
                         "Assists per game",
+                        "Turnovers per game",
                         "Steals per game",
                         "Blocks per game",
                         "Fouls per game",
@@ -410,6 +414,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                         p.orpg,
                         p.drpg,
                         p.apg,
+                        p.topg,
                         p.spg,
                         p.bpg,
                         p.fpg,
@@ -452,6 +457,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                     "ORB/G",
                     "DRB/G",
                     "AST/G",
+                    "TO/G",
                     "STL/G",
                     "BLK/G",
                     "PF/G",
@@ -501,6 +507,7 @@ export default function Players({ catalog }: { catalog: CareerCatalog }) {
                       p.orpg,
                       p.drpg,
                       p.apg,
+                      p.topg,
                       p.spg,
                       p.bpg,
                       p.fpg,

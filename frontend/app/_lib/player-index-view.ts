@@ -12,6 +12,7 @@ export const playerIndexSorts = [
   "spg",
   "bpg",
   "fpg",
+  "topg",
   "efg",
   "three_pct",
   "ft_rate",
@@ -19,6 +20,12 @@ export const playerIndexSorts = [
   "tov_rate",
 ] as const;
 export type PlayerIndexSort = (typeof playerIndexSorts)[number];
+
+/** Return the value used for a player-index sort, reversing lower-is-better rates. */
+export function playerIndexSortValue(value: number | null | undefined, sort: PlayerIndexSort) {
+  return (sort === "tov_rate" || sort === "topg") && value != null ? -value : value ?? null;
+}
+
 export type PlayerIndexFilters = {
   season: string;
   query: string;
