@@ -2,10 +2,11 @@ import type { MarketCaptureStatus } from "./market-availability";
 import type { SportSummary } from "./research-types";
 
 /** Build the scorecard request for the exact active forecast edition. */
-export function modelScopedScorecardPath(sport: "basketball" | "football", modelId: string | null | undefined): string | null {
+export function modelScopedScorecardPath(sport: "basketball" | "football", modelId: string | null | undefined, limit = 1): string | null {
   const id = typeof modelId === "string" ? modelId.trim() : "";
+  const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 1;
   return id
-    ? `/api/research/scorecard?sport=${sport}&model=${encodeURIComponent(id)}&limit=1`
+    ? `/api/research/scorecard?sport=${sport}&model=${encodeURIComponent(id)}&limit=${safeLimit}`
     : null;
 }
 

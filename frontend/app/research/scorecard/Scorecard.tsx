@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
-import { marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, type MarketReadinessMetadata } from "../../_lib/market-readiness";
+import { marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { comparisonGapDirectionLabel, comparisonGapLabel, comparisonTimingLabel } from "../../_lib/market-display";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Estimate type", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
@@ -43,6 +43,7 @@ export default function Scorecard() {
   // undefined = still checking, null = live catalog unavailable. A model
   // edition is never presented as current until this immutable ID matches.
   const [liveModelId, setLiveModelId] = useState<string | null | undefined>(undefined);
+  const [liveModelSport, setLiveModelSport] = useState<"football" | "basketball" | null>(null);
   const [query, setQuery] = useState(params.get("q") || ""),
     [status, setStatus] = useState(params.get("status") || "all"),
     [page, setPage] = useState(() => {
@@ -83,7 +84,8 @@ export default function Scorecard() {
     const c = new AbortController();
     setRefreshing(true);
     setError("");
-    fetch(`/api/research/scorecard?sport=${sport}&limit=5000`, { signal: c.signal })
+    const scopedPath = liveModelSport === sport ? modelScopedScorecardPath(sport, liveModelId, 5000) : null;
+    fetch(scopedPath || `/api/research/scorecard?sport=${sport}&limit=5000`, { signal: c.signal })
       .then((r) => {
         if (!r.ok) throw Error("The live research ledger could not be loaded.");
         return r.json();
@@ -110,7 +112,7 @@ export default function Scorecard() {
       .finally(() => setRefreshing(false));
     return () => c.abort();
   };
-  useEffect(() => refresh(), [sport]);
+  useEffect(() => refresh(), [sport, liveModelId, liveModelSport]);
   useEffect(() => {
     if (sport !== "football") {
       setBenchmark(null);
@@ -126,6 +128,7 @@ export default function Scorecard() {
   useEffect(() => {
     const controller = new AbortController();
     setLiveModelId(undefined);
+    setLiveModelSport(null);
     const season = sport === "basketball" ? 2027 : 2026;
     const endpoint = sport === "basketball"
       ? `/api/basketball/research/forecasts?season=${season}&meta=1`
@@ -139,7 +142,10 @@ export default function Scorecard() {
         const model = (catalog.models || []).find((candidate) => candidate.target_season === season)
           || catalog.models?.[0];
         if (!model?.model_id) throw new Error("The live forecast catalog has no model edition.");
-        if (!controller.signal.aborted) setLiveModelId(model.model_id);
+        if (!controller.signal.aborted) {
+          setLiveModelId(model.model_id);
+          setLiveModelSport(sport);
+        }
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setLiveModelId(null);
@@ -236,11 +242,11 @@ export default function Scorecard() {
         </div>
         <div>
           <strong>{m.games.toLocaleString()}</strong>
-          <span>Settled games across editions</span>
+          <span>{reliabilityScope.editionCount > 1 ? "Settled games across editions" : "Settled games · current edition"}</span>
         </div>
         <div>
           <strong>{fmt(m.margin_mae)}</strong>
-          <span>Margin MAE · selected editions</span>
+          <span>Margin MAE · {reliabilityScope.editionCount > 1 ? "selected editions" : "current edition"}</span>
         </div>
         <div>
           <strong>
@@ -248,12 +254,14 @@ export default function Scorecard() {
               ? "—"
               : fmt(m.winner_accuracy * 100) + "%"}
           </strong>
-          <span>Winner accuracy · selected editions · {m.winner_picks} picks</span>
+          <span>Winner accuracy · {reliabilityScope.editionCount > 1 ? "selected editions" : "current edition"} · {m.winner_picks} picks</span>
         </div>
       </div>
-      {reliabilityScope.lineage === "matched" && reliabilityScope.current && reliabilityScope.editionCount > 1 ? (
+      {reliabilityScope.lineage === "matched" && reliabilityScope.current ? (
         <p className="note" role="status" style={{ marginTop: 12 }}>
-          Headline reliability aggregates {reliabilityScope.aggregateSettled.toLocaleString()} settled eligible games across {reliabilityScope.editionCount.toLocaleString()} model editions. Current edition <code>{reliabilityScope.current.model_id}</code> has {reliabilityScope.current.settled_games.toLocaleString()} settled games and {reliabilityScope.current.eligible_forecasts.toLocaleString()} eligible forecasts; {reliabilityScope.priorSettled.toLocaleString()} settled games come from earlier editions.
+          {reliabilityScope.editionCount > 1
+            ? <>Headline reliability aggregates {reliabilityScope.aggregateSettled.toLocaleString()} settled eligible games across {reliabilityScope.editionCount.toLocaleString()} model editions. Current edition <code>{reliabilityScope.current.model_id}</code> has {reliabilityScope.current.settled_games.toLocaleString()} settled games and {reliabilityScope.current.eligible_forecasts.toLocaleString()} eligible forecasts; {reliabilityScope.priorSettled.toLocaleString()} settled games come from earlier editions.</>
+            : <>Scorecard is scoped to the verified current edition <code>{reliabilityScope.current.model_id}</code>: {reliabilityScope.current.eligible_forecasts.toLocaleString()} eligible forecasts and {reliabilityScope.current.settled_games.toLocaleString()} settled games. No earlier edition is pooled into these figures.</>}
         </p>
       ) : reliabilityScope.lineage === "mismatch" ? (
         <p className="notice" role="alert" style={{ marginTop: 12 }}>
