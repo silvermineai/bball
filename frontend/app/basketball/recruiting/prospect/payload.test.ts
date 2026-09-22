@@ -58,4 +58,20 @@ describe("parseProspectDossierPayload", () => {
   it("rejects malformed receipts instead of claiming a verified edition", () => {
     expect(parseProspectDossierPayload(response({ source_receipt: { dataset: "recruiting_rankings", captured_at: "bad", source_rows: 1, sha256: "bad", sha256_scope: "release_edition", integrity: "verified" } }), 2027, "42")).toBeNull();
   });
+
+  it("binds a verified receipt to the exact edition and capture clock", () => {
+    const digest = "a".repeat(64);
+    const receipt = {
+      dataset: "recruiting_rankings",
+      captured_at: "2026-09-01T00:00:00Z",
+      source_rows: 383,
+      sha256: digest,
+      sha256_scope: "release_edition",
+      integrity: "verified",
+    };
+    expect(parseProspectDossierPayload(response({ source_receipt: receipt }), 2027, "42")).not.toBeNull();
+    expect(parseProspectDossierPayload(response({ edition: "b".repeat(64), source_receipt: receipt }), 2027, "42")).toBeNull();
+    expect(parseProspectDossierPayload(response({ captured_at: "2026-09-02T00:00:00Z", source_receipt: receipt }), 2027, "42")).toBeNull();
+    expect(parseProspectDossierPayload(response({ source_receipt: { ...receipt, source_rows: 0 } }), 2027, "42")).toBeNull();
+  });
 });

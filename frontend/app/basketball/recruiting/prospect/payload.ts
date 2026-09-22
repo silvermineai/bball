@@ -96,6 +96,25 @@ function parseReceipt(value: unknown): SourceReceipt | null | undefined {
 }
 
 /**
+ * A verified prospect dossier receipt must describe the same edition and
+ * observation clock as the payload. Without this binding, a malformed or
+ * stale receipt could make an otherwise valid row look release verified.
+ */
+function verifiedReceiptMatchesPayload(
+  receipt: SourceReceipt | null,
+  edition: string | null,
+  capturedAt: string | null,
+): boolean {
+  if (!receipt || receipt.integrity !== "verified" || receipt.sha256_scope !== "release_edition") return true;
+  return /^[a-f0-9]{64}$/i.test(edition || "")
+    && receipt.sha256 !== null
+    && receipt.sha256 === edition!.toLowerCase()
+    && receipt.source_rows > 0
+    && capturedAt !== null
+    && receipt.captured_at === capturedAt;
+}
+
+/**
  * Validate a live exact-ID prospect response before rendering it. A name
  * search can return duplicates or a neighboring row; only one string-exact
  * athlete ID is admitted. Missing source fields remain null/undefined and
@@ -157,6 +176,7 @@ export function parseProspectDossierPayload(
   const sourceReceipt = payload.source_receipt === undefined ? null : parseReceipt(payload.source_receipt);
   const source = payload.source == null ? undefined : record(payload.source);
   if (capturedAt === undefined || edition === undefined || sourceReceipt === undefined
+    || !verifiedReceiptMatchesPayload(sourceReceipt, edition, capturedAt)
     || payload.history !== undefined && !Array.isArray(payload.history)
     || source && (typeof source.provider !== "string" || typeof source.methodology !== "string")) return null;
 
