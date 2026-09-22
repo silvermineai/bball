@@ -45,6 +45,17 @@ function directionSummary(results: Record<string, number>) {
     .join(" · ") || "—";
 }
 
+function quoteValue(c: Ledger["games"][number]["comparisons"][number]): string {
+  const price = (value: number | null | undefined) => value == null ? "—" : value.toFixed(2);
+  if (c.market === "totals") {
+    return `O/U ${c.line == null ? "—" : c.line.toFixed(1)} · Over ${price(c.over_price)} · Under ${price(c.under_price)}`;
+  }
+  if (c.market === "h2h") {
+    return `Home ${price(c.home_price)} · Away ${price(c.away_price)}`;
+  }
+  return `Home ${c.line == null ? "—" : signed(c.line)} · Home ${price(c.home_price)} · Away ${price(c.away_price)}`;
+}
+
 export default function Scorecard() {
   const params = useSearchParams();
   const [sport, setSport] = useState<"football" | "basketball">(
@@ -830,9 +841,11 @@ export default function Scorecard() {
                           >
                             Verified line · {c.market}
                             <br />
+                            {quoteValue(c)}
+                            <br />
                             {c.market === "h2h"
                               ? `Market home win ${fmt((c.market_home_probability || 0) * 100)}% · ${comparisonGapLabel(c) || "model difference unavailable"}`
-                              : `Line ${signed(c.line!)} · ${comparisonGapLabel(c) || "model difference unavailable"}`}
+                              : `${comparisonGapLabel(c) || "model difference unavailable"}`}
                             {comparisonGapDirectionLabel(c) && <><br />{comparisonGapDirectionLabel(c)}</>}
                             <br />
                             {c.market_overround == null

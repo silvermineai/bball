@@ -233,7 +233,14 @@ describe("live research scorecard", () => {
     });
     const response = await researchScorecard.request("/?sport=basketball&season=2027&limit=5000", {}, { RESEARCH_DB: { prepare } as never });
     expect(response.status).toBe(200);
-    const body = await response.json() as { sports: { basketball: { market_metrics: Array<Record<string, unknown>> } } };
+    const body = await response.json() as { games: Array<Record<string, unknown>>; sports: { basketball: { market_metrics: Array<Record<string, unknown>> } } };
+    expect(body.games[0].comparisons).toEqual([expect.objectContaining({
+      market: "h2h",
+      home_price: 1.8,
+      away_price: 2.2,
+      over_price: null,
+      under_price: null,
+    })]);
     expect(body.sports.basketball.market_metrics).toMatchObject([{
       market: "h2h",
       games: 1,
@@ -376,6 +383,8 @@ describe("live research scorecard", () => {
         bookmaker: "Book 1",
         market: "spreads",
         model_difference: 1,
+        home_price: 1.91,
+        away_price: 1.91,
       })],
     });
     expect(body.sports.basketball).toMatchObject({

@@ -404,6 +404,13 @@ function compare(prediction: Json, quote: Json, state: Json): Json | null {
     captured_at: quote.captured_at,
     updated_at: quote.updated_at,
     line,
+    // Keep the quoted prices beside the derived edge. A line without its
+    // paired prices cannot be audited for overround or reproduced from the
+    // retained observation, even when the model difference is valid.
+    home_price: market === "totals" ? null : first,
+    away_price: market === "totals" ? null : second,
+    over_price: market === "totals" ? first : null,
+    under_price: market === "totals" ? second : null,
     model_difference: null,
     market_home_probability: null,
     market_overround: 1 / first + 1 / second - 1,

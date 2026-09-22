@@ -9,6 +9,12 @@ export type Comparison = {
   captured_at: string;
   updated_at: string;
   line: number | null;
+  /** Decimal prices retained with the quoted line; only the fields matching
+   * the market are populated. */
+  home_price?: number | null;
+  away_price?: number | null;
+  over_price?: number | null;
+  under_price?: number | null;
   model_difference: number;
   market_home_probability: number | null;
   market_overround?: number;
