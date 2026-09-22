@@ -1,6 +1,14 @@
 import type { MarketCaptureStatus } from "./market-availability";
 import type { SportSummary } from "./research-types";
 
+/** Build the scorecard request for the exact active forecast edition. */
+export function modelScopedScorecardPath(sport: "basketball" | "football", modelId: string | null | undefined): string | null {
+  const id = typeof modelId === "string" ? modelId.trim() : "";
+  return id
+    ? `/api/research/scorecard?sport=${sport}&model=${encodeURIComponent(id)}&limit=1`
+    : null;
+}
+
 export type MarketReadinessMetadata = {
   source?: "partial" | "unavailable";
   research_receipts?: number;

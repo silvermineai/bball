@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState } from "./market-readiness";
+import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, modelScopedScorecardPath } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -108,6 +108,12 @@ describe("market connector readiness", () => {
       rejection_counts: {},
     })).toBe("");
     expect(formatMarketComparisonReadiness(undefined)).toBe("");
+  });
+
+  it("pins the scorecard to the active forecast edition", () => {
+    expect(modelScopedScorecardPath("football", " ridge-team-v2 ")).toBe("/api/research/scorecard?sport=football&model=ridge-team-v2&limit=1");
+    expect(modelScopedScorecardPath("basketball", "edition/unsafe")).toBe("/api/research/scorecard?sport=basketball&model=edition%2Funsafe&limit=1");
+    expect(modelScopedScorecardPath("football", " ")).toBeNull();
   });
   it("reports when a capture is deliberately bounded below the eligible slate", () => {
     expect(marketCaptureDiagnostic({

@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
 import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../_lib/market-availability";
-import { formatMarketComparisonReadiness, marketCaptureDiagnostic } from "../_lib/market-readiness";
+import { formatMarketComparisonReadiness, marketCaptureDiagnostic, modelScopedScorecardPath } from "../_lib/market-readiness";
 
 type ScorecardResponse = {
   generated_at?: string;
+  model?: string | null;
   total?: number;
   market_observations?: number;
   qualifying_market_observations?: number;
@@ -18,6 +19,8 @@ type ScorecardResponse = {
     };
   };
 };
+
+type ForecastSlice = { rows?: Array<{ model_id?: string | null }>; model?: string | null };
 
 type MarketMetadata = {
   sport?: string;
@@ -58,15 +61,30 @@ export default function LiveBasketballMarketStatus() {
     const controller = new AbortController();
     setStatus("checking");
     Promise.all([
-      fetchJson<ScorecardResponse>("/api/research/scorecard?sport=basketball&limit=1", { signal: controller.signal }),
+      fetchJson<ForecastSlice>("/api/basketball/research/forecasts?season=2027&status=upcoming&limit=1&page=0", { signal: controller.signal }),
       fetchJson<MarketMetadata>("/api/research/markets?meta=1&sport=basketball", { signal: controller.signal }),
     ])
-      .then(([scorecardPayload, archivePayload]) => {
-        if (!controller.signal.aborted) {
-          setScorecard(scorecardPayload);
-          setArchive(archivePayload);
-          setStatus(archivePayload.source === "unavailable" ? "fallback" : "live");
+      .then(([forecastPayload, archivePayload]) => {
+        if (controller.signal.aborted) return;
+        setArchive(archivePayload);
+        const modelId = forecastPayload.rows?.find((row) => typeof row.model_id === "string" && row.model_id.trim())?.model_id
+          || forecastPayload.model
+          || null;
+        const scorecardPath = modelScopedScorecardPath("basketball", modelId);
+        if (!scorecardPath) {
+          setScorecard(null);
+          setStatus("fallback");
+          return;
         }
+        fetchJson<ScorecardResponse>(scorecardPath, { signal: controller.signal })
+          .then((scorecardPayload) => {
+            if (controller.signal.aborted) return;
+            setScorecard(scorecardPayload);
+            setStatus(archivePayload.source === "unavailable" ? "fallback" : "live");
+          })
+          .catch((reason: unknown) => {
+            if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setStatus("fallback");
+          });
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
@@ -102,7 +120,7 @@ export default function LiveBasketballMarketStatus() {
     <p className="note" role="status">
       {status === "live" && scorecard
         ? <>
-            Model-versus-line tracking: {qualifyingCount.toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts. The scorecard retains {marketCount.toLocaleString()} accepted quote rows before its forecast-registration and freshness checks. {readinessDiagnostic ? `${readinessDiagnostic} ` : ""}The archive holds {(archive?.total || 0).toLocaleString()} retained rows, including {(archive?.pregame || 0).toLocaleString()} marked pregame, with {(archive?.provider_capabilities?.length || 0).toLocaleString()} applicable line feed{archive?.provider_capabilities?.length === 1 ? "" : "s"}{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. {archiveNote ? `${archiveNote} ` : ""}{captureNote}{captureDiagnostic}{captureStatusNote} Quotes require an authorized clock, exact participants and a pre-tip capture. {marketAction}
+            Model-versus-line tracking: {qualifyingCount.toLocaleString()} qualifying quote observations across {(scorecard.total || 0).toLocaleString()} basketball forecasts for model <span className="mono">{scorecard.model || "unavailable"}</span>. The scorecard retains {marketCount.toLocaleString()} quote rows before its forecast-registration and freshness checks. {readinessDiagnostic ? `${readinessDiagnostic} ` : ""}The archive holds {(archive?.total || 0).toLocaleString()} retained rows, including {(archive?.pregame || 0).toLocaleString()} marked pregame, with {(archive?.provider_capabilities?.length || 0).toLocaleString()} applicable line feed{archive?.provider_capabilities?.length === 1 ? "" : "s"}{scorecard.generated_at ? ` · checked ${date(scorecard.generated_at)}` : ""}. {archiveNote ? `${archiveNote} ` : ""}{captureNote}{captureDiagnostic}{captureStatusNote} Quotes require an authorized clock, exact participants and a pre-tip capture. {marketAction}
           </>
         : status === "fallback"
           ? <>Live model scorecard unavailable; the retained market archive remains available. <Link href="/research/scorecard/?sport=basketball">Open model scorecard →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
