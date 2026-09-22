@@ -31,6 +31,7 @@ export type DivisionExportPage = { total?: unknown; limit?: unknown; rows?: unkn
 /** Keep a multi-page export tied to one exact API cohort and page size. */
 export function validateDivisionPlayerExportPage(
   payload: DivisionExportPage, expectedTotal: number, expectedPageSize: number, page: number, totalPages: number,
+  expectedDivision?: "2" | "3",
 ): unknown[] {
   const total = Number(payload.total);
   const limit = Number(payload.limit || expectedPageSize);
@@ -39,6 +40,16 @@ export function validateDivisionPlayerExportPage(
   }
   if (page < totalPages - 1 && payload.rows.length === 0) {
     throw new Error("The lower-division player archive returned an incomplete page.");
+  }
+  if (expectedDivision && payload.rows.some((row) => {
+    if (!row || typeof row !== "object") return true;
+    const candidate = row as Record<string, unknown>;
+    const playerId = candidate.player_id;
+    return String(candidate.division) !== expectedDivision
+      || (typeof playerId !== "string" && typeof playerId !== "number")
+      || String(playerId).trim().length === 0;
+  })) {
+    throw new Error("The lower-division player archive returned a row outside the requested division or without a player identity.");
   }
   return payload.rows;
 }

@@ -62,4 +62,14 @@ describe("live lower-division ranking rows", () => {
     expect(() => validateDivisionPlayerExportPage({ total: 3, limit: 40, rows: [] }, 2, 40, 0, 1)).toThrow(/changed/);
     expect(() => validateDivisionPlayerExportPage({ total: 2, limit: 40, rows: [] }, 2, 40, 0, 2)).toThrow(/incomplete/);
   });
+
+  it("fails closed when an export page crosses the requested division or loses identity", () => {
+    const page = { total: 2, limit: 40, rows: [
+      { player_id: 1, division: 2 },
+      { player_id: 2, division: 3 },
+    ] };
+    expect(() => validateDivisionPlayerExportPage(page, 2, 40, 0, 1, "2")).toThrow(/outside the requested division/);
+    expect(() => validateDivisionPlayerExportPage({ total: 1, limit: 40, rows: [{ division: 2 }] }, 1, 40, 0, 1, "2")).toThrow(/without a player identity/);
+    expect(() => validateDivisionPlayerExportPage({ total: 1, limit: 40, rows: [{ player_id: "1", division: 2 }] }, 1, 40, 0, 1, "2")).not.toThrow();
+  });
 });

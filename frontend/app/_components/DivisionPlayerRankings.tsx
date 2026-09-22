@@ -182,7 +182,7 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
         const response = await fetchWithTransientRetry(`/api/basketball/research/ncaa-leaders?${params.toString()}`);
         if (!response.ok) throw new Error("The complete lower-division player export could not be loaded.");
         const payload = await response.json() as LiveRankingResponse;
-        const rows = validateDivisionPlayerExportPage(payload, total, pageSize, page, totalPages);
+        const rows = validateDivisionPlayerExportPage(payload, total, pageSize, page, totalPages, division);
         for (const row of rows) {
           if (!row || typeof row !== "object" || !("player_id" in row) || !("division" in row)) throw new Error("The lower-division player archive returned an incomplete source identity.");
           rawRows.push(row as LiveRankingRow);
