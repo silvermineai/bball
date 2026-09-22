@@ -10,6 +10,9 @@ const prediction = {
   home_win_probability: 0.64,
   margin_low: -8,
   margin_high: 16,
+  total_low: 130,
+  total_high: 166,
+  total_half_width: 18,
 } as const;
 
 const complete = {
@@ -35,7 +38,8 @@ describe("brief analysis packet", () => {
   it("marks a fully reconciled evidence packet ready", () => {
     const packet = buildBriefAnalysisPacket(complete);
     expect(packet.state).toBe("ready");
-    expect(packet.verifiedCount).toBe(7);
+    expect(packet.verifiedCount).toBe(8);
+    expect(packet.items).toHaveLength(8);
     expect(packet.missingInputs).toEqual([]);
     expect(packet.items.every((item) => item.state === "verified")).toBe(true);
   });
@@ -70,6 +74,38 @@ describe("brief analysis packet", () => {
     });
     expect(mixed.state).toBe("blocked");
     expect(mixed.items.find((item) => item.key === "forecast")?.observed).toContain("conflicts");
+  });
+
+  it("keeps a legacy edition's missing total range actionable", () => {
+    const packet = buildBriefAnalysisPacket({
+      ...complete,
+      prediction: {
+        ...prediction,
+        total_low: undefined,
+        total_high: undefined,
+        total_half_width: undefined,
+      },
+    });
+    expect(packet.state).toBe("partial");
+    expect(packet.items.find((item) => item.key === "total_uncertainty")).toMatchObject({
+      state: "unavailable",
+      observed: "No independent total range is published for this model edition",
+    });
+    expect(packet.missingInputs).toContain(
+      "A calibrated total range before using the projected total for scenario planning",
+    );
+  });
+
+  it("blocks an attached total range that is internally inconsistent", () => {
+    const packet = buildBriefAnalysisPacket({
+      ...complete,
+      prediction: { ...prediction, total_half_width: 17 },
+    });
+    expect(packet.state).toBe("blocked");
+    expect(packet.items.find((item) => item.key === "total_uncertainty")).toMatchObject({
+      state: "blocked",
+      observed: "Published total range failed its integrity checks",
+    });
   });
 
   it("does not call a TBD schedule or absent historical factors ready", () => {

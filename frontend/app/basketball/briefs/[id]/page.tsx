@@ -356,7 +356,10 @@ export default async function Page({
       </section>
       <div className="brief-forecast-note">
         <p>
-          Projected total <strong>{fmt(p.total)}</strong>. Nominal 80% range for
+          Projected total <strong>{fmt(p.total)}</strong>.{" "}
+          {p.total_low != null && p.total_high != null
+            ? <>Calibrated total range: <strong>{fmt(p.total_low)} to {fmt(p.total_high)}</strong>.{" "}</>
+            : <>An independent total range is unavailable for this model edition.{" "}</>}Nominal 80% range for
           home scoring margin:{" "}
           <strong>
             {signed(p.margin_low)} to {signed(p.margin_high)}

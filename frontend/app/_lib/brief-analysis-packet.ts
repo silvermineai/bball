@@ -4,7 +4,7 @@ import type { BriefRosterReadiness } from "./matchup-brief";
 export type BriefPacketState = "verified" | "partial" | "unavailable" | "blocked";
 
 export type BriefPacketItem = {
-  key: "forecast" | "model_terms" | "schedule" | "matchup_context" | "roster" | "availability" | "market";
+  key: "forecast" | "total_uncertainty" | "model_terms" | "schedule" | "matchup_context" | "roster" | "availability" | "market";
   label: string;
   state: BriefPacketState;
   observed: string;
@@ -35,6 +35,9 @@ type BriefAnalysisPacketArgs = {
     | "home_win_probability"
     | "margin_low"
     | "margin_high"
+    | "total_low"
+    | "total_high"
+    | "total_half_width"
   > & { estimate_type?: BBPrediction["estimate_type"] };
   modelId: string | null | undefined;
   /** The live row's exact model ID, when hydration has attached one. */
@@ -90,6 +93,16 @@ export function buildBriefAnalysisPacket(args: BriefAnalysisPacketArgs): BriefAn
     && args.prediction.home_win_probability >= 0
     && args.prediction.home_win_probability <= 1
     && args.prediction.margin_low <= args.prediction.margin_high;
+  const totalIntervalPresent = [args.prediction.total_low, args.prediction.total_high, args.prediction.total_half_width]
+    .some((value) => value != null);
+  const totalIntervalValid = finite(args.prediction.total_low)
+    && finite(args.prediction.total_high)
+    && finite(args.prediction.total_half_width)
+    && args.prediction.total_half_width > 0
+    && args.prediction.total_low <= args.prediction.total
+    && args.prediction.total <= args.prediction.total_high
+    && Math.abs((args.prediction.total - args.prediction.total_low) - args.prediction.total_half_width) <= 0.05
+    && Math.abs((args.prediction.total_high - args.prediction.total) - args.prediction.total_half_width) <= 0.05;
   const modelId = typeof args.modelId === "string" && args.modelId.trim() ? args.modelId.trim() : null;
   const attachedModelId = args.forecastModelId == null
     ? null
@@ -147,6 +160,30 @@ export function buildBriefAnalysisPacket(args: BriefAnalysisPacketArgs): BriefAn
         "Coefficient archive does not reproduce this forecast edition",
         "Matching coefficient terms before attributing the estimate to inputs",
       );
+
+  const totalUncertainty = !totalIntervalPresent
+    ? item(
+        "total_uncertainty",
+        "Total uncertainty",
+        "unavailable",
+        "No independent total range is published for this model edition",
+        "A calibrated total range before using the projected total for scenario planning",
+      )
+    : !totalIntervalValid
+      ? item(
+          "total_uncertainty",
+          "Total uncertainty",
+          "blocked",
+          "Published total range failed its integrity checks",
+          "A finite, ordered total range centered on the forecast total",
+        )
+      : item(
+          "total_uncertainty",
+          "Total uncertainty",
+          "verified",
+          `Calibrated total range ${args.prediction.total_low} to ${args.prediction.total_high} points`,
+          "",
+        );
 
   const startsAt = Date.parse(args.startsAt);
   const schedule = !Number.isFinite(startsAt)
@@ -210,7 +247,7 @@ export function buildBriefAnalysisPacket(args: BriefAnalysisPacketArgs): BriefAn
       ? item("market", "Verified market", "verified", `${args.marketQuoteCount} exact-game pregame quote${args.marketQuoteCount === 1 ? "" : "s"}`, "")
       : item("market", "Verified market", "unavailable", "No exact-game pregame quote survived the ledger checks", "A licensed quote matched to this game, model edition and pregame clock")
 
-  const items = [forecast, modelTerms, schedule, context, roster, availability, market];
+  const items = [forecast, totalUncertainty, modelTerms, schedule, context, roster, availability, market];
   const missingInputs = [...new Set(items.filter((entry) => entry.state !== "verified" && entry.missing).map((entry) => entry.missing))];
   const blocked = items.some((entry) => entry.state === "blocked");
   const state = blocked ? "blocked" : missingInputs.length ? "partial" : "ready";
