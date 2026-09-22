@@ -6,6 +6,7 @@ import FootballMatchupEvidence from "./FootballMatchupEvidence";
 import BriefNotebook from "../basketball/briefs/BriefNotebook";
 import { footballModelFactors, type FootballModelFactor } from "../_lib/football-model-factors";
 import { footballMarketComparison } from "../_lib/football-market-lens";
+import LiveFootballBriefMarketTrail from "../football/blog/LiveFootballBriefMarketTrail";
 const tasks = [
   "Confirm the quarterback, offensive line and current availability for both programs.",
   "Review passing efficiency alongside protection and coverage on film.",
@@ -166,6 +167,16 @@ export default function FootballBrief({
             <p>{marketComparison.text}</p>
           </div>
         </div>
+      </section>
+      <section className="section" aria-labelledby="live-market-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Current ledger / exact game</div>
+            <h2 id="live-market-title">Refresh the line beside this forecast.</h2>
+          </div>
+        </div>
+        <p className="note">The archived line above is retained for audit and may lack a publication clock. This check resolves the active football model edition first, then shows only exact-game market observations that passed the scorecard's participant and pre-kickoff timing gates.</p>
+        <LiveFootballBriefMarketTrail gameId={g.id} />
       </section>
       <p>
         <Link href={`/research/briefs/?sport=football&game=${g.id}`}>

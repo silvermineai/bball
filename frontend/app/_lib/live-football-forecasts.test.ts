@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "./data";
-import { applyLiveFootballMarketComparisons, dashboardFootballMarketComparisons, exactLiveFootballReliability, loadLiveFootballForecasts, loadLiveFootballMarketComparisons, loadLiveFootballModelReliability, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
+import { applyLiveFootballMarketComparisons, dashboardFootballMarketComparisons, exactLiveFootballReliability, loadLiveFootballForecasts, loadLiveFootballGameMarketComparison, loadLiveFootballMarketComparisons, loadLiveFootballModelReliability, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
 
 const game = (prediction: Game["prediction"]): Game => ({
   id: "game-1",
@@ -161,6 +161,52 @@ describe("live football forecast merge", () => {
       "game-1": { model_id: "football-v1", comparisons: [{ provider: "licensed", market: "spreads", line: -3.5 }] },
     });
     expect(requested).toContain("sport=football&season=2026&model=football-v1&limit=5000");
+    globalThis.fetch = originalFetch;
+  });
+
+  it("loads one game's market trail only when forecast and scorecard share the same model edition", async () => {
+    const originalFetch = globalThis.fetch;
+    const urls: string[] = [];
+    globalThis.fetch = (async (input) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("/api/football/research/forecasts")) {
+        return new Response(JSON.stringify({
+          rows: [{ ...liveRow(1), game_id: "game-1", kickoff: "2026-09-12T16:00:00Z", created_at: "2026-09-10T12:00:00Z" }],
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({
+        live: true,
+        season: 2026,
+        model: "football-v1",
+        total: 1,
+        page_size: 5000,
+        games: [{ game_id: "game-1", model_id: "football-v1", comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
+      }), { status: 200 });
+    }) as typeof fetch;
+    await expect(loadLiveFootballGameMarketComparison(undefined, "game-1")).resolves.toMatchObject({
+      modelId: "football-v1",
+      forecastCreatedAt: "2026-09-10T12:00:00Z",
+      forecastStartsAt: "2026-09-12T16:00:00Z",
+      comparisons: [{ market: "spreads", line: -3.5 }],
+    });
+    expect(urls[0]).toContain("gameId=game-1");
+    expect(urls[1]).toContain("gameId=game-1");
+    expect(urls[1]).toContain("model=football-v1");
+    globalThis.fetch = originalFetch;
+  });
+
+  it("withholds the game market trail when the scorecard returns another edition", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input) => {
+      const url = String(input);
+      if (url.includes("/api/football/research/forecasts")) {
+        return new Response(JSON.stringify({ rows: [{ ...liveRow(1), game_id: "game-1" }] }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ live: true, season: 2026, model: "football-v2", games: [] }), { status: 200 });
+    }) as typeof fetch;
+    await expect(loadLiveFootballGameMarketComparison(undefined, "game-1"))
+      .rejects.toThrow("inconsistent edition");
     globalThis.fetch = originalFetch;
   });
 

@@ -116,6 +116,60 @@ export type LiveFootballMarketComparisonSet = {
   comparisons: Comparison[];
 };
 
+export type LiveFootballGameMarketComparison = {
+  modelId: string;
+  forecastCreatedAt: string | null;
+  forecastStartsAt: string | null;
+  comparisons: Comparison[];
+};
+
+/**
+ * Load one football game's current forecast and its exact scorecard row.
+ *
+ * Matchup notebooks are server-rendered from a bundled edition, while the
+ * active model and market ledger can advance between builds. Resolve the
+ * forecast first, then ask the scorecard for that same game and model ID so a
+ * quote from another edition cannot appear beside the notebook estimate.
+ */
+export async function loadLiveFootballGameMarketComparison(
+  signal: AbortSignal | undefined,
+  gameId: string,
+): Promise<LiveFootballGameMarketComparison | null> {
+  const encodedGameId = encodeURIComponent(gameId);
+  const forecastResponse = await fetch(
+    `/api/football/research/forecasts?season=2026&gameId=${encodedGameId}&model=latest&status=all&limit=1`,
+    { signal },
+  );
+  if (!forecastResponse.ok) throw new Error("Live football forecast unavailable.");
+  const forecastPayload = await forecastResponse.json() as { rows?: LiveFootballForecastRow[] };
+  const forecast = forecastPayload.rows?.find((row) => row.game_id === gameId);
+  if (!forecast?.model_id || !validLiveFootballForecast(forecast)) return null;
+
+  const scorecardResponse = await fetch(
+    `/api/research/scorecard?sport=football&season=2026&gameId=${encodedGameId}&model=${encodeURIComponent(forecast.model_id)}&limit=5000`,
+    { signal },
+  );
+  if (!scorecardResponse.ok) throw new Error("Live football market comparisons unavailable.");
+  const scorecard = await scorecardResponse.json() as {
+    live?: boolean;
+    season?: number | null;
+    model?: string | null;
+    games?: Array<{ game_id: string; model_id?: string; comparisons?: Comparison[] }>;
+  };
+  if (scorecard.live !== true || scorecard.season !== 2026 || scorecard.model !== forecast.model_id) {
+    throw new Error("Live football market comparisons returned an inconsistent edition.");
+  }
+  const game = (scorecard.games || []).find(
+    (row) => row.game_id === gameId && row.model_id === forecast.model_id,
+  );
+  return {
+    modelId: forecast.model_id,
+    forecastCreatedAt: forecast.created_at || null,
+    forecastStartsAt: forecast.kickoff || null,
+    comparisons: game?.comparisons || [],
+  };
+}
+
 /**
  * Keep the landing board useful while its live scorecard request is in flight
  * or unavailable. Once a complete live map exists, an empty entry is
