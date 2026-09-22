@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import { buildProspectParams, formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
+import { buildProspectParams, formatProspectRank, formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
 
 describe("homepage recruiting section", () => {
   it("renders the prospect board as the fifth dashboard section", () => {
@@ -20,6 +20,19 @@ describe("prospect size formatting", () => {
 
   it("keeps missing measurements unavailable", () => {
     expect(formatProspectSize({ athlete_id: "2", name: "Forward" })).toBe("—");
+  });
+});
+
+describe("prospect position rank formatting", () => {
+  it("keeps position rank separate from national rank", () => {
+    expect(formatProspectRank(7)).toBe("#7");
+    expect(formatProspectRank(7.8)).toBe("#7");
+  });
+
+  it("keeps missing or invalid position rank unavailable", () => {
+    expect(formatProspectRank(null)).toBe("—");
+    expect(formatProspectRank(0)).toBe("—");
+    expect(formatProspectRank(Number.NaN)).toBe("—");
   });
 });
 
