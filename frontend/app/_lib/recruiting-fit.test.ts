@@ -112,6 +112,20 @@ describe("recruiting fit", () => {
     expect(filtered[0]).toMatchObject({ player: { id: "b" }, cohortRank: 2, cohortTotal: 2 });
   });
 
+  it("filters by source status without treating missing production as zero", () => {
+    const rows = [
+      player({ id: "target", team_id: "target", status: "same_program" }),
+      player({ id: "returning", team_id: "2", status: "same_program" }),
+      player({ id: "new", team_id: "3", status: "new_to_dataset" }),
+      player({ id: "unclassified", team_id: "4", status: "unmapped", prior_production: null }),
+    ];
+    const newPlayers = buildRecruitingFit(rows, { teamId: "target", role: "any", focus: "creation", minimumMinutes: 400, status: "new_to_dataset" });
+    expect(newPlayers.map((row) => row.player.id)).toEqual(["new"]);
+    const otherPlayers = buildRecruitingFit(rows, { teamId: "target", role: "any", focus: "creation", minimumMinutes: 0, status: "other" });
+    expect(otherPlayers).toEqual([]);
+    expect(buildRecruitingFit(rows, { teamId: "target", role: "any", focus: "creation", minimumMinutes: 0 }).map((row) => row.player.id)).toEqual(["returning", "new"]);
+  });
+
   it("reports how much of the selected skill evidence is available", () => {
     const result = buildRecruitingFit([
       player({ id: "target", team_id: "target" }),

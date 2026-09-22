@@ -124,6 +124,26 @@ export function recruitingFitCoverage(rosters: BBRosters): RecruitingFitCoverage
 
 export type FitRole = "guard" | "wing" | "big" | "any";
 export type FitFocus = "creation" | "shooting" | "rebounding" | "defense" | "workload";
+export type FitStatus = "all" | "same_program" | "different_program" | "new_to_dataset" | "ambiguous" | "other";
+
+export const fitStatusLabels: Record<FitStatus, string> = {
+  all: "All source statuses",
+  same_program: "Same source program",
+  different_program: "Different source program",
+  new_to_dataset: "New to dataset",
+  ambiguous: "Ambiguous source status",
+  other: "Other / unclassified",
+};
+
+const knownFitStatuses = new Set<Exclude<FitStatus, "all" | "other">>([
+  "same_program", "different_program", "new_to_dataset", "ambiguous",
+]);
+
+function matchesFitStatus(status: string, filter: FitStatus): boolean {
+  if (filter === "all") return true;
+  if (filter === "other") return !knownFitStatuses.has(status as Exclude<FitStatus, "all" | "other">);
+  return status === filter;
+}
 
 export type FitTeam = {
   id: string;
@@ -299,12 +319,13 @@ export function prioritizeRoleSummaries(summaries: RoleSummary[]): RoleSummary[]
 
 export function buildRecruitingFit(
   players: BBRoster[],
-  options: { teamId: string; role: FitRole; focus: FitFocus; minimumMinutes: number; query?: string },
+  options: { teamId: string; role: FitRole; focus: FitFocus; minimumMinutes: number; query?: string; status?: FitStatus },
 ): FitRow[] {
   const eligible = players.filter((player) => {
     if (player.team_id === options.teamId || !player.prior_production) return false;
     if (player.prior_production.minutes < options.minimumMinutes) return false;
     if (options.role !== "any" && positionRole(player.position) !== options.role) return false;
+    if (!matchesFitStatus(player.status, options.status || "all")) return false;
     return true;
   });
   const query = (options.query || "").trim().toLowerCase();

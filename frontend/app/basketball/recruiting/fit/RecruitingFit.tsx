@@ -5,7 +5,7 @@ import { useBasketballRelease } from "../../../_components/useBasketballRelease"
 import { downloadCsv, toCsv } from "../../../_lib/csv";
 import { fmt } from "../../../_lib/format";
 import type { BBRosters } from "../../../_lib/basketball-types";
-import { archivedNeedStatus, buildRecruitingFit, buildRoleSummaries, fitMetricLabels, focusDescriptions, focusLabels, parseRecruitingFitRosterPayload, prioritizeRoleSummaries, recruitingFitCoverage, recruitingFitSourceReceipt, roleLabels, positionRole, type FitFocus, type FitRole, type FitTeam } from "../../../_lib/recruiting-fit";
+import { archivedNeedStatus, buildRecruitingFit, buildRoleSummaries, fitMetricLabels, fitStatusLabels, focusDescriptions, focusLabels, parseRecruitingFitRosterPayload, prioritizeRoleSummaries, recruitingFitCoverage, recruitingFitSourceReceipt, roleLabels, positionRole, type FitFocus, type FitRole, type FitStatus, type FitTeam } from "../../../_lib/recruiting-fit";
 
 const focusValueLabels: Record<FitFocus, string> = { creation: "APG", shooting: "TS%", rebounding: "ORB/G · DRB/G", defense: "SPG", workload: "Minutes" };
 const componentDisplay = (key: string, value: number | null) => value == null ? "—" : ["ts", "efg", "ft_pct"].includes(key) ? `${fmt(value * 100)}%` : fmt(value);
@@ -37,7 +37,7 @@ function readNotes(teamId: string): Record<string, string> {
 
 export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
   const fallbackTeam = [...teams].sort((a, b) => (a.rank || 999) - (b.rank || 999) || a.name.localeCompare(b.name))[0]?.id || "";
-  const [teamId, setTeamId] = useState(fallbackTeam), [role, setRole] = useState<FitRole>("any"), [focus, setFocus] = useState<FitFocus>("creation"), [minimumMinutes, setMinimumMinutes] = useState(400), [query, setQuery] = useState(""), [page, setPage] = useState(0), [picked, setPicked] = useState<string[]>([]), [notes, setNotes] = useState<Record<string, string>>({}), [hydrated, setHydrated] = useState(false), [copied, setCopied] = useState(""), [savedMessage, setSavedMessage] = useState("");
+  const [teamId, setTeamId] = useState(fallbackTeam), [role, setRole] = useState<FitRole>("any"), [focus, setFocus] = useState<FitFocus>("creation"), [status, setStatus] = useState<FitStatus>("all"), [minimumMinutes, setMinimumMinutes] = useState(400), [query, setQuery] = useState(""), [page, setPage] = useState(0), [picked, setPicked] = useState<string[]>([]), [notes, setNotes] = useState<Record<string, string>>({}), [hydrated, setHydrated] = useState(false), [copied, setCopied] = useState(""), [savedMessage, setSavedMessage] = useState("");
   const { data, error } = useBasketballRelease<BBRosters>("rosters");
   const [liveRoster, setLiveRoster] = useState<BBRosters | null>(null);
   const [liveRosterError, setLiveRosterError] = useState("");
@@ -76,6 +76,7 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
     if (params.get("team") && teams.some((team) => team.id === params.get("team"))) setTeamId(params.get("team")!);
     if (["any", "guard", "wing", "big"].includes(params.get("role") || "")) setRole(params.get("role") as FitRole);
     if (["creation", "shooting", "rebounding", "defense", "workload"].includes(params.get("focus") || "")) setFocus(params.get("focus") as FitFocus);
+    if (Object.keys(fitStatusLabels).includes(params.get("status") || "")) setStatus(params.get("status") as FitStatus);
     if ([200, 400, 800].includes(Number(params.get("min")))) setMinimumMinutes(Number(params.get("min")));
     setQuery(params.get("q") || "");
     const requestedTeam = params.get("team") && teams.some((team) => team.id === params.get("team")) ? params.get("team")! : fallbackTeam;
@@ -86,7 +87,7 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
   }, [fallbackTeam, teams]);
   useEffect(() => {
     if (!hydrated) return;
-    const params = new URLSearchParams({ team: teamId, role, focus, min: String(minimumMinutes) });
+    const params = new URLSearchParams({ team: teamId, role, focus, status, min: String(minimumMinutes) });
     if (query) params.set("q", query);
     picked.slice(0, 5).forEach((id) => params.append("pick", id));
     window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params}`);
@@ -96,9 +97,9 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
     } catch {
       // The board remains usable when private browser storage is unavailable.
     }
-  }, [focus, hydrated, minimumMinutes, notes, picked, query, role, teamId]);
-  const result = useMemo(() => rosterData ? buildRecruitingFit(rosterData.players, { teamId, role, focus, minimumMinutes, query }) : [], [rosterData, focus, minimumMinutes, query, role, teamId]);
-  const allCandidates = useMemo(() => rosterData ? buildRecruitingFit(rosterData.players, { teamId, role, focus, minimumMinutes }) : [], [rosterData, focus, minimumMinutes, role, teamId]);
+  }, [focus, hydrated, minimumMinutes, notes, picked, query, role, status, teamId]);
+  const result = useMemo(() => rosterData ? buildRecruitingFit(rosterData.players, { teamId, role, focus, minimumMinutes, query, status }) : [], [rosterData, focus, minimumMinutes, query, role, status, teamId]);
+  const allCandidates = useMemo(() => rosterData ? buildRecruitingFit(rosterData.players, { teamId, role, focus, minimumMinutes, status }) : [], [rosterData, focus, minimumMinutes, role, status, teamId]);
   const summaries = useMemo(() => rosterData ? buildRoleSummaries(rosterData.players, teamId) : [], [rosterData, teamId]);
   const reviewQueue = useMemo(() => prioritizeRoleSummaries(summaries), [summaries]);
   const target = teams.find((team) => team.id === teamId);
@@ -128,10 +129,11 @@ export default function RecruitingFit({ teams }: { teams: FitTeam[] }) {
           <label className="control"><span>PROGRAM</span><select value={teamId} onChange={(event) => changeTeam(event.target.value)}>{teams.slice().sort((a, b) => (a.rank || 999) - (b.rank || 999) || a.name.localeCompare(b.name)).map((team) => <option key={team.id} value={team.id}>{team.rank ? `#${team.rank} ` : ""}{team.name}</option>)}</select></label>
           <label className="control"><span>ROLE</span><select value={role} onChange={(event) => reset(() => setRole(event.target.value as FitRole))}>{Object.entries(roleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
           <label className="control"><span>PRIORITY</span><select value={focus} onChange={(event) => reset(() => setFocus(event.target.value as FitFocus))}>{Object.entries(focusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+          <label className="control"><span>SOURCE STATUS</span><select value={status} onChange={(event) => reset(() => setStatus(event.target.value as FitStatus))}>{Object.entries(fitStatusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
           <label className="control"><span>MINIMUM PRIOR MINUTES</span><select value={minimumMinutes} onChange={(event) => reset(() => setMinimumMinutes(Number(event.target.value)))}><option value={200}>200+ minutes</option><option value={400}>400+ minutes</option><option value={800}>800+ minutes</option></select></label>
           <label className="control"><span>PLAYER OR PROGRAM</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search candidate or school" /></label>
         </div>
-        <p className="note" role="status">{liveRoster ? "Live Cloudflare D1 roster edition connected. " : liveRosterError ? `${liveRosterError} Showing the bundled roster release. ` : "Checking the live roster observation edition… "}{focusDescriptions[focus]} Candidates are source-listed 2026–27 players outside the selected program with an exact prior production record. Scores combine a 70% priority percentile and 30% prior-minutes percentile among the role and workload sample.</p>
+        <p className="note" role="status">{liveRoster ? "Live Cloudflare D1 roster edition connected. " : liveRosterError ? `${liveRosterError} Showing the bundled roster release. ` : "Checking the live roster observation edition… "}{focusDescriptions[focus]} Showing {fitStatusLabels[status].toLowerCase()}. Candidates are source-listed 2026–27 players outside the selected program with an exact prior production record. Scores combine a 70% priority percentile and 30% prior-minutes percentile among the selected source-status, role and workload sample.</p>
         {rosterData && <details className="note" style={{ marginTop: 12 }}><summary>Fit board edition receipt</summary><div className="table-scroll" style={{ marginTop: 10 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved (UTC)</th><th>SHA-256</th><th>Status</th></tr></thead><tbody><tr><td>{sourceReceipt?.dataset.replaceAll("_", " ") || "rosters"}</td><td>{sourceReceipt?.fetchedAt ? new Date(sourceReceipt.fetchedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}</td><td><code>{sourceReceipt?.sha256 || "—"}</code></td><td>{sourceReceipt ? "Verified digest" : "Receipt unavailable"}</td></tr></tbody></table></div><p style={{ marginTop: 10 }}>A verified digest identifies the retained roster edition behind this shortlist. A missing or malformed receipt keeps the fit rows usable as observations but removes the verification claim. This does not establish eligibility, transfer status or a projected role.</p></details>}
         <div className="button-row" style={{ marginTop: 14 }}><button className="button secondary" type="button" onClick={share}>Copy fit board link</button>{picked.length > 0 && <button className="button secondary" type="button" onClick={clearShortlist}>Clear private shortlist</button>}{copied && <span className="note" role="status">{copied}</span>}{savedMessage && <span className="note" role="status">{savedMessage}</span>}</div>
       </section>
