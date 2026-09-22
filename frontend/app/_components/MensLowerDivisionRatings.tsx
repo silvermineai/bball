@@ -54,6 +54,12 @@ export default function MensLowerDivisionRatings({ division }: { division: MensL
           <strong>{current.coverage.teams.toLocaleString()}</strong><span>source teams</span>
           <strong>{current.coverage.source_receipts.toLocaleString()}</strong><span>response receipts</span>
         </div>
+        <div className="table-scroll" style={{ marginTop: 16 }}>
+          <table className="data-table"><thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
+            {current.readiness.map((check) => <tr key={check.key}><th scope="row">{check.key.replaceAll("_", " ")}</th><td><span className={`readiness-state readiness-state-${check.status === "ready" || check.status === "retrospective_only" ? "ready" : "missing"}`}>{check.status === "retrospective_only" ? "Retrospective only" : check.status === "ready" ? "Ready" : "Blocked"}</span></td><td>{check.detail}</td></tr>)}
+          </tbody></table>
+        </div>
+        <p className="note" role="status">Target-season schedule: {current.target_schedule.status} · {current.target_schedule.games.toLocaleString()} games. {current.target_schedule.note}</p>
         <div className="toolbar" style={{ marginTop: 16 }}>
           <label className="control"><span>SEARCH TEAM</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Team, conference, or ID" /></label>
           <label className="control"><span>SORT BY</span><select value={sort} onChange={(event) => setSort(event.target.value as MensLowerRatingsSort)}><option value="rank">Model rank</option><option value="rating">Rating</option><option value="win_pct">Win %</option><option value="avg_margin">Average margin</option><option value="team">Team</option></select></label>

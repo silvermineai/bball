@@ -28,6 +28,8 @@ describe("men's lower-division ratings", () => {
     const parsed = parseMensLowerRatingsAsset(release);
     expect(parsed.divisions.d2.model_id).toMatch(/^mbb-lower-ratings-v1-d2-/);
     expect(parsed.divisions.d3.model_id).toMatch(/^mbb-lower-ratings-v1-d3-/);
+    expect(parsed.divisions.d2.target_schedule).toMatchObject({ status: "missing", games: 0 });
+    expect(parsed.divisions.d3.readiness.find((check) => check.key === "target_schedule")).toMatchObject({ status: "blocked" });
   });
 
   it("fails closed for a different gender or broken rank sequence", () => {
@@ -47,4 +49,3 @@ describe("men's lower-division ratings", () => {
     expect(sortMensLowerRatings(rows, "team", "asc").map((row) => row.team_id)).toEqual(["alpha", "beta"]);
   });
 });
-
