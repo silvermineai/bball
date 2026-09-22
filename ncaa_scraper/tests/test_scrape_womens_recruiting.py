@@ -9,6 +9,7 @@ _module = importlib.util.module_from_spec(_module_spec)
 _module_spec.loader.exec_module(_module)
 listed_ids = _module.listed_ids
 normalize = _module.normalize
+capture = _module.capture
 
 
 class WomensRecruitingCaptureTests(unittest.TestCase):
@@ -32,6 +33,29 @@ class WomensRecruitingCaptureTests(unittest.TestCase):
         self.assertIsNone(row["rank"])
         self.assertIsNone(row["committed_team_id"])
         self.assertEqual(row["source_sha256"], hashlib.sha256(b"detail").hexdigest())
+
+    def test_capture_verifies_exact_api_robots_policy_before_requests(self):
+        calls = []
+
+        def robots(url):
+            calls.append(("robots", url))
+            return {"robots_url": "https://sports.core.api.espn.com/robots.txt", "robots_sha256": "a" * 64, "crawl_delay_seconds": None}
+
+        def fetch(url):
+            calls.append(("fetch", url))
+            if "/seasons/2027/recruits" in url:
+                return ({"count": 1, "pageIndex": 1, "pageSize": 200, "pageCount": 1, "items": [{"$ref": "https://sports.core.api.espn.com/v2/sports/basketball/leagues/womens-college-basketball/recruits/10"}]}, b"list")
+            return ({"athlete": {"id": "10", "displayName": "Ava Example"}, "grade": 93, "attributes": [], "status": {}}, b"detail")
+
+        original_robots, original_fetch = _module.verify_robots_policy, _module.fetch
+        try:
+            _module.verify_robots_policy, _module.fetch = robots, fetch
+            artifact = capture(2027, workers=1)
+        finally:
+            _module.verify_robots_policy, _module.fetch = original_robots, original_fetch
+        self.assertEqual(calls[0][0], "robots")
+        self.assertEqual(calls[1][0], "fetch")
+        self.assertEqual(artifact["source"]["robots_policy"]["robots_sha256"], "a" * 64)
 
 
 if __name__ == "__main__":

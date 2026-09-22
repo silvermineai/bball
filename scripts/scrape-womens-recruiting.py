@@ -13,12 +13,18 @@ import concurrent.futures
 import hashlib
 import json
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
+# The scraper package is nested in the repository. Keep the robots-policy
+# helper available when this script is invoked directly from ``scripts/``.
+sys.path.insert(0, str(ROOT / "ncaa_scraper"))
+from ncaa_scraper.espn_robots import verify_robots_policy
+
 DEFAULT_OUTPUT = ROOT / "frontend/public/data/basketball/womens-recruiting.json"
 BASE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/womens-college-basketball"
 LIST_URL = BASE + "/seasons/{season}/recruits?limit=200"
@@ -116,7 +122,12 @@ def normalize(detail: dict, athlete_id: str, raw_body: bytes, season: int, captu
 def capture(season: int = 2027, workers: int = 8) -> dict:
     if not 2025 <= season <= 2035 or not 1 <= workers <= 8:
         raise ValueError("season or worker count is outside the capture bound")
-    listing, listing_body = fetch(LIST_URL.format(season=season))
+    list_url = LIST_URL.format(season=season)
+    # ESPN's API origin is separate from its web origin. Verify the exact
+    # origin before the first list or detail request and retain the receipt in
+    # the release so a future refresh can be audited without guessing policy.
+    robots_policy = verify_robots_policy(list_url)
+    listing, listing_body = fetch(list_url)
     ids = listed_ids(listing)
     captured_at = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
@@ -142,6 +153,7 @@ def capture(season: int = 2027, workers: int = 8) -> dict:
             "list_sha256": hashlib.sha256(listing_body).hexdigest(),
             "detail_url_template": DETAIL_URL,
             "receipt_count": len(records) + 1,
+            "robots_policy": robots_policy,
             "identity_policy": "ESPN recruit athlete IDs remain in a women-specific namespace; no men's recruiting row or team identity is joined.",
         },
         "coverage": {
