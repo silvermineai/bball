@@ -39,6 +39,7 @@ import { news } from "./news";
 import { footballSourceStats } from "./football-source-stats";
 import { footballRecruiting } from "./football-recruiting";
 import { footballForecasts } from "./football-forecasts";
+import { footballLowerForecasts } from "./football-lower-forecasts";
 import { possessionStyle } from "./possession-style";
 import { ncaaBoxDb, researchDb } from "./research-db";
 import { researchScorecard } from "./research-scorecard";
@@ -276,6 +277,7 @@ app.route("/api/football/player-history", footballPlayerHistory);
 app.route("/api/football/source-stats", footballSourceStats);
 app.route("/api/football/recruiting", footballRecruiting);
 app.route("/api/football/research/forecasts", footballForecasts);
+app.route("/api/football/research/lower-forecasts", footballLowerForecasts);
 
 const footballPlayerQuery = z.object({
   season: z.coerce.number().int().min(2010).max(2035).default(2025),
