@@ -311,7 +311,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
                 <div><dt>Rank coverage</dt><dd>{rankTrajectory.rankedCaptures} / {rankTrajectory.totalCaptures}<small>{(rankTrajectory.rankCoverage * 100).toFixed(0)}% of captures</small></dd></div>
                 <div><dt>Average recorded rank</dt><dd>#{rankTrajectory.averageRank.toFixed(1)}<small>ranked captures only</small></dd></div>
               </div>
-              <p className="note" style={{ marginTop: 12 }}>The endpoint comparison uses the first and latest retained ranked captures. Best rank, average rank and range summarize the same exact-ID history; unranked captures remain in the coverage denominator and are not scored.</p>
+              <p className="note" style={{ marginTop: 12 }}>{rankTrajectory.latestCaptureRanked ? "The endpoint comparison uses the first and latest retained ranked captures." : "The newest retained capture is unranked, so the endpoint comparison stops at the latest ranked capture."} Best rank, average rank and range summarize the same exact-ID history; unranked captures remain in the coverage denominator and are not scored.</p>
             </>}
             {gradeTrajectory && <>
               <div className="raw-stat-grid" style={{ marginTop: 16 }}>

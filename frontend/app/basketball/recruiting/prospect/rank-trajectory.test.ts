@@ -24,6 +24,7 @@ describe("prospectRankTrajectory", () => {
       totalCaptures: 4,
       rankedCaptures: 3,
       rankCoverage: 0.75,
+      latestCaptureRanked: true,
       firstRank: 80,
       latestRank: 60,
       bestRank: 50,
@@ -38,6 +39,16 @@ describe("prospectRankTrajectory", () => {
   it("labels decline and unchanged endpoints", () => {
     expect(prospectRankTrajectory([capture(10, 0), capture(24, 1)])?.direction).toBe("declined");
     expect(prospectRankTrajectory([capture(10, 0), capture(10, 1)])?.direction).toBe("unchanged");
+  });
+
+  it("marks when the newest retained capture is unranked", () => {
+    expect(prospectRankTrajectory([capture(10, 0), capture(null, 1)])).toMatchObject({
+      latestCaptureRanked: false,
+      firstRank: 10,
+      latestRank: 10,
+      rankedCaptures: 1,
+      totalCaptures: 2,
+    });
   });
 
   it("withholds a trajectory when no positive rank is recorded", () => {

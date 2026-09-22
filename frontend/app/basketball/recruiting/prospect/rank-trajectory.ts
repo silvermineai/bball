@@ -4,6 +4,8 @@ export type ProspectRankTrajectory = {
   totalCaptures: number;
   rankedCaptures: number;
   rankCoverage: number;
+  /** Whether the newest retained capture itself has a usable positive rank. */
+  latestCaptureRanked: boolean;
   firstRank: number;
   latestRank: number;
   bestRank: number;
@@ -37,6 +39,9 @@ export function prospectRankTrajectory(
     totalCaptures: history.length,
     rankedCaptures: ranked.length,
     rankCoverage: ranked.length / history.length,
+    latestCaptureRanked: history.at(-1)?.rank != null
+      && Number.isSafeInteger(history.at(-1)?.rank)
+      && history.at(-1)!.rank! > 0,
     firstRank,
     latestRank,
     bestRank,
