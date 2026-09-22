@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmt } from "../_lib/format";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
+import { ncaaPlayerHref, ncaaPlayerShotHref } from "../_lib/ncaa-player-links";
 
 export type NationalPlayerRow = {
   player_id: number | string;
@@ -395,12 +396,12 @@ export default function LiveNationalPlayerTable({
       {error ? <p className={players.length ? "note" : "empty"} role="status">{error}{players.length ? "" : " Try another field or return to points per game."}</p> : null}
       <div className="dashboard-table-wrap" aria-busy={loading}>
         <table className="data-table dashboard-table">
-          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Division</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">3P/G</th><th className="numeric">MPG</th><th className="numeric">A/TO</th><th className="numeric">D-D</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th>Source snapshot</th></tr></thead>
+          <thead><tr><th>{selectedMetric.rankLabel} rank</th><th>Division</th><th>Player</th><th>Team</th><th className="numeric">GP</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">3P/G</th><th className="numeric">MPG</th><th className="numeric">A/TO</th><th className="numeric">D-D</th><th className="numeric">PF/G</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th>Shot map</th><th>Source snapshot</th></tr></thead>
           <tbody>{players.slice(0, rowLimit).map((player) => (
           <tr key={player.player_id}>
             <td className="rank-number">{player.leader_rank ?? "—"}</td>
             <td>D{player.division}</td>
-            <th scope="row"><Link href={`/basketball/ncaa-player/?id=${player.player_id}&season=${season}`}>{player.name}</Link><small>{player.conference || "Conference unavailable"}</small></th>
+            <th scope="row"><Link href={ncaaPlayerHref(player.player_id, season)}>{player.name}</Link><small>{player.conference || "Conference unavailable"}</small></th>
             <td>{player.team_name || "—"}</td>
             <td className="numeric">{player.games ?? "—"}</td>
             <td className="numeric">{metric === "ppg" ? <strong>{fmt(metricValue(player, "ppg"))}</strong> : fmt(metricValue(player, "ppg"))}</td>
@@ -417,6 +418,7 @@ export default function LiveNationalPlayerTable({
             <td className="numeric">{metric === "fg_pct" ? <strong>{pct(metricValue(player, "fg_pct"))}</strong> : pct(metricValue(player, "fg_pct"))}</td>
             <td className="numeric">{metric === "three_pct" ? <strong>{pct(metricValue(player, "three_pct"))}</strong> : pct(metricValue(player, "three_pct"))}</td>
             <td className="numeric">{metric === "ft_pct" ? <strong>{pct(metricValue(player, "ft_pct"))}</strong> : pct(metricValue(player, "ft_pct"))}</td>
+            <td>{player.division === 1 ? <Link className="text-link" href={ncaaPlayerShotHref(player.player_id, season)}>Open court →</Link> : <span className="note">D1 coordinates only</span>}</td>
             <td>
               {sourceStatEntries(player).length ? <details className="ranking-recorded-details"><summary>{sourceStatEntries(player).length} source snapshot field{sourceStatEntries(player).length === 1 ? "" : "s"}</summary>{sourceStatEntries(player).map(([key, source]) => <small key={key}><strong>{key}</strong> · rank {source.rank ?? "—"} · value {source.value ?? "—"}<br />headers: {source.headers.join(" · ")}<br />cells: {source.cells.join(" · ")}</small>)}</details> : <span className="note">—</span>}
             </td>
