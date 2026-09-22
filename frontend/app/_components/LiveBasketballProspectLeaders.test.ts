@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import { buildProspectParams, formatProspectRank, formatProspectSize, parseProspectBoardFilters, prospectBoardFilterSearch, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, prospectRankBreakdown, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
+import { buildProspectParams, formatProspectRank, formatProspectSize, parseProspectBoardFilters, prospectBoardFilterSearch, prospectBoardResponseState, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, prospectRankBreakdown, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
 
 describe("homepage recruiting section", () => {
   it("renders the prospect board as the fifth dashboard section", () => {
@@ -66,6 +66,19 @@ describe("prospect class labels", () => {
 
   it("omits empty optional filters instead of broadening them into values", () => {
     expect(buildProspectParams({ season: 2028, page: 0 }).toString()).toBe("season=2028&page=0&committed=all");
+  });
+});
+
+describe("prospect response states", () => {
+  it("keeps a valid zero-row filter result distinct from an unavailable release", () => {
+    expect(prospectBoardResponseState({ rows: [] })).toBe("empty");
+    expect(prospectBoardResponseState({ rows: [], source: "live" })).toBe("empty");
+    expect(prospectBoardResponseState({ rows: [], source: "unavailable" })).toBe("unavailable");
+  });
+
+  it("requires an array of rows before calling a response usable", () => {
+    expect(prospectBoardResponseState({ rows: undefined })).toBe("unavailable");
+    expect(prospectBoardResponseState({ rows: [{ athlete_id: "1", name: "Guard" }] })).toBe("ready");
   });
 });
 

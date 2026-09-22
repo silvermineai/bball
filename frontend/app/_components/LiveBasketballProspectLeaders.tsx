@@ -59,6 +59,8 @@ type ProspectResponse = {
     best_rank?: number | null;
     average_rank?: number | null;
   }>;
+  source?: "live" | "unavailable" | string;
+  unavailable_reason?: string;
 };
 
 const prospectSeasons = [2025, 2026, 2027, 2028, 2029, 2030] as const;
@@ -66,6 +68,7 @@ export type ProspectSeason = (typeof prospectSeasons)[number];
 export type ProspectCommitment = "all" | "yes" | "no";
 export type ProspectMovement = "all" | "up" | "down" | "unchanged" | "new" | "unavailable";
 export type ProspectRankMax = "" | "10" | "25" | "50" | "100";
+export type ProspectBoardResponseState = "ready" | "empty" | "unavailable";
 const prospectPositions = ["PG", "SG", "SF", "PF", "C"] as const;
 export type ProspectPosition = "" | (typeof prospectPositions)[number];
 export type ProspectBoardFilters = {
@@ -252,6 +255,19 @@ export function validateProspectExportPage(
   return payload.rows;
 }
 
+/**
+ * Keep a valid zero-row filter result distinct from a failed live release.
+ * The API deliberately returns an empty rows array for a query with no
+ * matches; treating that as unavailable hides useful denominator and reset
+ * controls from a coach searching a narrow class or position.
+ */
+export function prospectBoardResponseState(
+  payload: Pick<ProspectResponse, "source"> & { rows?: Prospect[] | null },
+): ProspectBoardResponseState {
+  if (payload.source === "unavailable" || !Array.isArray(payload.rows)) return "unavailable";
+  return payload.rows.length > 0 ? "ready" : "empty";
+}
+
 export const formatProspectSize = (row: Prospect) => {
   const height = row.height_inches;
   const weight = row.weight_pounds;
@@ -264,7 +280,7 @@ export const formatProspectSize = (row: Prospect) => {
 
 export default function LiveBasketballProspectLeaders() {
   const [data, setData] = useState<ProspectResponse | null>(null);
-  const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
+  const [status, setStatus] = useState<"checking" | ProspectBoardResponseState>("checking");
   const [season, setSeason] = useState<ProspectSeason>(2027);
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState<ProspectPosition>("");
@@ -348,7 +364,7 @@ export default function LiveBasketballProspectLeaders() {
       .then((payload) => {
         if (!controller.signal.aborted) {
           setData(payload);
-          setStatus(payload.rows?.length ? "ready" : "unavailable");
+          setStatus(prospectBoardResponseState(payload));
         }
       })
       .catch((reason: unknown) => {
@@ -360,6 +376,16 @@ export default function LiveBasketballProspectLeaders() {
       controller.abort();
     };
   }, [committed, movementFilter, position, query, rankMax, season]);
+
+  const resetFilters = () => {
+    setSeason(2027);
+    setQuery("");
+    setPosition("");
+    setCommitted("all");
+    setRankMax("");
+    setMovementFilter("all");
+    setRowLimit(10);
+  };
 
   return (
     <section className="dashboard-section" aria-labelledby="dashboard-prospects">
@@ -384,7 +410,7 @@ export default function LiveBasketballProspectLeaders() {
       </div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       <p className="dashboard-caption">Current national, position, state and region ranks, movement, grade and destination in a compact {season} class view. Each dimensional rank is the publisher&apos;s recorded rank within that cohort; it is not a Silvermine grade or role projection. Filters are preserved in the URL so a board view can be shared with a staff member. The full board supports every tracked class, position and commitment filter. “No recorded destination” means the release has no committed team ID; it does not mean no recruiting interest.</p>
-      {status === "checking" ? <p className="empty" role="status">Loading current prospects…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live prospect board is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : (
+      {status === "checking" ? <p className="empty" role="status">Loading current prospects…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live prospect board is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : status === "empty" ? <p className="empty" role="status">No prospects match these filters. The retained release is available, but this class, position, destination, movement or search combination returned zero rows. <button className="text-link" type="button" onClick={resetFilters}>Clear filters</button> · <Link href="/basketball/recruiting/">Open the full recruiting board →</Link></p> : (
         <>
           <div className="dashboard-strip dashboard-recruiting-strip">
             <div><strong>{data.total.toLocaleString()}</strong><span>Prospects tracked</span></div>
