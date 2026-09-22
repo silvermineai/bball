@@ -47,6 +47,7 @@ import { basketballRosters } from "./basketball-rosters";
 import { matchupPersonnel } from "./matchup-personnel";
 import { footballDb } from "./football-db";
 import { publicReceipt } from "./public-receipts";
+import { womensLowerStats } from "./womens-lower-stats";
 
 type Bindings = Env;
 
@@ -256,6 +257,7 @@ app.route("/api/basketball/research/impact-within-team", withinImpactSource);
 app.route("/api/basketball/research/impact", impactSource);
 app.route("/api/basketball/research/lineups", lineupSource);
 app.route("/api/basketball/research/forecasts", basketballForecasts);
+app.route("/api/basketball/research/womens-lower-stats", womensLowerStats);
 // Women’s forecasts are a separately trained, source-native edition. Keep
 // their static publication boundary explicit so the men’s D1 warehouse can
 // never be selected as a fallback for WBB.
