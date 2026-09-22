@@ -42,6 +42,17 @@ describe("lower football player aggregation", () => {
     expect(() => validateLowerFootballPlayerArchive({ ...validArchive(), coverage: { ...validArchive().coverage, players: 2 } })).toThrow(/coverage does not match/);
   });
 
+  it("rejects rows when source keys cannot be paired to exactly one raw value", () => {
+    expect(() => validateLowerFootballPlayerArchive({
+      ...validArchive(),
+      rows: [row({ stats: ["10/20", "200"] })],
+    })).toThrow(/invalid player rows/);
+    expect(() => validateLowerFootballPlayerArchive({
+      ...validArchive(),
+      rows: [row({ keys: ["passingYards", "passingYards", "passingTouchdowns"], stats: ["200", "200", "2"] })],
+    })).toThrow(/invalid player rows/);
+  });
+
   it("aggregates exact athlete and team identities across games", () => {
     const result = aggregateLowerFootballPlayers([
       row(),

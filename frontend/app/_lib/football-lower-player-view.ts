@@ -62,12 +62,17 @@ const dateString = (value: unknown) => value == null || (typeof value === "strin
 function validLowerPlayerRow(value: unknown, season: number, gameIds: ReadonlySet<string>): value is LowerFootballRawRow {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
+  // Provider values are positionally paired with keys. A mismatch makes the
+  // source field identity ambiguous, so reject the row before display,
+  // ranking, or export instead of shifting or silently dropping values.
   return row.season === season
     && (row.division === "d2" || row.division === "d3")
     && text(row.game_id) && gameIds.has(row.game_id)
     && text(row.team_id) && text(row.athlete_id) && text(row.athlete)
-    && text(row.category) && Array.isArray(row.keys) && row.keys.every(text)
-    && Array.isArray(row.stats) && row.stats.every((item) => typeof item === "string")
+    && text(row.category) && Array.isArray(row.keys) && row.keys.length > 0
+    && row.keys.every(text) && new Set(row.keys).size === row.keys.length
+    && Array.isArray(row.stats) && row.stats.length === row.keys.length
+    && row.stats.every((item) => typeof item === "string")
     && (row.labels == null || (Array.isArray(row.labels) && row.labels.every((item) => typeof item === "string")))
     && dateString(row.date);
 }
