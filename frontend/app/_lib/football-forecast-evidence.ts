@@ -15,6 +15,12 @@ export type FootballForecastEvidence = {
   } | null;
 };
 
+export type FootballForecastAvailability = {
+  state: "forecasted" | "unseen_team" | "out_of_scope" | "division_unavailable" | "missing";
+  label: string;
+  detail: string;
+};
+
 const finite = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
@@ -26,6 +32,57 @@ export function footballForecastDivision(value: unknown): FootballForecastDivisi
   if (["d2", "division2", "divisionii"].includes(normalized)) return "d2";
   if (["d3", "division3", "divisioniii"].includes(normalized)) return "d3";
   return null;
+}
+
+/**
+ * Explain why a scheduled football game does not have a score estimate.
+ *
+ * The overview intentionally leaves out unsupported games rather than
+ * manufacturing a probability. Keeping this explanation beside the card
+ * makes the coverage boundary actionable: an unseen D1 team is different
+ * from a lower-division game and from a schedule row whose division cannot
+ * be joined exactly.
+ */
+export function footballForecastAvailability(
+  game: Pick<Game, "home_id" | "away_id" | "home_name" | "away_name" | "home_division" | "away_division" | "prediction">,
+  modelTeams: readonly string[] = [],
+): FootballForecastAvailability {
+  if (game.prediction) {
+    return { state: "forecasted", label: "Forecast available", detail: "A registered model estimate is attached to this game." };
+  }
+  const homeDivision = footballForecastDivision(game.home_division);
+  const awayDivision = footballForecastDivision(game.away_division);
+  if (!homeDivision || !awayDivision || homeDivision !== awayDivision) {
+    return {
+      state: "division_unavailable",
+      label: "Division scope unavailable",
+      detail: "No estimate: the retained schedule does not provide one exact division for both teams.",
+    };
+  }
+  if (homeDivision !== "d1") {
+    return {
+      state: "out_of_scope",
+      label: "Outside primary model scope",
+      detail: "No estimate: the primary model is FBS-only; lower-division schedules remain available for research.",
+    };
+  }
+  const known = new Set(modelTeams.map(String));
+  const unseen = [
+    known.has(String(game.away_id)) ? null : game.away_name || String(game.away_id),
+    known.has(String(game.home_id)) ? null : game.home_name || String(game.home_id),
+  ].filter((name): name is string => Boolean(name));
+  if (unseen.length) {
+    return {
+      state: "unseen_team",
+      label: "Model coverage gap",
+      detail: `No estimate: ${unseen.join(" and ")} is outside the trained FBS team field.`,
+    };
+  }
+  return {
+    state: "missing",
+    label: "Forecast unavailable",
+    detail: "Both teams are in the trained field, but no valid forecast row is published for this edition.",
+  };
 }
 
 /**
@@ -93,4 +150,3 @@ export function footballForecastEvidence(
     reconstruction,
   };
 }
-

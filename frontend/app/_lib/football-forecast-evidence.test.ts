@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { footballForecastEvidence, footballForecastDivision } from "./football-forecast-evidence";
+import { footballForecastAvailability, footballForecastEvidence, footballForecastDivision } from "./football-forecast-evidence";
 
 const model = {
   teams: ["away", "home"],
@@ -10,6 +10,8 @@ const model = {
 const game = (overrides: Record<string, unknown> = {}) => ({
   home_id: "home",
   away_id: "away",
+  home_name: "Home",
+  away_name: "Away",
   home_division: "FBS",
   away_division: "FCS",
   neutral: 0,
@@ -50,5 +52,27 @@ describe("football forecast evidence", () => {
       reasons: ["no published forecast"],
       reconstruction: null,
     });
+  });
+});
+
+describe("football forecast availability", () => {
+  it("distinguishes an unseen D1 team from lower-division scope", () => {
+    expect(footballForecastAvailability({ ...game({ prediction: null }), home_name: "Known", away_name: "New Team", away_id: "new" }, ["home"])).toMatchObject({
+      state: "unseen_team",
+      label: "Model coverage gap",
+    });
+    expect(footballForecastAvailability(game({ prediction: null, home_division: "D2", away_division: "D2" }), ["home", "away"])).toMatchObject({
+      state: "out_of_scope",
+      label: "Outside primary model scope",
+    });
+  });
+
+  it("keeps mixed divisions and missing rows explicitly unavailable", () => {
+    expect(footballForecastAvailability(game({ prediction: null, home_division: "FBS", away_division: "unknown" }), ["home", "away"]).state).toBe("division_unavailable");
+    expect(footballForecastAvailability(game({ prediction: null }), ["home", "away"])).toMatchObject({
+      state: "missing",
+      detail: expect.stringContaining("Both teams are in the trained field"),
+    });
+    expect(footballForecastAvailability(game()).state).toBe("forecasted");
   });
 });

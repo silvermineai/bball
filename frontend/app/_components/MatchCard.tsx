@@ -7,7 +7,7 @@ import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-displ
 import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
 import { footballMatchupContextEdgeLabel, footballMatchupContextRows, type FootballMatchupContextRow } from "../_lib/football-matchup-context";
 import { footballPersonnelReadinessRows, personnelReadinessStatusLabel, type FootballPersonnelReadinessGame } from "../_lib/football-personnel-readiness";
-import { footballForecastEvidence } from "../_lib/football-forecast-evidence";
+import { footballForecastAvailability, footballForecastEvidence } from "../_lib/football-forecast-evidence";
 const categoryLabel: Record<string, string> = {
   passing: "Pass",
   rushing: "Rush",
@@ -49,6 +49,7 @@ export default function MatchCard({
   const modelFactors = p && model ? footballModelFactors(model, g) : null;
   const reliability = p ? exactFootballCalibrationReliability(p, calibrationReliability, expectedModelId) : null;
   const forecastEvidence = footballForecastEvidence(g, model, expectedModelId);
+  const forecastAvailability = footballForecastAvailability(g, model?.teams);
   return (
     <article className="match-card">
       <div className="meta">
@@ -124,8 +125,8 @@ export default function MatchCard({
         </>
       ) : (
         <p className="note">
-          No forecast: a team is outside the model’s trained FBS field. Schedule
-          retained for planning.
+          <strong>{forecastAvailability.label}</strong><br />
+          {forecastAvailability.detail} Schedule retained for planning.
         </p>
       )}
       {intel && intel.programs.some((program) => program.leaders.length) && (
