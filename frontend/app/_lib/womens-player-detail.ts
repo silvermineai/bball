@@ -50,6 +50,17 @@ export type WomensPlayerDetailKind = "count" | "rate" | "percentage";
 export type WomensPlayerDetailField = readonly [key: string, label: string, kind: WomensPlayerDetailKind];
 
 /**
+ * Context fields kept visible in the primary player table. These are source
+ * values shared by the season and game-box player releases, so the table can
+ * show role and rebounding shape without deriving a value or joining names.
+ */
+export const womensPlayerTableContextFields = [
+  ["gamesStarted", "GS"],
+  ["avgOffensiveRebounds", "ORB/G"],
+  ["avgDefensiveRebounds", "DRB/G"],
+] as const;
+
+/**
  * Fields present in the retained women's player-season release but hidden by
  * the compact ranking columns. These are source values; the view never fills
  * a missing field with a derived zero.

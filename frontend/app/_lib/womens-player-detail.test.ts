@@ -10,6 +10,7 @@ import {
   womensPlayerCsvRows,
   compareWomensPlayerRows,
   womensPlayerSourceCoverage,
+  womensPlayerTableContextFields,
 } from "./womens-player-detail";
 
 describe("women's player retained detail", () => {
@@ -19,6 +20,14 @@ describe("women's player retained detail", () => {
       "points", "totalRebounds", "avgTurnovers", "fieldGoalPct",
       "assistTurnoverRatio", "doubleDouble", "technicalFouls",
     ]));
+  });
+
+  it("keeps role and rebounding context in the primary table schema", () => {
+    expect(womensPlayerTableContextFields).toEqual([
+      ["gamesStarted", "GS"],
+      ["avgOffensiveRebounds", "ORB/G"],
+      ["avgDefensiveRebounds", "DRB/G"],
+    ]);
   });
 
   it("formats percentages and leaves absent or non-finite values unavailable", () => {
