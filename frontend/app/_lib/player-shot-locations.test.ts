@@ -9,6 +9,7 @@ import {
   playerShotBand,
   playerShotSide,
   summarizePlayerShotBands,
+  summarizePlayerShotProfile,
   summarizePlayerShotSides,
   toPlayerCourtPoint,
   type PlayerShotLocation,
@@ -114,5 +115,37 @@ describe("player shot location helpers", () => {
       { side: "Middle", attempts: 3, knownOutcomes: 3, makes: 1, share: 0.6, makeRate: 1 / 3 },
       { side: "Chart right", attempts: 1, knownOutcomes: 1, makes: 1, share: 0.2, makeRate: 1 },
     ]);
+  });
+
+  it("turns the map into a denominator-aware quick read", () => {
+    const summary = summarizePlayerShotProfile([
+      shot({ x: 0, y: 1, made: true }),
+      shot({ x: 1, y: 2, made: false }),
+      shot({ x: -10, y: 30, made: true }),
+      shot({ x: null, y: null, made: false, location_status: "missing" }),
+      shot({ x: 0, y: 60, made: true }),
+    ], 6);
+
+    expect(summary.totalAttempts).toBe(6);
+    expect(summary.plottedAttempts).toBe(3);
+    expect(summary.plottedShare).toBeCloseTo(0.5);
+    expect(summary.dominantBand?.band).toBe("Rim");
+    expect(summary.dominantBand?.attempts).toBe(2);
+    expect(summary.dominantSide?.side).toBe("Middle");
+    expect(summary.dominantSide?.attempts).toBe(2);
+  });
+
+  it("does not invent a dominant band or side when the plotted counts tie", () => {
+    const summary = summarizePlayerShotProfile([
+      shot({ x: -9, y: 1 }),
+      shot({ x: 9, y: 1 }),
+      shot({ x: -9, y: 15 }),
+      shot({ x: 9, y: 15 }),
+      shot({ x: 0, y: 30 }),
+      shot({ x: 0, y: 32 }),
+    ]);
+
+    expect(summary.dominantBand).toBeNull();
+    expect(summary.dominantSide).toBeNull();
   });
 });

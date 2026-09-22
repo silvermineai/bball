@@ -249,6 +249,46 @@ export function summarizePlayerShotSides(shots: readonly PlayerShotLocation[]) {
   }));
 }
 
+export type PlayerShotProfileSummary = {
+  /** Source attempt denominator, or returned rows when the source total is unavailable. */
+  totalAttempts: number;
+  /** Attempts with coordinates inside the one-half-court drawing. */
+  plottedAttempts: number;
+  /** Plotted attempts divided by the retained source denominator. */
+  plottedShare: number | null;
+  /** A unique leader only; ties remain unavailable rather than being broken arbitrarily. */
+  dominantBand: ReturnType<typeof summarizePlayerShotBands>[number] | null;
+  /** A unique leader only; ties remain unavailable rather than being broken arbitrarily. */
+  dominantSide: ReturnType<typeof summarizePlayerShotSides>[number] | null;
+};
+
+function uniqueAttemptLeader<T extends { attempts: number }>(rows: readonly T[]) {
+  const maximum = Math.max(0, ...rows.map((row) => row.attempts));
+  if (!maximum) return null;
+  const leaders = rows.filter((row) => row.attempts === maximum);
+  return leaders.length === 1 ? leaders[0] : null;
+}
+
+/**
+ * Turn the chart summaries into a short, reviewable reading aid. The source
+ * attempt denominator stays separate from the plotted count, and ties do not
+ * receive an invented "favorite" zone or side.
+ */
+export function summarizePlayerShotProfile(
+  shots: readonly PlayerShotLocation[],
+  recordedAttempts?: number | null,
+): PlayerShotProfileSummary {
+  const plottedAttempts = shots.filter(isPlottablePlayerShot).length;
+  const totalAttempts = recordedPlayerAttemptCount(recordedAttempts, shots.length);
+  return {
+    totalAttempts,
+    plottedAttempts,
+    plottedShare: totalAttempts > 0 ? plottedAttempts / totalAttempts : null,
+    dominantBand: uniqueAttemptLeader(summarizePlayerShotBands(shots)),
+    dominantSide: uniqueAttemptLeader(summarizePlayerShotSides(shots)),
+  };
+}
+
 /** Build a deterministic 10 × 9 attempt-density grid for a player. */
 export function buildPlayerCourtZones(
   shots: readonly PlayerShotLocation[],

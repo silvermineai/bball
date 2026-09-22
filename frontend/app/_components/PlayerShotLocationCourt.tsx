@@ -14,6 +14,7 @@ import {
   summarizePlayerShotSides,
   matchesPlayerShotOutcome,
   recordedPlayerAttemptCount,
+  summarizePlayerShotProfile,
   unreturnedPlayerAttemptCount,
   toPlayerCourtPoint,
   type PlayerShotOutcomeFilter,
@@ -71,6 +72,7 @@ export default function PlayerShotLocationCourt({
   const totalAttempts = recordedPlayerAttemptCount(sourceAttempts, shots.length);
   const unreturnedAttempts = unreturnedPlayerAttemptCount(sourceAttempts, shots.length);
   const sourceCountMismatch = sourceAttempts != null && sourceAttempts < shots.length;
+  const profile = useMemo(() => summarizePlayerShotProfile(shots, sourceAttempts), [shots, sourceAttempts]);
   const made = plotted.filter(isMadePlayerShot).length;
   const knownOutcomes = plotted.filter(hasKnownPlayerShotOutcome).length;
   const unknownOutcomes = plotted.length - knownOutcomes;
@@ -192,6 +194,22 @@ export default function PlayerShotLocationCourt({
             {beyondHalfCourt ? `; ${beyondHalfCourt.toLocaleString()} beyond the half-court drawing` : ""}. They are retained in All attempts and omitted from the map. {unknownOutcomes.toLocaleString()} plotted outcome{unknownOutcomes === 1 ? "" : "s"} remain excluded from shooting rates.
             {sourceCountMismatch ? " The source attempt total is lower than the returned coordinate rows; the larger returned-row count is shown for integrity." : ""}
           </p>
+          <div className="mt-4 rounded border border-line bg-[#f7f8f3] p-3" aria-label="Shot profile quick read">
+            <p className="eyebrow text-court">QUICK READ</p>
+            <p className="mt-1 text-xs leading-5 text-graphite">
+              {profile.dominantBand
+                ? <><strong>{profile.dominantBand.band}</strong> is the largest geometric distance band at {(profile.dominantBand.share * 100).toFixed(1)}% of plotted attempts ({profile.dominantBand.attempts.toLocaleString()} attempts).</>
+                : "No single distance band leads the plotted attempts."}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-graphite">
+              {profile.dominantSide
+                ? <><strong>{profile.dominantSide.side}</strong> is the most common chart side at {(profile.dominantSide.share * 100).toFixed(1)}% of plotted attempts ({profile.dominantSide.attempts.toLocaleString()} attempts).</>
+                : "No single chart side leads the plotted attempts."} Chart side is a display orientation and does not establish handedness.
+            </p>
+            <p className="mt-1 text-xs leading-5 text-graphite">
+              {profile.plottedShare == null ? "Plotted share is unavailable." : `${(profile.plottedShare * 100).toFixed(1)}% of the ${profile.totalAttempts.toLocaleString()} retained attempts are inside the drawn half court.`} The bands and sides are coordinate-derived summaries, not source shot labels.
+            </p>
+          </div>
         </div>
       </div>
       {showEvents ? (
