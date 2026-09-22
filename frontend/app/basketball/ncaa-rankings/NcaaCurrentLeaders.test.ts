@@ -33,6 +33,17 @@ describe("NCAA current leader cohorts", () => {
     expect(leaders.find((entry) => entry.field === "fg_pct")?.player.name).toBe("D2 qualified");
   });
 
+  it("ranks retained total and rate fields that are separate from points per game", () => {
+    const rows = [
+      { ...player(1, 1, "Volume leader", 18), pts: 500, threes_pg: 3.4, dbl_dbl: 8 },
+      { ...player(2, 1, "Rate leader", 24), pts: 400, threes_pg: 4.1, dbl_dbl: 2 },
+    ];
+    const leaders = currentCategoryLeaders(rows, "1");
+    expect(leaders.find((entry) => entry.field === "pts")?.player.name).toBe("Volume leader");
+    expect(leaders.find((entry) => entry.field === "threes_pg")?.player.name).toBe("Rate leader");
+    expect(leaders.find((entry) => entry.field === "dbl_dbl")?.player.name).toBe("Volume leader");
+  });
+
   it("reports selected-division field coverage without turning missing values into zero", () => {
     const rows = [
       player(1, 2, "Recorded", 20),

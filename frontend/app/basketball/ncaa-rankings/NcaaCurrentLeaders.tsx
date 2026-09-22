@@ -21,6 +21,8 @@ export type IndividualPlayer = {
   spg?: number | null;
   bpg?: number | null;
   mpg?: number | null;
+  threes_pg?: number | null;
+  dbl_dbl?: number | null;
   ppg_rank?: number | null;
   fgm?: number | null;
   fga?: number | null;
@@ -49,15 +51,19 @@ export type LeaderCategory = {
   label: string;
   field: keyof IndividualPlayer;
   suffix?: string;
+  digits?: number;
   minimum?: (player: IndividualPlayer) => boolean;
 };
 
 export const leaderCategories: LeaderCategory[] = [
   { label: "Points per game", field: "ppg" },
+  { label: "Total points", field: "pts", digits: 0 },
+  { label: "3-pointers per game", field: "threes_pg" },
   { label: "Rebounds per game", field: "rpg" },
   { label: "Assists per game", field: "apg" },
   { label: "Steals per game", field: "spg" },
   { label: "Blocks per game", field: "bpg" },
+  { label: "Double-doubles", field: "dbl_dbl", digits: 0 },
   { label: "Minutes per game", field: "mpg" },
   { label: "Field-goal percentage", field: "fg_pct", suffix: "%", minimum: (player) => (player.fga || 0) >= 75 },
   { label: "Three-point percentage", field: "three_pct", suffix: "%", minimum: (player) => (player.three_fga || 0) >= 25 },
@@ -69,7 +75,7 @@ export function playersForDivision(players: IndividualPlayer[], division: "1" | 
   return players.filter((player) => player.division === Number(division));
 }
 
-export const leaderCoverageFields = ["ppg", "rpg", "apg", "spg", "bpg", "mpg", "fg_pct", "three_pct", "ft_pct"] as const;
+export const leaderCoverageFields = ["ppg", "pts", "threes_pg", "rpg", "apg", "spg", "bpg", "dbl_dbl", "mpg", "fg_pct", "three_pct", "ft_pct"] as const;
 export type LeaderCoverageField = (typeof leaderCoverageFields)[number];
 
 export function divisionCoverage(players: IndividualPlayer[], division: "1" | "2" | "3") {
@@ -137,7 +143,7 @@ export default function NcaaCurrentLeaders({ players }: { players: IndividualPla
     </section>
     <section className="paper-panel" aria-labelledby="category-leaders" style={{ marginBottom: 24 }}>
       <div className="section-heading" style={{ marginBottom: 12 }}><div><div className="eyebrow">Current season / {scopeLabel(scope)}</div><h2 id="category-leaders">National category leaders</h2></div><span className="note">Rate leaders use simple attempt and game minimums</span></div>
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Category</th><th>Leader</th><th>Program</th><th className="numeric">Value</th><th className="numeric">GP</th><th className="numeric">Rank</th></tr></thead><tbody>{categoryLeaders.map((entry) => { const rank = entry.player[`${String(entry.field)}_rank` as keyof IndividualPlayer]; return <tr key={entry.field}><th scope="row">{entry.label}</th><td>{playerLabel(entry.player, scope)}<small>{entry.player.position || "Position unavailable"}</small>{division !== "1" && <small>Published leader row · Archive ID {entry.player.player_id}</small>}</td><td><strong>{entry.player.team_name || "—"}</strong><small>{entry.player.conference || "Conference unavailable"}</small></td><td className="numeric"><strong>{number(entry.value)}{entry.suffix || ""}</strong></td><td className="numeric">{number(entry.player.games, 0)}</td><td className="numeric">{typeof rank === "number" ? number(rank, 0) : "—"}</td></tr>; })}</tbody></table></div>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Category</th><th>Leader</th><th>Program</th><th className="numeric">Value</th><th className="numeric">GP</th><th className="numeric">Rank</th></tr></thead><tbody>{categoryLeaders.map((entry) => { const rank = entry.player[`${String(entry.field)}_rank` as keyof IndividualPlayer]; return <tr key={entry.field}><th scope="row">{entry.label}</th><td>{playerLabel(entry.player, scope)}<small>{entry.player.position || "Position unavailable"}</small>{division !== "1" && <small>Published leader row · Archive ID {entry.player.player_id}</small>}</td><td><strong>{entry.player.team_name || "—"}</strong><small>{entry.player.conference || "Conference unavailable"}</small></td><td className="numeric"><strong>{number(entry.value, entry.digits ?? 1)}{entry.suffix || ""}</strong></td><td className="numeric">{number(entry.player.games, 0)}</td><td className="numeric">{typeof rank === "number" ? number(rank, 0) : "—"}</td></tr>; })}</tbody></table></div>
       {!categoryLeaders.length && <p className="empty">No qualifying {scopeLabel(scope)} category rows are published for this edition.</p>}
     </section>
     <section className="paper-panel" aria-labelledby="scoring-leaders" style={{ marginBottom: 24 }}>
