@@ -461,7 +461,7 @@ describe("live research scorecard", () => {
       {
         id: "quote-model-2", sport: "basketball", game_id: "game-settled-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads",
         captured_at: "2026-01-03T12:00:00.000000Z", updated_at: "2026-01-03T11:59:00.000000Z",
-        payload_json: JSON.stringify({ home_id: "home-2", away_id: "away-2", starts_at: "2026-01-04T00:00:00.000000Z", line: 1, home_price: 1.91, away_price: 1.91 }),
+        payload_json: JSON.stringify({ home_id: "home-2", away_id: "away-2", starts_at: "2026-01-04T00:00:00.000000Z", line: 3, home_price: 1.91, away_price: 1.91 }),
       },
     ];
     const prepare = vi.fn((sql: string) => {
@@ -521,12 +521,12 @@ describe("live research scorecard", () => {
     })]);
     expect(body.games?.[1]?.comparisons).toEqual([expect.objectContaining({
       line_result: "loss",
-      model_result: "win",
-      direction_result: "win",
+      model_result: "pass",
+      direction_result: "pass",
     })]);
     expect(body.sports.basketball.market_metrics).toMatchObject([
       { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8, line_results: { win: 1 }, model_results: { win: 1 }, error_comparison: { compared: 1, model_better: 1, line_better: 0, ties: 0 } },
-      { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9, line_results: { loss: 1 }, model_results: { win: 1 }, error_comparison: { compared: 1, model_better: 1, line_better: 0, ties: 0 } },
+      { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 7, line_results: { loss: 1 }, model_results: { pass: 1 }, error_comparison: { compared: 1, model_better: 0, line_better: 0, ties: 1 } },
     ]);
     expect(body.sports.basketball.pending_market_metrics).toEqual([]);
   });

@@ -39,7 +39,7 @@ type ForecastCatalog = {
 };
 
 function directionSummary(results: Record<string, number>) {
-  const order = ["win", "loss", "push"];
+  const order = ["win", "loss", "push", "pass"];
   return order
     .filter((key) => Number.isFinite(results[key]) && results[key] > 0)
     .map((key) => `${key} ${results[key].toLocaleString()}`)
@@ -665,6 +665,7 @@ export default function Scorecard() {
                   <th>Model Brier</th>
                   <th>Market Brier</th>
                   <th>Model direction</th>
+                  <th>Model side result</th>
                   <th>Quoted side result</th>
                 </tr>
               </thead>
@@ -683,6 +684,7 @@ export default function Scorecard() {
                     <td>{fmt(r.model_brier, 4)}</td>
                     <td>{fmt(r.market_brier, 4)}</td>
                     <td>{directionSummary(r.direction_results)}</td>
+                    <td>{directionSummary(r.model_results || {})}</td>
                     <td>{directionSummary(r.line_results || {})}</td>
                   </tr>
                 ))}
