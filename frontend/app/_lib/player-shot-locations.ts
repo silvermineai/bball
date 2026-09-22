@@ -70,6 +70,8 @@ export type PlayerShotCoordinateInput = {
 };
 
 export type PlayerShotCoordinateExportRow = {
+  player_id: string | null;
+  player_name: string | null;
   season: number;
   team_id: string;
   team_name: string | null;
@@ -103,10 +105,13 @@ export function expandPlayerShotCoordinate(raw: PlayerShotCoordinate | PlayerSho
 /** Flatten every retained coordinate event for an exact season/team export. */
 export function playerShotCoordinateExportRows(
   rows: readonly PlayerShotCoordinateInput[],
+  identity: { player_id?: string | null; player_name?: string | null } = {},
 ): PlayerShotCoordinateExportRow[] {
   return rows.flatMap((row) => (row.stats.coordinates || []).map((raw, coordinate_index) => {
     const shot = expandPlayerShotCoordinate(raw);
     return {
+      player_id: identity.player_id ?? null,
+      player_name: identity.player_name ?? null,
       season: row.season,
       team_id: row.team_id,
       team_name: row.team_name,

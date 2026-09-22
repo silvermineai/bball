@@ -44,9 +44,9 @@ describe("player shot location helpers", () => {
           { contest_id: "contest-2", x: null, y: null, made: null, zone: "unknown" },
         ],
       },
-    }])).toEqual([
-      { season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 0, contest_id: "contest-1", x: 1, y: 2, distance_ft: 12, zone: "rim", type: "layup", made: true, points: 2, raw_coordinate: '["contest-1",1,2,12,"rim","layup",true,2]' },
-      { season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 1, contest_id: "contest-2", x: null, y: null, distance_ft: null, zone: "unknown", type: null, made: null, points: null, raw_coordinate: '{"contest_id":"contest-2","x":null,"y":null,"made":null,"zone":"unknown"}' },
+    }], { player_id: "player-1", player_name: "Example Player" })).toEqual([
+      { player_id: "player-1", player_name: "Example Player", season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 0, contest_id: "contest-1", x: 1, y: 2, distance_ft: 12, zone: "rim", type: "layup", made: true, points: 2, raw_coordinate: '["contest-1",1,2,12,"rim","layup",true,2]' },
+      { player_id: "player-1", player_name: "Example Player", season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 1, contest_id: "contest-2", x: null, y: null, distance_ft: null, zone: "unknown", type: null, made: null, points: null, raw_coordinate: '{"contest_id":"contest-2","x":null,"y":null,"made":null,"zone":"unknown"}' },
     ]);
   });
 

@@ -278,7 +278,6 @@ export default function NcaaPlayerCard() {
     location_status: shot.x == null || shot.y == null ? "missing" : "located",
     text: shot.zone || "",
   }; })), [id, shootingRows]);
-  const shotCoordinateRows = useMemo(() => playerShotCoordinateExportRows(shootingRows), [shootingRows]);
   const recentForm = useMemo(() => buildNcaaRecentForm(card?.games || [], 5), [card?.games]);
   const trajectory = useMemo(
     () => buildNcaaPlayerTrajectory(card?.seasons || []),
@@ -286,6 +285,7 @@ export default function NcaaPlayerCard() {
   );
   const name = selectedRow?.player_name || roster?.player_name || card?.seasons[0]?.player_name || `Player ${id}`;
   const team = selectedRow?.team_name || roster?.team_name || card?.seasons[0]?.team_name || "Source team unavailable";
+  const shotCoordinateRows = useMemo(() => playerShotCoordinateExportRows(shootingRows, { player_id: id, player_name: name }), [id, name, shootingRows]);
   const boxSummary = useMemo(() => playerSeasonBoxSummary(selected || []), [selected]);
   const points = boxSummary.points, games = selected?.reduce((total, row) => total + (Number.isFinite(row.games) ? row.games : 0), 0) || 0, minutes = boxSummary.minutes, fga = value(selectedStats, "fga"), fgm = value(selectedStats, "fgm"), fta = value(selectedStats, "fta"), ftm = value(selectedStats, "ftm"), ast = boxSummary.assists, turnovers = boxSummary.turnovers, fouls = boxSummary.fouls, orb = value(selectedStats, "orb"), drb = value(selectedStats, "drb"), steals = boxSummary.steals, blocks = boxSummary.blocks, doubleDoubles = boxSummary.doubleDoubles;
   const ts = trueShooting({ pts: points, fga, fta });
@@ -333,9 +333,9 @@ export default function NcaaPlayerCard() {
     downloadCsv(
       `ncaa-player-${id}-${season}-shot-coordinates.csv`,
       toCsv(
-        ["Season", "Team", "Archive team ID", "Coordinate index", "Contest ID", "X (ft)", "Y (ft)", "Distance (ft)", "Zone", "Type", "Made", "Points", "Raw source coordinate JSON"],
+        ["Archive player ID", "Player", "Season", "Team", "Archive team ID", "Coordinate index", "Contest ID", "X (ft)", "Y (ft)", "Distance (ft)", "Zone", "Type", "Made", "Points", "Raw source coordinate JSON"],
         shotCoordinateRows.map((row) => [
-          row.season, row.team_name, row.team_id, row.coordinate_index, row.contest_id,
+          row.player_id, row.player_name, row.season, row.team_name, row.team_id, row.coordinate_index, row.contest_id,
           row.x, row.y, row.distance_ft, row.zone, row.type, row.made == null ? null : String(row.made), row.points, row.raw_coordinate,
         ]),
       ),
