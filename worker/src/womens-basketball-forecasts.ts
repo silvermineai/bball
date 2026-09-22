@@ -68,6 +68,26 @@ function finiteNumber(value: unknown): value is number {
 }
 
 /**
+ * The published WBB artifact rounds scores and margins independently. Keep a
+ * small tolerance for that display rounding, but reject a row whose score
+ * pair cannot produce the recorded margin.
+ */
+export const WOMENS_PREDICTION_ARITHMETIC_TOLERANCE = 0.11;
+
+export function validWomensPredictionArithmetic(
+  prediction: Record<string, unknown>,
+  tolerance = WOMENS_PREDICTION_ARITHMETIC_TOLERANCE,
+): boolean {
+  if (!Number.isFinite(tolerance) || tolerance < 0) return false;
+  const home = prediction.predicted_home_score;
+  const away = prediction.predicted_away_score;
+  const margin = prediction.predicted_margin;
+  if (!finiteNumber(home) || !finiteNumber(away) || !finiteNumber(margin)) return false;
+  if (home < 0 || away < 0) return false;
+  return Math.abs((home - away) - margin) <= tolerance;
+}
+
+/**
  * Validate the source-native WBB edition before it crosses the API boundary.
  * The endpoint deliberately accepts only the women's artifact identity and
  * never falls back to the men's D1 forecast warehouse.
@@ -111,7 +131,8 @@ export function parseWomensForecastArtifact(value: unknown): {
     if (numericValues.some((item) => !finiteNumber(item))
       || (probability as number) < 0 || (probability as number) > 1
       || (awayProbability as number) < 0 || (awayProbability as number) > 1
-      || Math.abs((probability as number) + (awayProbability as number) - 1) > 0.001) {
+      || Math.abs((probability as number) + (awayProbability as number) - 1) > 0.001
+      || !validWomensPredictionArithmetic(checked)) {
       invalid_rows += 1;
       continue;
     }
@@ -241,4 +262,3 @@ womensBasketballForecasts.get("/", zValidator("query", querySchema), async (c) =
     return c.json({ error: "The published women's basketball forecast is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }
 });
-

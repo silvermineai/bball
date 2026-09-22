@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { parseWomensForecastArtifact, womensBasketballForecasts } from "../src/womens-basketball-forecasts";
+import { parseWomensForecastArtifact, validWomensPredictionArithmetic, womensBasketballForecasts } from "../src/womens-basketball-forecasts";
 
 const prediction = {
   home_win_probability: 0.64,
@@ -44,6 +44,20 @@ function assets() {
 }
 
 describe("women's basketball forecast publication", () => {
+  it("keeps score and margin arithmetic internally consistent", () => {
+    expect(validWomensPredictionArithmetic(prediction)).toBe(true);
+    expect(validWomensPredictionArithmetic({ ...prediction, predicted_margin: 12 })).toBe(false);
+    expect(validWomensPredictionArithmetic({ ...prediction, predicted_home_score: -1 })).toBe(false);
+    const parsed = parseWomensForecastArtifact({
+      ...artifact,
+      forecasts: artifact.forecasts.map((row, index) => index === 0
+        ? { ...row, prediction: { ...row.prediction, predicted_margin: 12 } }
+        : row),
+    });
+    expect(parsed.forecasts).toHaveLength(1);
+    expect(parsed.invalid_rows).toBe(2);
+  });
+
   it("requires the source-native women artifact and counts malformed rows", () => {
     const parsed = parseWomensForecastArtifact(artifact);
     expect(parsed.forecasts).toHaveLength(2);
@@ -93,4 +107,3 @@ describe("women's basketball forecast publication", () => {
     expect(assetsMock.fetch).not.toHaveBeenCalled();
   });
 });
-
