@@ -72,14 +72,21 @@ export function effectiveFieldGoal(
     : null;
 }
 
+/** Return the disclosed TS denominator when both source shooting inputs are usable. */
+export function trueShootingDenominator(stats: NumericStats) {
+  const fga = stats.fga;
+  const fta = stats.fta;
+  if (typeof fga !== "number" || !Number.isFinite(fga) || fga < 0 || typeof fta !== "number" || !Number.isFinite(fta) || fta < 0) return null;
+  const denominator = 2 * (fga + 0.475 * fta);
+  return denominator > 0 ? denominator : null;
+}
+
 /** Compute the disclosed college TS% fallback without turning missing fields into zero. */
 export function trueShooting(stats: NumericStats) {
   const points = stats.pts;
-  const fga = stats.fga;
-  const fta = stats.fta;
-  if (points == null || fga == null || fta == null) return null;
-  const denominator = 2 * (fga + 0.475 * fta);
-  return denominator > 0 ? points / denominator : null;
+  const denominator = trueShootingDenominator(stats);
+  if (typeof points !== "number" || !Number.isFinite(points) || denominator == null) return null;
+  return points / denominator;
 }
 
 /** Derive compact source rates for a player card without imputing missing fields. */

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
-import { safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
+import { safeRate, safeSum, trueShooting, trueShootingDenominator } from "../../_lib/ncaa-player-box";
 
 type Row = {
   season: number; contest_id: string; team_id: string; player_id: string;
@@ -56,7 +56,7 @@ const sourceFieldGroups = [
   { label: "Half-court", fields: [["pts_half", "Points", "number"], ["orb_half", "Offensive rebounds", "number"], ["drb_half", "Defensive rebounds", "number"], ["ast_half", "Assists", "number"], ["tov_half", "Turnovers", "number"], ["ts_pct_half", "True shooting", "percent"], ["efg_pct_half", "Effective FG", "percent"]] },
   { label: "Playmaking", fields: [["pts_ast", "Assisted points", "number"], ["pts_unast", "Unassisted points", "number"], ["fgm_ast", "Assisted FGM", "number"], ["tpm_ast", "Assisted 3PM", "number"], ["rimm_ast", "Assisted rim makes", "number"], ["midm_ast", "Assisted mid makes", "number"]] },
 ] as const;
-const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Player", "Player archive ID", "Team", "Team archive ID", "Opponent", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "Raw recorded stats JSON"];
+const exportHeaders = ["Season", "Archive mode", "Game date", "Contest ID", "Player", "Player archive ID", "Team", "Team archive ID", "Opponent", "Minutes", "Points", "Rebounds", "Assists", "FGM", "FGA", "3PM", "3PA", "FTM", "FTA", "True shooting %", "True shooting denominator", "Raw recorded stats JSON"];
 
 const prettySourceField = (key: string) => key
   .replaceAll("_", " ")
@@ -232,7 +232,7 @@ export default function NcaaPlayerBox() {
   const exportRow = (row: Row) => {
     const s = row.stats;
     const computedTs = trueShooting(s);
-    return [row.season, result?.archive_mode, row.game_date, row.contest_id, row.player_name, row.player_id, row.team_name, row.team_id, row.opponent_name, s.mins, s.pts, safeSum(s.orb, s.drb), s.ast, s.fgm, s.fga, s.tpm, s.tpa, s.ftm, s.fta, s.ts_pct == null ? computedTs == null ? null : computedTs * 100 : s.ts_pct * 100, JSON.stringify(s), ...sourceFields.map((field) => s[field] ?? null)];
+    return [row.season, result?.archive_mode, row.game_date, row.contest_id, row.player_name, row.player_id, row.team_name, row.team_id, row.opponent_name, s.mins, s.pts, safeSum(s.orb, s.drb), s.ast, s.fgm, s.fga, s.tpm, s.tpa, s.ftm, s.fta, s.ts_pct == null ? computedTs == null ? null : computedTs * 100 : s.ts_pct * 100, trueShootingDenominator(s), JSON.stringify(s), ...sourceFields.map((field) => s[field] ?? null)];
   };
   const download = () => {
     if (!result) return;
@@ -343,7 +343,8 @@ export default function NcaaPlayerBox() {
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       {copied && <p role="status">{copied}</p>}
       <p className="note">CSV exports include the compact audit columns plus every retained field listed above as a separate <code>Archive …</code> column; the original JSON payload remains attached for exact replay.</p>
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>{result.archive_mode === "games" ? "Date / player" : "Season / player"}</th><th>{result.archive_mode === "games" ? "Matchup" : "Program"}</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">TS%</th></tr></thead><tbody>{result.rows.map((row) => { const s = row.stats; return <tr key={`${row.contest_id || row.season}-${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}><strong>{row.player_name || row.player_id}</strong></Link><small>{result.archive_mode === "games" ? `${row.game_date || "—"} ·` : `${label(row.season)} ·`} Archive ID {row.player_id}</small><SourceFieldDetails stats={s} /></td><td><strong>{row.team_name || row.team_id}</strong><small>{result.archive_mode === "games" ? `vs ${row.opponent_name || "—"} · contest ${row.contest_id}` : `Team ID ${row.team_id}`}</small></td><td className="numeric">{n(s.mins)}</td><td className="numeric"><strong>{n(s.pts, 0)}</strong></td><td className="numeric">{n(safeSum(s.orb, s.drb), 0)}</td><td className="numeric">{n(s.ast, 0)}</td><td className="numeric">{pct(s.fg_pct ?? rate(s.fgm, s.fga))}</td><td className="numeric">{pct(s.tp_pct ?? rate(s.tpm, s.tpa))}</td><td className="numeric">{pct(s.ts_pct ?? trueShooting(s))}</td></tr>; })}</tbody></table></div>
+      <p className="note">TS% uses the source-published <code>ts_pct</code> when present; otherwise it uses the disclosed fallback PTS ÷ [2 × (FGA + 0.475 × FTA)]. The adjacent denominator audit is computed only from recorded FGA and FTA, so missing inputs remain unavailable and never become zero.</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>{result.archive_mode === "games" ? "Date / player" : "Season / player"}</th><th>{result.archive_mode === "games" ? "Matchup" : "Program"}</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">TS%<small>source or fallback</small></th><th className="numeric">TS denominator<small>2 × (FGA + 0.475 × FTA)</small></th></tr></thead><tbody>{result.rows.map((row) => { const s = row.stats; return <tr key={`${row.contest_id || row.season}-${row.team_id}-${row.player_id}`}><td><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${row.season}`}><strong>{row.player_name || row.player_id}</strong></Link><small>{result.archive_mode === "games" ? `${row.game_date || "—"} ·` : `${label(row.season)} ·`} Archive ID {row.player_id}</small><SourceFieldDetails stats={s} /></td><td><strong>{row.team_name || row.team_id}</strong><small>{result.archive_mode === "games" ? `vs ${row.opponent_name || "—"} · contest ${row.contest_id}` : `Team ID ${row.team_id}`}</small></td><td className="numeric">{n(s.mins)}</td><td className="numeric"><strong>{n(s.pts, 0)}</strong></td><td className="numeric">{n(safeSum(s.orb, s.drb), 0)}</td><td className="numeric">{n(s.ast, 0)}</td><td className="numeric">{pct(s.fg_pct ?? rate(s.fgm, s.fga))}</td><td className="numeric">{pct(s.tp_pct ?? rate(s.tpm, s.tpa))}</td><td className="numeric">{pct(s.ts_pct ?? trueShooting(s))}</td><td className="numeric">{n(trueShootingDenominator(s), 1)}</td></tr>; })}</tbody></table></div>
       {!result.rows.length && <p className="empty">No player rows match this search.</p>}
       <div className="pagination"><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><span>Page {page + 1} of {pages}</span><button className="button secondary" disabled={(page + 1) * 50 >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div>
       <div className="paper-panel" style={{ marginTop: 24 }}>

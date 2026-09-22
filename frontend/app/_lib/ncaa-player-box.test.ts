@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, playerSeasonBoxSummary, safeRate, safeSum, trueShooting } from "./ncaa-player-box";
+import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, playerSeasonBoxSummary, safeRate, safeSum, trueShooting, trueShootingDenominator } from "./ncaa-player-box";
 
 describe("NCAA player box rate helpers", () => {
   it("keeps missing source fields unavailable while preserving recorded zero makes", () => {
@@ -14,6 +14,13 @@ describe("NCAA player box rate helpers", () => {
     expect(trueShooting({ pts: 20, fga: null, fta: 4 })).toBeNull();
     expect(trueShooting({ pts: 20, fga: 10, fta: undefined })).toBeNull();
     expect(trueShooting({ pts: 0, fga: 10, fta: 0 })).toBe(0);
+  });
+
+  it("exposes the TS denominator audit without manufacturing missing inputs", () => {
+    expect(trueShootingDenominator({ fga: 10, fta: 4 })).toBe(23.8);
+    expect(trueShootingDenominator({ fga: 10, fta: null })).toBeNull();
+    expect(trueShootingDenominator({ fga: Number.NaN, fta: 4 })).toBeNull();
+    expect(trueShootingDenominator({ fga: -1, fta: 4 })).toBeNull();
   });
 
   it("keeps composite rebounds unavailable when either component is missing", () => {
