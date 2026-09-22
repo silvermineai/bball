@@ -212,7 +212,11 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
       || Number.isNaN(Date.parse(recordCapturedAt))) return null;
     const grade = record.grade == null ? null : record.grade;
     const rank = record.rank == null ? null : record.rank;
-    if (grade != null && (typeof grade !== "number" || !Number.isFinite(grade) || grade < 0)) return null;
+    // ESPN's recruiting grade is a percentage-like 0–100 value. Reject an
+    // impossible source value before it can become a misleading leader or
+    // distort the release coverage denominator. Missing grades remain valid
+    // and are handled as unavailable throughout the board.
+    if (grade != null && (typeof grade !== "number" || !Number.isFinite(grade) || grade < 0 || grade > 100)) return null;
     if (rank != null && (typeof rank !== "number" || !Number.isSafeInteger(rank) || rank <= 0)) return null;
     const height = record.height_inches == null ? null : record.height_inches;
     const weight = record.weight_pounds == null ? null : record.weight_pounds;

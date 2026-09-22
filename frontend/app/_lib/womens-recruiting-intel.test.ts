@@ -188,6 +188,25 @@ describe("women's recruiting prospect cohort", () => {
     expect(validateWomensRecruitingRelease({ ...base, edition: "not-a-digest" })).toBeNull();
   });
 
+  it("rejects an impossible source grade instead of ranking it", () => {
+    const base = {
+      schema_version: 1,
+      sport: "basketball",
+      gender: "women",
+      season: 2027,
+      edition: "c".repeat(64),
+      captured_at: "2026-09-22T04:10:24.839220Z",
+      source: source(1),
+      coverage: { prospects: 1, graded: 1, ranked: 0, committed: 0 },
+      records: [{ athlete_id: "101", name: "A", grade: 100, ...sourceFields("101") }],
+    };
+    expect(validateWomensRecruitingRelease(base)).not.toBeNull();
+    expect(validateWomensRecruitingRelease({
+      ...base,
+      records: [{ ...base.records[0], grade: 100.01 }],
+    })).toBeNull();
+  });
+
   it("rejects a release whose receipt count or row source URL does not reconcile", () => {
     const base = {
       schema_version: 1,
