@@ -52,4 +52,42 @@ describe("basketball market handoff", () => {
       }),
     ).toEqual({});
   });
+
+  it("uses parsed clocks and rejects malformed or post-capture updates", () => {
+    const base = {
+      id: "v2",
+      sport: "basketball" as const,
+      game_id: "402",
+      model_id: "m",
+      generated_at: "2026-11-01T09:00:00Z",
+      registered_at: "2026-11-01T09:30:00Z",
+      starts_at: "2026-11-01T15:00:00Z",
+      time_tbd: 0,
+      home_name: "Home",
+      away_name: "Away",
+      season: 2027,
+      home_margin: 3,
+      total: 140,
+      home_win_probability: 0.6,
+      margin_low: 0,
+      margin_high: 6,
+      status: "scheduled",
+      exclusion: null,
+      actual_margin: null,
+      actual_total: null,
+    };
+    const valid = {
+      provider: "licensed",
+      bookmaker: "book",
+      market: "spreads" as const,
+      captured_at: "2026-11-01T12:59:00-02:00",
+      updated_at: "2026-11-01T14:58:00Z",
+      line: -3.5,
+      model_difference: 1,
+      market_home_probability: null,
+    };
+    const malformed = { ...valid, captured_at: "not-a-clock" };
+    const updatedAfterCapture = { ...valid, captured_at: "2026-11-01T12:00:00Z", updated_at: "2026-11-01T12:01:00Z" };
+    expect(marketComparisonsForLedger({ games: [{ ...base, comparisons: [malformed, updatedAfterCapture, valid] }] })).toEqual({ "402": [valid] });
+  });
 });

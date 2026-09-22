@@ -82,15 +82,33 @@ export function getBasketballMarketComparisons(): Record<string, Comparison[]> {
   return marketComparisonsForLedger(getLedger());
 }
 
+function marketClock(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function marketComparisonsForLedger(
   ledger: Pick<Ledger, "games">,
 ): Record<string, Comparison[]> {
   const result: Record<string, Comparison[]> = {};
   for (const game of ledger.games) {
     if (game.sport !== "basketball" || game.exclusion || game.time_tbd) continue;
+    const startClock = marketClock(game.starts_at);
+    if (startClock == null) continue;
     const comparisons = game.comparisons
-      .filter((quote) => quote.captured_at < game.starts_at)
-      .sort((a, b) => b.captured_at.localeCompare(a.captured_at));
+      .filter((quote) => {
+        const capturedClock = marketClock(quote.captured_at);
+        const updatedClock = marketClock(quote.updated_at);
+        // A malformed clock or a feed update after capture cannot establish
+        // a trustworthy pregame observation. Keep it out of the public handoff
+        // rather than letting string ordering make it appear eligible.
+        return capturedClock != null
+          && updatedClock != null
+          && updatedClock <= capturedClock
+          && capturedClock < startClock;
+      })
+      .sort((a, b) => (marketClock(b.captured_at) ?? Number.NEGATIVE_INFINITY) - (marketClock(a.captured_at) ?? Number.NEGATIVE_INFINITY));
     if (comparisons.length) result[game.game_id] = comparisons;
   }
   return result;
