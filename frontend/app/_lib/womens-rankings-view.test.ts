@@ -4,6 +4,7 @@ import {
   paginateWomensRankingRows,
   womensRankingCountLabel,
   womensRankingSampleLabel,
+  womensPlayerShotMapHref,
   womensPlayerTableHref,
   type WomensRankingRow,
 } from "./womens-rankings-view";
@@ -17,6 +18,10 @@ const rows: WomensRankingRow[] = [
 describe("women's ranking board view", () => {
   it("hands an exact source player ID to the women’s production table", () => {
     expect(womensPlayerTableHref("5239100")).toBe("/basketball/players/?gender=women&division=1&q=5239100");
+  });
+
+  it("opens the exact player file at the reviewable shot map", () => {
+    expect(womensPlayerShotMapHref("athlete 42")).toBe("/basketball/womens-player/?id=athlete%2042#wbb-shot-map-title");
   });
 
   it("filters by player, team, or source player ID without renumbering", () => {

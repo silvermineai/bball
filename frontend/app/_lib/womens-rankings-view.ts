@@ -19,6 +19,15 @@ export function womensPlayerTableHref(playerId: string | number): string {
   return `/basketball/players/?gender=women&division=1&q=${encodeURIComponent(String(playerId))}`;
 }
 
+/**
+ * Open the exact women’s player file at its shot-map section. The player file
+ * performs the separate-name/team identity review before selecting a shot
+ * profile; this helper never treats the two source ID namespaces as joined.
+ */
+export function womensPlayerShotMapHref(playerId: string | number): string {
+  return `/basketball/womens-player/?id=${encodeURIComponent(String(playerId))}#wbb-shot-map-title`;
+}
+
 /** Keep absent coverage distinct from a source-reported zero. */
 export function womensRankingCountLabel(value: unknown): string {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
