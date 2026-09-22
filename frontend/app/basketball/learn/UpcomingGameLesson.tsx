@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { date, fmt, signed } from "../../_lib/format";
 import type { UpcomingGameLesson as Lesson } from "./upcoming-game-lesson";
+import { buildUpcomingFactorStudy } from "./upcoming-game-factors";
+
+const percent = (value: number | null) => value == null ? "—" : `${fmt(value * 100, 1)}%`;
 
 export default function UpcomingGameLesson({
   lesson,
@@ -24,6 +27,12 @@ export default function UpcomingGameLesson({
     lesson.marginReading === "both-outcomes"
       ? "The stored 80% margin range includes both teams winning. Treat the point estimate as a starting point, then investigate the uncertainty."
       : "The stored 80% margin range stays on one side of zero. It still describes historical model error, not a guarantee.";
+  const factorStudy = buildUpcomingFactorStudy(game);
+  const factorLabel = factorStudy.lineage === "same-edition"
+    ? "Same-edition context"
+    : factorStudy.lineage === "other-edition"
+      ? "Other-edition context"
+      : "Factor context unavailable";
   return (
     <section className="section learning-next-game" aria-labelledby="learning-next-game-title">
       <div className="section-heading">
@@ -69,8 +78,30 @@ export default function UpcomingGameLesson({
           <p className="note">The range is attached to this exact game and model edition; it is not a market line.</p>
         </article>
       </div>
+      <article className="paper-panel learning-factor-study" aria-labelledby="learning-factor-study-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Pass 03 / Four-factor map</div>
+            <h3 id="learning-factor-study-title">Turn the forecast into a study question.</h3>
+          </div>
+          <span className="note">{factorLabel}{factorStudy.season ? ` · ${factorStudy.season - 1}–${String(factorStudy.season).slice(-2)}` : ""}</span>
+        </div>
+        {factorStudy.lineage === "other-edition" && <p className="status-warn">These rates are retained descriptive context from {factorStudy.modelId || "an older edition"}. They did not generate this forecast and are shown as a study prompt.</p>}
+        {factorStudy.lineage === "unavailable" && <p className="note">No retained Four Factor context is attached to this game. Missing rates stay unavailable rather than being inferred from another team or season.</p>}
+        {factorStudy.lineage !== "unavailable" && <div className="learning-factor-table table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Factor</th><th>{game.home_name} attack</th><th>{game.away_name} defense</th><th>{game.away_name} attack</th><th>{game.home_name} defense</th><th>Stored edge</th></tr></thead>
+            <tbody>{factorStudy.rows.map((row) => <tr key={row.key}>
+              <th scope="row">{row.label}<small className="learning-factor-question">{row.question}</small></th>
+              <td>{percent(row.homeOffense)}</td><td>{percent(row.awayDefense)}</td><td>{percent(row.awayOffense)}</td><td>{percent(row.homeDefense)}</td>
+              <td className={row.edge == null ? undefined : row.edge >= 0 ? "factor-home" : "factor-away"}>{row.edge == null ? "—" : row.edge === 0 ? "Even" : `${row.edge > 0 ? "Home" : "Away"} ${fmt(Math.abs(row.edge) * 100, 1)} pp`}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
+        <p className="note learning-factor-source">Positive edge favors the home side; defensive direction follows the factor. The rates describe the retained source profile and are not a player availability claim.</p>
+      </article>
       <article className="paper-panel learning-next-game-question">
-        <div className="eyebrow">Pass 03 / Evidence question</div>
+        <div className="eyebrow">Pass 04 / Evidence question</div>
         <h3>What would you check before carrying the baseline into preparation?</h3>
         <ol>
           <li>Open the evidence brief and compare both directions of the Four Factors.</li>

@@ -1809,6 +1809,14 @@ th,
 .learning-next-game-question h3 { margin: 7px 0 11px; }
 .learning-next-game-question ol { margin: 0; padding-left: 22px; }
 .learning-next-game-question li { margin: 7px 0; }
+.learning-factor-study { margin-bottom: 18px; }
+.learning-factor-study .section-heading { margin-bottom: 12px; }
+.learning-factor-table { margin: 0; }
+.learning-factor-table th,
+.learning-factor-table td { min-width: 125px; vertical-align: top; }
+.learning-factor-table th:first-child { min-width: 190px; }
+.learning-factor-question { display: block; color: var(--muted); font-weight: 400; line-height: 1.35; margin-top: 5px; max-width: 250px; }
+.learning-factor-source { margin-top: 12px; }
 @media (max-width: 700px) {
   .learning-checkpoint-heading, .learning-checkpoint-result { display: block; }
   .learning-checkpoint-progress { display: block; margin-top: 16px; }
