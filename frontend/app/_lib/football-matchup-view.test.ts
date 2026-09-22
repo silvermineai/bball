@@ -27,8 +27,10 @@ describe("football matchup signal filters", () => {
     expect(parseFootballMatchupDivision("unknown")).toBe("d1");
     expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d2" }, "d2")).toBe(true);
     expect(matchesFootballMatchupDivision({ home_division: "Division II", away_division: "Division II" }, "d2")).toBe(true);
-    expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d3" }, "d3")).toBe(true);
+    expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d3" }, "d3")).toBe(false);
     expect(matchesFootballMatchupDivision({ home_division: "fbs", away_division: "fcs" }, "d1")).toBe(true);
+    expect(matchesFootballMatchupDivision({ home_division: "fbs", away_division: "d2" }, "d1")).toBe(false);
+    expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d3" }, "d2")).toBe(false);
     expect(matchesFootballMatchupDivision({ home_division: "d2", away_division: "d3" }, "d1")).toBe(false);
     expect(filterFootballMatchupGames([
       { id: "d1", home_division: "fbs", away_division: "fcs" },

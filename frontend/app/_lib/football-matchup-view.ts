@@ -19,11 +19,18 @@ export function matchesFootballMatchupDivision(
   game: { home_division?: string | null; away_division?: string | null },
   division: FootballMatchupDivision,
 ) {
-  const sourceDivisions = [game.home_division, game.away_division]
-    .map((value) => String(value || "").trim().toLowerCase());
-  if (division === "d2") return sourceDivisions.some((value) => value === "d2" || value === "ii" || value === "d-ii" || value === "division ii");
-  if (division === "d3") return sourceDivisions.some((value) => value === "d3" || value === "iii" || value === "d-iii" || value === "division iii");
-  return sourceDivisions.some((value) => value === "fbs" || value === "fcs" || value === "d1" || value === "i" || value === "division i");
+  const sourceDivision = (value: unknown): FootballMatchupDivision | null => {
+    const normalized = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (["fbs", "fcs", "d1", "i", "division1", "divisioni"].includes(normalized)) return "d1";
+    if (["d2", "ii", "division2", "divisionii"].includes(normalized)) return "d2";
+    if (["d3", "iii", "division3", "divisioniii"].includes(normalized)) return "d3";
+    return null;
+  };
+  // A division tab is a competition scope, so both sides must resolve to the
+  // same requested division. This prevents a D2-vs-D3 or D2-vs-D1 game from
+  // appearing as a D2 matchup simply because one team matched the filter.
+  return sourceDivision(game.home_division) === division
+    && sourceDivision(game.away_division) === division;
 }
 
 /** Filter a server-rendered matchup edition to the requested source division. */
