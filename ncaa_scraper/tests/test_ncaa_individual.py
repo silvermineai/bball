@@ -17,6 +17,7 @@ from ncaa_scraper.ncaa_individual import (
     release_is_degraded,
     source_totals,
     to_num,
+    parse_player_identity,
 )
 
 
@@ -48,6 +49,20 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(to_num("39:47"), 39 + 47 / 60)
 
+    def test_player_identity_resolves_class_suffix_before_team(self):
+        player, team, conference = parse_player_identity(
+            "Darin Smith, Jr., Central Conn. St. (NEC)",
+            {"centralconnst": "Central Conn. St."},
+        )
+        self.assertEqual((player, team, conference), ("Darin Smith", "Central Conn. St.", "NEC"))
+
+    def test_player_identity_resolves_team_names_with_parentheses(self):
+        player, team, conference = parse_player_identity(
+            "Koi D. Kirk, Dominican (NY) (CACC)",
+            {"dominicanny": "Dominican (NY)"},
+        )
+        self.assertEqual((player, team, conference), ("Koi D. Kirk", "Dominican (NY)", "CACC"))
+
     def test_export_release_reports_division_coverage(self):
         conn = sqlite3.connect(":memory:")
         conn.executescript(SCHEMA)
@@ -62,6 +77,7 @@ class NCAAIndividualTests(unittest.TestCase):
         release = export_release(conn)
         self.assertEqual(release["coverage"]["players"], 1)
         self.assertEqual(release["coverage"]["divisions"]["1"]["ppg"], 1)
+        self.assertEqual(release["coverage"]["divisions"]["1"]["team_ncaa_id"], 1)
         self.assertEqual(release["coverage"]["divisions"]["1"]["stl"], 0)
         self.assertEqual(release["coverage"]["divisions"]["2"]["fta"], 0)
         self.assertEqual(release["coverage"]["teams"], 1)

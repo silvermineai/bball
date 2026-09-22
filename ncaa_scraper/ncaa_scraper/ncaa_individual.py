@@ -173,6 +173,50 @@ def team_key(value: str | None) -> str:
     return "".join(ch for ch in normalized if ch.isalnum())
 
 
+CLASS_SUFFIX_RE = re.compile(
+    r",\s*(?:Fr|So|Jr|Sr|R-?Fr|R-?So|R-?Jr|R-?Sr|Grad|Gr)\.?\s*$",
+    re.IGNORECASE,
+)
+
+
+def parse_player_identity(label: str, team_names: dict[str, str] | None = None) -> tuple[str, str | None, str | None]:
+    """Split the NCAA display label into player, canonical team and conference.
+
+    Most ranking rows are ``Player, Team (Conference)``.  A source-side name
+    suffix occasionally adds a class marker before the team (for example
+    ``Darin Smith, Jr., Central Conn. St. (NEC)``).  Splitting at the first
+    comma therefore mislabels the team and prevents the player from joining to
+    the NCAA team directory.  Resolve the longest suffix against the
+    division's own directory, then remove only the optional class marker.
+    """
+    text = str(label or "").strip()
+    conference = None
+    match = re.match(r"^(.*?)\s*\(([^()]*)\)\s*$", text)
+    if match:
+        text, conference = match.group(1).strip(), match.group(2).strip() or None
+
+    parts = [part.strip() for part in text.split(",") if part.strip()]
+    player = text
+    team = None
+    aliases = team_names or {}
+    # The first matching suffix is the longest because we iterate from the
+    # earliest separator.  This preserves schools whose names contain commas.
+    for index in range(1, len(parts)):
+        candidate = ", ".join(parts[index:])
+        canonical = aliases.get(team_key(candidate))
+        if canonical:
+            player = ", ".join(parts[:index])
+            team = canonical
+            break
+    if team is None and len(parts) > 1:
+        # Retain a useful fallback for a source label whose team is missing
+        # from the directory; callers can expose the unresolved identity.
+        team = parts[-1]
+        player = ", ".join(parts[:-1])
+    player = CLASS_SUFFIX_RE.sub("", player).strip(" ,")
+    return player, team, conference
+
+
 def final_period(fetcher: ScraplingNCAAFetcher, division: str) -> str | None:
     html = decode_html(fetcher.fetch(
         f"/rankings/change_sport_year_div?academic_year={YEAR}&division={division}&sport_code={SPORT}",
@@ -308,6 +352,7 @@ def export_release(conn: sqlite3.Connection) -> dict:
         rows = [p for p in players if p["division"] == division]
         coverage[str(division)] = {
             "players": len(rows),
+            "team_ncaa_id": sum(p.get("team_ncaa_id") is not None for p in rows),
             **{
                 field: sum(p.get(field) is not None for p in rows)
                 for field in PLAYER_STAT_FIELDS
@@ -474,6 +519,30 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
     conn.commit()
     print(f"[individual] d{div_int}: team directory {count} teams", flush=True)
 
+    # National ranking rows only expose a school label, while the directory
+    # carries the stable NCAA team ID. Resolve labels within the same division
+    # so downstream team joins never depend on a cross-provider name match.
+    # Ambiguous normalized labels are omitted and remain explicitly
+    # unresolved in the public coverage counts.
+    team_rows = conn.execute(
+        "SELECT team_ncaa_id,name FROM ncaa_team_directory WHERE division=? AND team_ncaa_id IS NOT NULL",
+        (div_int,),
+    ).fetchall()
+    team_names: dict[str, str] = {}
+    for _team_id, name in team_rows:
+        key = team_key(name)
+        if not key:
+            continue
+        if key in team_names and team_names[key] != name:
+            team_names.pop(key, None)
+            continue
+        team_names[key] = str(name)
+    team_ids = {
+        team_key(name): int(team_id)
+        for team_id, name in team_rows
+        if team_key(name) in team_names
+    }
+
     # ---- individual stats
     for stat_seq, slug in INDIVIDUAL_STATS.items():
         url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={stat_seq}"
@@ -517,8 +586,8 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
             if not player_link:
                 continue
             pid = int(player_link.group(1))
-            pm = re.match(r"(.*?),\s*(.*?)\s*\(([^)]*)\)\s*$", cells[1])
-            pname, tname, conf = (pm.group(1), pm.group(2), pm.group(3)) if pm else (cells[1], None, None)
+            pname, tname, conf = parse_player_identity(cells[1], team_names)
+            team_ncaa_id = team_ids.get(team_key(tname)) if tname else None
             rank = to_num(cells[0])
             value = to_num(cells[-1])
             games = to_num(cells[5])
@@ -550,6 +619,9 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
                    class_year, height, position, games, source_stats_json)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(player_id) DO UPDATE SET division=excluded.division,
+                   name=COALESCE(excluded.name, ncaa_players.name),
+                   team_name=COALESCE(excluded.team_name, ncaa_players.team_name),
+                   conference=COALESCE(excluded.conference, ncaa_players.conference),
                    class_year=COALESCE(excluded.class_year, ncaa_players.class_year),
                    games=COALESCE(excluded.games, ncaa_players.games),
                    team_ncaa_id=COALESCE(excluded.team_ncaa_id, ncaa_players.team_ncaa_id),
@@ -557,7 +629,7 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
                    updated_at=CURRENT_TIMESTAMP""",
                 (
                     pid, div_int, pname, tname,
-                    int(team_link.group(1)) if team_link else None,
+                    team_ncaa_id or (int(team_link.group(1)) if team_link else None),
                     conf, cells[2] or None, cells[3] or None, cells[4] or None, games,
                     json.dumps(source_stats, ensure_ascii=False, separators=(",", ":")),
                 ),
