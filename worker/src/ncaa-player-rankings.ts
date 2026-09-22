@@ -535,7 +535,10 @@ const balancedQueries = (where: string, minGames: number, minMinutes: number) =>
   const prefix = `WITH aggregate AS (${aggregate(where)}), derived AS (${derived}), stats AS (${stats}), scored AS (${scored})`;
   return {
     count: `${prefix} SELECT count(*) AS total FROM scored WHERE value IS NOT NULL`,
-    rows: `${prefix} SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM scored WHERE value IS NOT NULL ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`,
+    rows: `${prefix}, ranked AS (
+      SELECT *, RANK() OVER (ORDER BY value DESC) AS rank
+      FROM scored WHERE value IS NOT NULL
+    ) SELECT * FROM ranked WHERE 1=1/* TARGET */ ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`,
     binds: [minGames, minMinutes],
   };
 };
@@ -567,7 +570,10 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
   const prefix = `WITH aggregate AS (${aggregate(where)}), derived AS (${derived}), stats AS (${stats}), scored AS (${scored})`;
   return {
     count: `${prefix} SELECT count(*) AS total FROM scored WHERE value IS NOT NULL`,
-    rows: `${prefix} SELECT *, RANK() OVER (ORDER BY value DESC) AS rank FROM scored WHERE value IS NOT NULL ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`,
+    rows: `${prefix}, ranked AS (
+      SELECT *, RANK() OVER (ORDER BY value DESC) AS rank
+      FROM scored WHERE value IS NOT NULL
+    ) SELECT * FROM ranked WHERE 1=1/* TARGET */ ORDER BY value DESC, player_name ASC, player_id ASC LIMIT 50 OFFSET ?`,
     binds: [minGames, minMinutes],
   };
 };
@@ -667,22 +673,25 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
   const rows = metric === "balanced_index"
     ? await withTimeout((() => {
       const query = balancedQueries(where, minGames, minMinutes);
-      const rowsQuery = query.rows.replace("WHERE value IS NOT NULL ORDER BY", `WHERE value IS NOT NULL${targetClause} ORDER BY`);
+      const rowsQuery = query.rows.replace("/* TARGET */", targetClause);
       return researchDb(c.env).prepare(rowsQuery).bind(...binds, ...query.binds, ...playerIds, page * 50).all();
     })(), DB_TIMEOUT_MS)
     : metric === "impact_index"
       ? await withTimeout((() => {
         const query = impactQueries(where, minGames, minMinutes);
-        const rowsQuery = query.rows.replace("WHERE value IS NOT NULL ORDER BY", `WHERE value IS NOT NULL${targetClause} ORDER BY`);
+        const rowsQuery = query.rows.replace("/* TARGET */", targetClause);
         return researchDb(c.env).prepare(rowsQuery).bind(...binds, ...query.binds, ...playerIds, page * 50).all();
       })(), DB_TIMEOUT_MS)
     : await withTimeout(researchDb(c.env).prepare(
-      `WITH aggregate AS (${aggregate(where)}), ranked AS (
+      `WITH aggregate AS (${aggregate(where)}), eligible AS (
         SELECT aggregate.*, ${expression} AS value
         FROM aggregate WHERE games >= ? AND minutes >= ? AND ${qualification} AND ${volumeQualification}
+      ), ranked AS (
+        SELECT eligible.*, RANK() OVER (ORDER BY value ${rankOrder}) AS rank
+        FROM eligible WHERE value IS NOT NULL
       )
-      SELECT *, RANK() OVER (ORDER BY value ${rankOrder}) AS rank FROM ranked
-      WHERE value IS NOT NULL${targetClause} ORDER BY value ${rankOrder}, player_name ASC, player_id ASC
+      SELECT * FROM ranked WHERE 1=1${targetClause}
+      ORDER BY value ${rankOrder}, player_name ASC, player_id ASC
       LIMIT 50 OFFSET ?`,
     ).bind(...binds, minGames, minMinutes, ...volumeBinds, ...playerIds, page * 50).all(), DB_TIMEOUT_MS);
   const response = c.json({ season, metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });

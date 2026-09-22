@@ -126,7 +126,7 @@ describe("NCAA player rankings availability", () => {
     expect(sql).toContain("COUNT(json_extract(s.stats_json,'$.fga')) = COUNT(*)");
   });
 
-  it("adds bounded exact player IDs to ranking SQL for comparison cohorts", async () => {
+  it.each(["ppg", "balanced_index", "impact_index"])("ranks an exact-ID %s comparison against the full qualified cohort", async (metric) => {
     const prepare = vi.fn((_query: string) => ({
       bind: vi.fn(() => ({
         first: vi.fn(async () => ({ total: 0 })),
@@ -134,7 +134,7 @@ describe("NCAA player rankings availability", () => {
       })),
     }));
     const response = await ncaaPlayerRankings.request(
-      "/?season=2026&metric=ppg&playerIds=42,43&minGames=5&minMinutes=200",
+      `/?season=2026&metric=${metric}&playerIds=42,43&minGames=5&minMinutes=200`,
       {},
       { DB: { prepare } } as never,
     );
@@ -143,6 +143,11 @@ describe("NCAA player rankings availability", () => {
     const rowSql = prepare.mock.calls.map(([query]) => String(query)).find((query) => query.includes("player_id IN (?,?)")) || "";
     expect(rowSql).toContain("player_id IN (?,?)");
     expect(countSql).not.toContain("player_id IN (?,?)");
+    const rankAt = rowSql.indexOf("RANK() OVER");
+    const cohortFilterAt = rowSql.indexOf("player_id IN (?,?)");
+    expect(rankAt).toBeGreaterThan(-1);
+    expect(cohortFilterAt).toBeGreaterThan(rankAt);
+    expect(rowSql.slice(rankAt, cohortFilterAt)).toContain("FROM eligible WHERE value IS NOT NULL".replace("eligible", metric === "ppg" ? "eligible" : "scored"));
   });
 
   it("rejects an unbounded or nonnumeric exact-ID list", async () => {
