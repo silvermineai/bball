@@ -30,6 +30,28 @@ describe("bball api", () => {
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("sport_code = ?"));
   });
 
+  it("keeps division filters source-native for the public team list", async () => {
+    const binds: unknown[][] = [];
+    const prepare = vi.fn((sql: string) => ({
+      bind: (...args: unknown[]) => {
+        binds.push(args);
+        return {
+          first: async () => null,
+          all: async () => ({
+            results: sql.includes("FROM teams t")
+              ? [{ id: "team-d2", name: "Division II Example", sportCode: "MBB", division: "2" }]
+              : [],
+          }),
+        };
+      },
+    }));
+    const response = await app.request("/api/teams?sport=s_mbb&division=2", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ teams: [{ id: "team-d2", name: "Division II Example", sportCode: "MBB", division: "2" }] });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("COALESCE(t.division, '1') = ?"));
+    expect(binds.some((args) => args.includes("2"))).toBe(true);
+  });
+
   it("finds football athletes from the football source warehouse", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: () => ({

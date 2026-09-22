@@ -10,6 +10,12 @@ export const SPORTS = [
 
 export const DEFAULT_SPORT = "s_mbb";
 
+export const DIVISIONS = [
+  { code: "1", label: "Division I" },
+  { code: "2", label: "Division II" },
+  { code: "3", label: "Division III" },
+] as const;
+
 export function sourceSportCode(sportId: string) {
   return SPORTS.find((sport) => sport.code === sportId)?.sourceCode ?? sportId;
 }

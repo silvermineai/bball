@@ -3,6 +3,7 @@ export type TeamListItem = {
   orgId?: number;
   sportId?: string;
   sportCode?: string;
+  division?: string;
   name: string;
   record?: string;
   season?: string;
@@ -16,6 +17,7 @@ export type GameListItem = {
   id: string;
   sportId?: string;
   sportCode?: string;
+  division?: string;
   date?: string;
   venue?: string;
   awayTeam?: string;
@@ -28,6 +30,7 @@ export type GameListItem = {
 export type PlayerListItem = {
   id: string;
   sportCode?: string;
+  division?: string;
   name: string;
   teamName?: string;
   statGroups?: string;

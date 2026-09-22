@@ -1,6 +1,6 @@
 import { SortableTable } from "@/components/SortableTable";
 import { api } from "@/lib/api";
-import { SPORTS } from "@/lib/sports";
+import { DIVISIONS, SPORTS } from "@/lib/sports";
 import { useSelectedSport } from "@/lib/useSelectedSport";
 import type { GameListItem } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,8 @@ export const Route = createFileRoute("/games/")({
 
 function GamesPage() {
   const [sport, setSport] = useSelectedSport();
-  const { data } = useQuery({ queryKey: ["games", sport], queryFn: () => api.games(sport) });
+  const [division, setDivision] = useState("1");
+  const { data } = useQuery({ queryKey: ["games", sport, division], queryFn: () => api.games(sport, division) });
   const games = data?.games ?? [];
   const columns = useMemo<ColumnDef<GameListItem>[]>(
     () => [
@@ -43,11 +44,14 @@ function GamesPage() {
           <h1 className="text-3xl font-semibold">Games</h1>
           <p className="mt-2 text-graphite">Open a game for box-score context, player stats, shots, and play-by-play.</p>
         </div>
-        <select className="w-full rounded-md border-line bg-white md:w-64" value={sport} onChange={(event) => setSport(event.target.value)}>
-          {SPORTS.map((item) => (
-            <option key={item.code} value={item.code}>{item.label}</option>
-          ))}
-        </select>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <select className="w-full rounded-md border-line bg-white" value={sport} onChange={(event) => setSport(event.target.value)}>
+            {SPORTS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+          </select>
+          <select className="w-full rounded-md border-line bg-white" value={division} onChange={(event) => setDivision(event.target.value)} aria-label="Division">
+            {DIVISIONS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+          </select>
+        </div>
       </div>
       <SortableTable data={games} columns={columns} />
     </div>

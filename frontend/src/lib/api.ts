@@ -211,8 +211,8 @@ export const api = {
     const [teams, games, players] = await Promise.all([api.teams("", sport), api.games(sport), api.players("", sport)]);
     return { teams: teams.teams, games: games.games, players: players.players };
   },
-  teams: (q = "", sport = "s_mbb") =>
-    request(`/teams?q=${encodeURIComponent(q)}&sport=${encodeURIComponent(sport)}`, { teams: filterBySport(sampleTeams, sport) }),
+  teams: (q = "", sport = "s_mbb", division = "1") =>
+    request(`/teams?q=${encodeURIComponent(q)}&sport=${encodeURIComponent(sport)}&division=${encodeURIComponent(division)}`, { teams: filterBySport(sampleTeams, sport) }),
   team: (id: string) =>
     request(`/teams/${id}`, {
       team: sampleTeams.find((team) => String(team.id) === id) ?? sampleTeams[0],
@@ -220,10 +220,10 @@ export const api = {
       players: samplePlayers,
       shots: sampleShots,
     }),
-  games: (sport = "s_mbb") => request(`/games?sport=${encodeURIComponent(sport)}`, { games: filterBySport(sampleGames, sport) }),
+  games: (sport = "s_mbb", division = "1") => request(`/games?sport=${encodeURIComponent(sport)}&division=${encodeURIComponent(division)}`, { games: filterBySport(sampleGames, sport) }),
   game: (id: string) => requestOrLoad(`/games/${id}`, loadSampleGame),
-  players: (q = "", sport = "s_mbb") =>
-    request(`/players?q=${encodeURIComponent(q)}&sport=${encodeURIComponent(sport)}`, { players: filterBySport(samplePlayers, sport) }),
+  players: (q = "", sport = "s_mbb", division = "1") =>
+    request(`/players?q=${encodeURIComponent(q)}&sport=${encodeURIComponent(sport)}&division=${encodeURIComponent(division)}`, { players: filterBySport(samplePlayers, sport) }),
   player: (id: string, search = "") => requestOrLoad(`/players/${id}${search}`, () => loadSamplePlayer(id)),
   backfillStatus: () =>
     fetch(`${LOCAL_RUNNER_BASE}/backfill/status`).then((res) => {

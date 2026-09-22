@@ -179,6 +179,7 @@ app.use("/api/*", async (c, next) => {
 const listQuery = z.object({
   season: z.string().default("2025-26"),
   sport: z.string().default("s_mbb"),
+  division: z.enum(["1", "2", "3", "all"]).default("1"),
   q: z.string().optional(),
   teamId: z.string().optional(),
   from: z.string().optional(),
@@ -1363,9 +1364,9 @@ app.post("/api/auth/logout", async (c) => {
 });
 
 app.get("/api/teams", zValidator("query", listQuery), async (c) => {
-  const { season, sport, q } = c.req.valid("query");
+  const { season, sport, division, q } = c.req.valid("query");
   const like = `%${q ?? ""}%`;
-  const rows = await all(c.env.DB, TEAM_LIST_SQL, season, sourceSportCode(sport), like);
+  const rows = await all(c.env.DB, TEAM_LIST_SQL, season, sourceSportCode(sport), division, division, like);
   return c.json({ teams: rows });
 });
 
@@ -1385,7 +1386,7 @@ app.get("/api/teams/:teamId", async (c) => {
 });
 
 app.get("/api/games", zValidator("query", listQuery), async (c) => {
-  const { season, sport, teamId, from, to } = c.req.valid("query");
+  const { season, sport, division, teamId, from, to } = c.req.valid("query");
   const sourceTeamId = teamId ? await resolveTeamSourceId(c.env.DB, String(teamId)) : null;
   const rows = await all(
     c.env.DB,
@@ -1393,6 +1394,8 @@ app.get("/api/games", zValidator("query", listQuery), async (c) => {
     season,
     sourceSportCode(sport),
     sourceSportCode(sport),
+    division,
+    division,
     sourceTeamId,
     sourceTeamId,
     sourceTeamId,
@@ -1416,10 +1419,10 @@ app.get("/api/games/:contestId", async (c) => {
   return c.json({ game: publicGame, playerStats, shots, actions });
 });
 
-app.get("/api/players", zValidator("query", z.object({ sport: z.string().default("s_mbb"), teamId: z.string().optional(), q: z.string().optional() })), async (c) => {
-  const { sport, teamId, q } = c.req.valid("query");
+app.get("/api/players", zValidator("query", z.object({ sport: z.string().default("s_mbb"), division: z.enum(["1", "2", "3", "all"]).default("1"), teamId: z.string().optional(), q: z.string().optional() })), async (c) => {
+  const { sport, division, teamId, q } = c.req.valid("query");
   const sourceTeamId = teamId ? await resolveTeamSourceId(c.env.DB, teamId) : null;
-  const rows = await all(c.env.DB, PLAYER_LIST_SQL, sourceTeamId, sourceTeamId, sourceSportCode(sport), sourceSportCode(sport), `%${q ?? ""}%`);
+  const rows = await all(c.env.DB, PLAYER_LIST_SQL, sourceTeamId, sourceTeamId, sourceSportCode(sport), sourceSportCode(sport), division, division, `%${q ?? ""}%`);
   return c.json({ players: rows });
 });
 
@@ -1934,6 +1937,7 @@ const TEAM_LIST_SQL = `
 SELECT
   t.internal_id AS id,
   t.sport_code AS sportCode,
+  COALESCE(t.division, '1') AS division,
   CASE t.sport_code
     WHEN 'MBB' THEN 's_mbb'
     WHEN 'WBB' THEN 's_wbb'
@@ -1952,12 +1956,15 @@ SELECT
 FROM teams t
 LEFT JOIN team_games tg ON tg.ncaa_team_id = t.ncaa_team_id
 LEFT JOIN games g ON g.contest_id = tg.contest_id
-WHERE t.season_label = ? AND t.sport_code = ? AND t.name LIKE ?
+WHERE t.season_label = ? AND t.sport_code = ?
+  AND (? = 'all' OR COALESCE(t.division, '1') = ?)
+  AND t.name LIKE ?
 GROUP BY t.ncaa_team_id
 ORDER BY t.name`;
 
 const TEAM_DETAIL_SQL = `
 SELECT internal_id AS id, ncaa_team_id AS sourceTeamId, name, record, season_label AS season,
+       COALESCE(division, '1') AS division,
        CASE sport_code
          WHEN 'MBB' THEN 's_mbb'
          WHEN 'WBB' THEN 's_wbb'
@@ -2001,6 +2008,7 @@ LIMIT 1000`;
 const GAME_LIST_SQL = `
 SELECT g.internal_id AS id, g.game_date AS date, g.venue, g.away_score AS awayScore, g.home_score AS homeScore,
        away.name AS awayTeam, home.name AS homeTeam, COALESCE(home.sport_code, away.sport_code, 'MBB') AS sportCode,
+       COALESCE(home.division, away.division, '1') AS division,
        CASE COALESCE(home.sport_code, away.sport_code, 'MBB')
          WHEN 'MBB' THEN 's_mbb'
          WHEN 'WBB' THEN 's_wbb'
@@ -2016,6 +2024,7 @@ LEFT JOIN teams away ON away.ncaa_team_id = g.away_team_id
 LEFT JOIN teams home ON home.ncaa_team_id = g.home_team_id
 WHERE g.season_label = ?
   AND (? IS NULL OR COALESCE(home.sport_code, away.sport_code) = ?)
+  AND (? = 'all' OR COALESCE(home.division, away.division, '1') = ?)
   AND (? IS NULL OR g.away_team_id = ? OR g.home_team_id = ?)
   AND (? IS NULL OR date(g.game_date) >= date(?))
   AND (? IS NULL OR date(g.game_date) <= date(?))
@@ -2026,6 +2035,7 @@ const GAME_DETAIL_SQL = `
 SELECT g.internal_id AS id, g.contest_id AS sourceContestId, g.game_date AS date, g.venue, g.attendance, g.away_score AS awayScore, g.home_score AS homeScore,
        away.internal_id AS awayTeamId, away.name AS awayTeam, home.internal_id AS homeTeamId, home.name AS homeTeam,
        COALESCE(home.sport_code, away.sport_code, 'MBB') AS sportCode,
+       COALESCE(home.division, away.division, '1') AS division,
        CASE COALESCE(home.sport_code, away.sport_code, 'MBB')
          WHEN 'MBB' THEN 's_mbb'
          WHEN 'WBB' THEN 's_wbb'
@@ -2067,14 +2077,21 @@ ORDER BY sequence`;
 const PLAYER_LIST_SQL = `
 SELECT p.internal_id AS id, MAX(p.name) AS name, COUNT(DISTINCT pgs.contest_id) AS games,
        MAX(pgs.team_name) AS teamName, MAX(pgs.position) AS position, MAX(pgs.sport_code) AS sportCode,
+       COALESCE(MAX(team_filter.division), '1') AS division,
        GROUP_CONCAT(DISTINCT pgs.stat_group) AS statGroups,
        ROUND(AVG(pgs.points), 1) AS ppg,
        ROUND(AVG(pgs.total_rebounds), 1) AS rpg,
        ROUND(AVG(pgs.assists), 1) AS apg
 FROM (SELECT ncaa_player_id, MAX(internal_id) AS internal_id, MAX(name) AS name FROM players GROUP BY ncaa_player_id) p
 JOIN player_game_stats pgs ON pgs.ncaa_player_id = p.ncaa_player_id
+LEFT JOIN (
+  SELECT org_id, sport_code, MAX(COALESCE(division, '1')) AS division
+  FROM teams
+  GROUP BY org_id, sport_code
+) team_filter ON team_filter.org_id = pgs.team_org_id AND team_filter.sport_code = pgs.sport_code
 WHERE (? IS NULL OR pgs.team_org_id = (SELECT org_id FROM teams WHERE ncaa_team_id = ?))
   AND (? IS NULL OR pgs.sport_code = ?)
+  AND (? = 'all' OR COALESCE(team_filter.division, '1') = ?)
   AND p.name LIKE ?
 GROUP BY p.ncaa_player_id
 ORDER BY COALESCE(ppg, 0) DESC, games DESC, name ASC`;

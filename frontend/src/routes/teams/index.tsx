@@ -1,6 +1,6 @@
 import { SortableTable } from "@/components/SortableTable";
 import { api } from "@/lib/api";
-import { SPORTS } from "@/lib/sports";
+import { DIVISIONS, SPORTS } from "@/lib/sports";
 import { useSelectedSport } from "@/lib/useSelectedSport";
 import type { TeamListItem } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -15,7 +15,8 @@ export const Route = createFileRoute("/teams/")({
 function TeamsPage() {
   const [q, setQ] = useState("");
   const [sport, setSport] = useSelectedSport();
-  const { data } = useQuery({ queryKey: ["teams", q, sport], queryFn: () => api.teams(q, sport) });
+  const [division, setDivision] = useState("1");
+  const { data } = useQuery({ queryKey: ["teams", q, sport, division], queryFn: () => api.teams(q, sport, division) });
   const teams = data?.teams ?? [];
   const columns = useMemo<ColumnDef<TeamListItem>[]>(
     () => [
@@ -49,11 +50,14 @@ function TeamsPage() {
           <h1 className="text-3xl font-semibold">Teams</h1>
           <p className="mt-2 text-graphite">Scan the field, then open a team for games, players, and shot profile.</p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-[12rem_20rem]">
+        <div className="grid gap-2 sm:grid-cols-[12rem_12rem_20rem]">
           <select className="rounded-md border-line bg-white" value={sport} onChange={(event) => setSport(event.target.value)}>
             {SPORTS.map((item) => (
               <option key={item.code} value={item.code}>{item.label}</option>
             ))}
+          </select>
+          <select className="rounded-md border-line bg-white" value={division} onChange={(event) => setDivision(event.target.value)} aria-label="Division">
+            {DIVISIONS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
           </select>
           <input
             className="w-full rounded-md border-line bg-white"
