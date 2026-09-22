@@ -19,6 +19,8 @@ type ForecastModel = {
   evaluation_margin_mae?: number | null;
   evaluation_baseline_margin_mae?: number | null;
   evaluation_interval_coverage?: number | null;
+  evaluation_total_interval_coverage?: number | null;
+  total_interval_status?: "calibrated" | "unavailable" | null;
   evaluation_games?: number | null;
   evaluation_unscored_games?: number | null;
   publication_complete?: boolean;
@@ -110,8 +112,9 @@ export default function LiveBasketballForecastStatus({
       {status === "live" && model
         ? `Live D1 forecast index: ${rowSummary}${coverageSummary} · ${model.model_id || "current model"}${model.last_created_at ? ` · captured ${date(model.last_created_at)}` : ""}${model.training_games != null ? ` · trained on ${model.training_games.toLocaleString()} games${model.training_seasons?.length ? ` (${model.training_seasons.join(", ")})` : ""}` : ""}${model.evaluation_winner_accuracy != null && model.evaluation_margin_mae != null ? ` · held-out ${
             (model.evaluation_winner_accuracy * 100).toFixed(1)
-          }% winner / ${model.evaluation_margin_mae.toFixed(1)}-point MAE${baselineDelta == null ? "" : ` / ${Math.abs(baselineDelta).toFixed(1)} points ${baselineDelta >= 0 ? "lower" : "higher"} than baseline`}${model.evaluation_interval_coverage != null ? ` / ${(model.evaluation_interval_coverage * 100).toFixed(1)}% range coverage` : ""}${evaluationCoverage ? ` across ${evaluationCoverage}` : ""}` : ""}.`
+          }% winner / ${model.evaluation_margin_mae.toFixed(1)}-point MAE${baselineDelta == null ? "" : ` / ${Math.abs(baselineDelta).toFixed(1)} points ${baselineDelta >= 0 ? "lower" : "higher"} than baseline`}${model.evaluation_interval_coverage != null ? ` / ${(model.evaluation_interval_coverage * 100).toFixed(1)}% margin range coverage` : ""}${model.evaluation_total_interval_coverage != null ? ` / ${(model.evaluation_total_interval_coverage * 100).toFixed(1)}% total range coverage` : ""}${evaluationCoverage ? ` across ${evaluationCoverage}` : ""}` : ""}.`
         + (editionNotice ? ` ${editionNotice}` : "")
+        + (model.total_interval_status === "calibrated" ? " Total ranges are calibrated." : " Total range uncertainty is unavailable for this edition.")
         : status === "fallback"
           ? <>Live forecast index unavailable; the published landing-page edition remains available. <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>
           : "Checking the live forecast index…"}

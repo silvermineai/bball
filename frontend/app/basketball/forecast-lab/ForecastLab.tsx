@@ -79,6 +79,9 @@ type LiveModel = {
   calibration_season?: number | null;
   calibration_games?: number | null;
   margin_half_width?: number | null;
+  calibration_total_half_width?: number | null;
+  fallback_total_half_width?: number | null;
+  fallback_total_games?: number | null;
   fallback_margin_half_width?: number | null;
   fallback_games?: number | null;
   evaluation_season?: number | null;
@@ -92,6 +95,11 @@ type LiveModel = {
   evaluation_log_loss?: number | null;
   evaluation_baseline_margin_mae?: number | null;
   evaluation_interval_coverage?: number | null;
+  evaluation_total_interval_coverage?: number | null;
+  total_interval_status?: "calibrated" | "unavailable" | null;
+  total_interval_method?: string | null;
+  total_interval_half_width?: number | null;
+  total_interval_forecast_rows?: number | null;
 };
 type LiveCatalog = { models: LiveModel[] };
 type LiveMarketMetadata = {
@@ -459,7 +467,7 @@ export default function ForecastLab({
   const selectedEvaluation = liveModel?.evaluation_games != null && liveModel.evaluation_winner_accuracy != null && liveModel.evaluation_margin_mae != null
     ? liveModel
     : modelSelection === "latest"
-      ? { evaluation_games: overview.model.evaluation.games, evaluation_winner_accuracy: overview.model.evaluation.winner_accuracy, evaluation_margin_mae: overview.model.evaluation.margin_mae, evaluation_baseline_margin_mae: overview.model.evaluation.baseline_margin_mae, evaluation_interval_coverage: overview.model.evaluation.interval_coverage }
+      ? { evaluation_games: overview.model.evaluation.games, evaluation_winner_accuracy: overview.model.evaluation.winner_accuracy, evaluation_margin_mae: overview.model.evaluation.margin_mae, evaluation_baseline_margin_mae: overview.model.evaluation.baseline_margin_mae, evaluation_interval_coverage: overview.model.evaluation.interval_coverage, evaluation_total_interval_coverage: overview.model.evaluation.total_interval_coverage }
       : null;
   const holdoutBaselineDelta = selectedEvaluation
     ? baselineMarginDelta(selectedEvaluation.evaluation_margin_mae, selectedEvaluation.evaluation_baseline_margin_mae)
@@ -581,7 +589,7 @@ export default function ForecastLab({
               ? `${liveModel.forecasts.toLocaleString()} forecast rows are registered: ${(liveModel.primary_forecasts ?? 0).toLocaleString()} primary, ${(liveModel.cold_start_forecasts ?? 0).toLocaleString()} cold-start${liveModel.invalid_forecasts ? `, ${liveModel.invalid_forecasts.toLocaleString()} invalid` : ""}.`
               : `${(liveModel?.forecasts ?? overview.coverage.forecast_games).toLocaleString()} forecasts are registered.`}</h2>
             <p>{selectedCutoff ? `The selected edition was cut off at ${date(selectedCutoff)}.` : "The selected edition does not expose a cutoff clock in the live catalog."} {selectedTrainingGames != null ? `Its fit uses ${selectedTrainingGames.toLocaleString()} paired games${selectedTrainingSeasons.length ? ` across ${selectedTrainingSeasons.join(", ")}` : ""}.` : "Training sample metadata is unavailable for this historical edition."}</p>
-            <p className="note">{selectedEvaluation ? `Retrospective holdout: ${numeric(selectedEvaluation.evaluation_winner_accuracy! * 100)}% winner accuracy · ${numeric(selectedEvaluation.evaluation_margin_mae)} point margin MAE${holdoutBaselineDelta == null ? "" : ` · ${numeric(Math.abs(holdoutBaselineDelta), 2)} points ${holdoutBaselineDelta >= 0 ? "lower" : "higher"} than the baseline`}${selectedEvaluation.evaluation_interval_coverage != null ? ` · ${numeric(selectedEvaluation.evaluation_interval_coverage * 100)}% interval coverage` : ""} across ${selectedEvaluation.evaluation_games!.toLocaleString()} games.` : "No holdout metrics were published with this historical edition."}</p>
+            <p className="note">{selectedEvaluation ? `Retrospective holdout: ${numeric(selectedEvaluation.evaluation_winner_accuracy! * 100)}% winner accuracy · ${numeric(selectedEvaluation.evaluation_margin_mae)} point margin MAE${holdoutBaselineDelta == null ? "" : ` · ${numeric(Math.abs(holdoutBaselineDelta), 2)} points ${holdoutBaselineDelta >= 0 ? "lower" : "higher"} than the baseline`}${selectedEvaluation.evaluation_interval_coverage != null ? ` · ${numeric(selectedEvaluation.evaluation_interval_coverage * 100)}% margin interval coverage` : ""}${selectedEvaluation.evaluation_total_interval_coverage != null ? ` · ${numeric(selectedEvaluation.evaluation_total_interval_coverage * 100)}% total interval coverage` : ""} across ${selectedEvaluation.evaluation_games!.toLocaleString()} games.` : "No holdout metrics were published with this historical edition."}</p>
             <p className="note">Schedule readiness in this view: {confirmedStartCount.toLocaleString()} canonical rows are marked timed, while {unconfirmedStartCount.toLocaleString()} remain TBD. The separate recorded clock layer currently has {(scheduleClockConfirmed ?? scheduleClocks.filter((row) => row.source_time_valid).length).toLocaleString()} confirmed observations{scheduleClockError ? ` (${scheduleClockError})` : ""}. TBD rows remain useful forecasts, but the prospective scorecard and market checks exclude them until the source confirms the start.</p>
           </div>
         <div className="paper-panel">
@@ -601,9 +609,12 @@ export default function ForecastLab({
             <div><span>Target season</span><strong>{liveModel.target_season ?? "—"}</strong></div>
             <div><span>Calibration sample</span><strong>{liveModel.calibration_games != null ? `${liveModel.calibration_games.toLocaleString()} games` : "—"}</strong></div>
             <div><span>Interval half-width</span><strong>{liveModel.margin_half_width != null ? `${numeric(liveModel.margin_half_width)} pts` : "—"}</strong></div>
+            <div><span>Total interval status</span><strong>{liveModel.total_interval_status === "calibrated" ? "Calibrated" : "Unavailable for this edition"}</strong></div>
+            <div><span>Total interval half-width</span><strong>{liveModel.total_interval_half_width != null ? `${numeric(liveModel.total_interval_half_width)} pts` : "—"}</strong></div>
             <div><span>Holdout result</span><strong>{liveModel.evaluation_winner_accuracy != null ? `${numeric(liveModel.evaluation_winner_accuracy * 100)}% winner` : "—"}</strong></div>
             <div><span>Margin MAE vs baseline</span><strong>{holdoutBaselineDelta == null ? "—" : `${holdoutBaselineDelta >= 0 ? "−" : "+"}${numeric(Math.abs(holdoutBaselineDelta), 2)} pts`}</strong></div>
             <div><span>Range coverage</span><strong>{liveModel.evaluation_interval_coverage != null ? `${numeric(liveModel.evaluation_interval_coverage * 100)}%` : "—"}</strong></div>
+            <div><span>Total range coverage</span><strong>{liveModel.evaluation_total_interval_coverage != null ? `${numeric(liveModel.evaluation_total_interval_coverage * 100)}%` : "—"}</strong></div>
             <div><span>Holdout Brier score</span><strong>{liveModel.evaluation_brier != null ? numeric(liveModel.evaluation_brier, 4) : "—"}</strong></div>
             <div><span>Holdout log loss</span><strong>{liveModel.evaluation_log_loss != null ? numeric(liveModel.evaluation_log_loss, 4) : "—"}</strong></div>
             <div><span>Holdout margin RMSE</span><strong>{liveModel.evaluation_margin_rmse != null ? `${numeric(liveModel.evaluation_margin_rmse, 2)} pts` : "—"}</strong></div>

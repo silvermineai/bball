@@ -616,6 +616,9 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
                 json_extract(artifact_json,'$.calibration.season') AS calibration_season,
                 json_extract(artifact_json,'$.calibration.games') AS calibration_games,
                 json_extract(artifact_json,'$.calibration.margin_half_width') AS margin_half_width,
+                json_extract(artifact_json,'$.calibration.total_half_width') AS calibration_total_half_width,
+                json_extract(artifact_json,'$.calibration.fallback_total_half_width') AS fallback_total_half_width,
+                json_extract(artifact_json,'$.calibration.fallback_total_games') AS fallback_total_games,
                 json_extract(artifact_json,'$.evaluation.season') AS evaluation_season,
                 json_extract(artifact_json,'$.evaluation.games') AS evaluation_games,
                 json_extract(artifact_json,'$.evaluation.unscored_games') AS evaluation_unscored_games,
@@ -627,8 +630,13 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
                 json_extract(artifact_json,'$.evaluation.log_loss') AS evaluation_log_loss,
                 json_extract(artifact_json,'$.evaluation.baseline_margin_mae') AS evaluation_baseline_margin_mae,
                 json_extract(artifact_json,'$.evaluation.interval_coverage') AS evaluation_interval_coverage,
+                json_extract(artifact_json,'$.evaluation.total_interval_coverage') AS evaluation_total_interval_coverage,
                 json_extract(artifact_json,'$.calibration.fallback_margin_half_width') AS fallback_margin_half_width,
-                json_extract(artifact_json,'$.calibration.fallback_games') AS fallback_games
+                json_extract(artifact_json,'$.calibration.fallback_games') AS fallback_games,
+                json_extract(artifact_json,'$.intervals.total.status') AS total_interval_status,
+                json_extract(artifact_json,'$.intervals.total.method') AS total_interval_method,
+                json_extract(artifact_json,'$.intervals.total.calibration_half_width') AS total_interval_half_width,
+                json_extract(artifact_json,'$.intervals.total.forecast_rows') AS total_interval_forecast_rows
            FROM bb_models
           ORDER BY created_at DESC, id`,
       ),
@@ -659,6 +667,24 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
           // A malformed artifact field is represented as an empty catalog value.
         }
       }
+      const totalIntervalHalfWidth = item.total_interval_half_width == null ? null : Number(item.total_interval_half_width);
+      const totalIntervalForecastRows = item.total_interval_forecast_rows == null ? null : Number(item.total_interval_forecast_rows);
+      const expectedForecasts = item.expected_forecasts == null ? null : Number(item.expected_forecasts);
+      const aggregateForecasts = Number(item.forecasts || 0);
+      const totalIntervalContractValid = item.total_interval_status === "calibrated"
+        && typeof item.total_interval_method === "string"
+        && item.total_interval_method.length > 0
+        && totalIntervalHalfWidth != null
+        && Number.isFinite(totalIntervalHalfWidth)
+        && totalIntervalHalfWidth > 0
+        && totalIntervalForecastRows != null
+        && Number.isInteger(totalIntervalForecastRows)
+        && totalIntervalForecastRows > 0
+        && expectedForecasts != null
+        && Number.isInteger(expectedForecasts)
+        && expectedForecasts > 0
+        && aggregateForecasts === expectedForecasts
+        && totalIntervalForecastRows === expectedForecasts;
       return {
         ...item,
         forecasts: Number(item.forecasts || 0),
@@ -668,13 +694,16 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         target_season: item.target_season == null ? null : Number(item.target_season),
         training_games: item.training_games == null ? null : Number(item.training_games),
         training_seasons: trainingSeasons,
-        expected_forecasts: item.expected_forecasts == null ? null : Number(item.expected_forecasts),
+        expected_forecasts: expectedForecasts,
         publication_complete: item.expected_forecasts == null
           ? true
           : Number(item.forecasts || 0) === Number(item.expected_forecasts),
         calibration_season: item.calibration_season == null ? null : Number(item.calibration_season),
         calibration_games: item.calibration_games == null ? null : Number(item.calibration_games),
         margin_half_width: item.margin_half_width == null ? null : Number(item.margin_half_width),
+        calibration_total_half_width: item.calibration_total_half_width == null ? null : Number(item.calibration_total_half_width),
+        fallback_total_half_width: item.fallback_total_half_width == null ? null : Number(item.fallback_total_half_width),
+        fallback_total_games: item.fallback_total_games == null ? null : Number(item.fallback_total_games),
         fallback_margin_half_width: item.fallback_margin_half_width == null ? null : Number(item.fallback_margin_half_width),
         fallback_games: item.fallback_games == null ? null : Number(item.fallback_games),
         evaluation_season: item.evaluation_season == null ? null : Number(item.evaluation_season),
@@ -688,6 +717,14 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
         evaluation_log_loss: item.evaluation_log_loss == null ? null : Number(item.evaluation_log_loss),
         evaluation_baseline_margin_mae: item.evaluation_baseline_margin_mae == null ? null : Number(item.evaluation_baseline_margin_mae),
         evaluation_interval_coverage: item.evaluation_interval_coverage == null ? null : Number(item.evaluation_interval_coverage),
+        evaluation_total_interval_coverage: item.evaluation_total_interval_coverage == null ? null : Number(item.evaluation_total_interval_coverage),
+        // Missing or malformed contract metadata is deliberately reported as
+        // unavailable. A catalog consumer must never infer calibrated total
+        // uncertainty from a legacy edition's scalar fields.
+        total_interval_status: totalIntervalContractValid ? "calibrated" : "unavailable",
+        total_interval_method: typeof item.total_interval_method === "string" ? item.total_interval_method : null,
+        total_interval_half_width: totalIntervalHalfWidth != null && Number.isFinite(totalIntervalHalfWidth) ? totalIntervalHalfWidth : null,
+        total_interval_forecast_rows: totalIntervalForecastRows != null && Number.isInteger(totalIntervalForecastRows) && totalIntervalForecastRows >= 0 ? totalIntervalForecastRows : null,
       };
     });
     // Forecast rows can outlive their model metadata during a replay. Keep

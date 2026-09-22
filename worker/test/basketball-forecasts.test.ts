@@ -390,12 +390,17 @@ describe("basketball forecast availability", () => {
         { model_id: "complete", forecasts: 12, primary_forecasts: 10, cold_start_forecasts: 2, invalid_forecasts: 0, last_created_at: "2026-09-08T00:00:00Z" },
       ] },
       { results: [
-        { model_id: "partial", model_created_at: "2026-09-09T00:00:00Z", target_season: 2027, expected_forecasts: 12 },
+        { model_id: "partial", model_created_at: "2026-09-09T00:00:00Z", target_season: 2027, expected_forecasts: 12,
+          total_interval_status: "calibrated", total_interval_method: "held_out_absolute_total_error_quantile_80",
+          total_interval_half_width: 18.4, total_interval_forecast_rows: 12 },
         { model_id: "complete", model_created_at: "2026-09-08T00:00:00Z", target_season: 2027, expected_forecasts: 12,
           calibration_games: 5701, margin_half_width: 15.92, fallback_margin_half_width: 23.88, fallback_games: 50,
+          calibration_total_half_width: 18.4, fallback_total_half_width: 27.6, fallback_total_games: 50,
+          total_interval_status: "calibrated", total_interval_method: "held_out_absolute_total_error_quantile_80",
+          total_interval_half_width: 18.4, total_interval_forecast_rows: 12,
           evaluation_games: 5734, evaluation_unscored_games: 0, evaluation_winner_accuracy: 0.676,
           evaluation_margin_mae: 10.26, evaluation_margin_rmse: 13.1, evaluation_total_mae: 12.4,
-          evaluation_brier: 0.21, evaluation_log_loss: 0.61 },
+          evaluation_brier: 0.21, evaluation_log_loss: 0.61, evaluation_total_interval_coverage: 0.801 },
       ] },
       { results: [{ upcoming_games: 12 }] },
     ]);
@@ -421,14 +426,18 @@ describe("basketball forecast availability", () => {
     expect(body.models).toMatchObject([
       { model_id: "complete", forecasts: 12, expected_forecasts: 12, publication_complete: true,
         fallback_margin_half_width: 23.88, fallback_games: 50,
+        total_interval_status: "calibrated", total_interval_half_width: 18.4,
+        total_interval_forecast_rows: 12, evaluation_total_interval_coverage: 0.801,
         evaluation_unscored_games: 0, evaluation_margin_rmse: 13.1,
         evaluation_total_mae: 12.4, evaluation_brier: 0.21, evaluation_log_loss: 0.61 },
-      { model_id: "partial", forecasts: 1, expected_forecasts: 12, publication_complete: false },
+      { model_id: "partial", forecasts: 1, expected_forecasts: 12, publication_complete: false, total_interval_status: "unavailable" },
     ]);
     const metadataSql = String(prepare.mock.calls.find(([sql]) => String(sql).includes("FROM bb_models"))?.[0]);
     expect(metadataSql).toContain("$.evaluation.brier");
     expect(metadataSql).toContain("$.evaluation.log_loss");
     expect(metadataSql).toContain("$.calibration.fallback_games");
+    expect(metadataSql).toContain("$.intervals.total.status");
+    expect(metadataSql).toContain("$.evaluation.total_interval_coverage");
   });
 
   it("returns a retryable status when the D1 catalog is unavailable", async () => {

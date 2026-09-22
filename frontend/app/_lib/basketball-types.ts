@@ -156,6 +156,8 @@ export type BBOverview = {
       brier: number;
       log_loss: number;
       interval_coverage: number;
+      /** Held-out coverage for the independently calibrated total interval. */
+      total_interval_coverage?: number;
       baseline_margin_mae: number;
       training_seasons: number[];
     };
