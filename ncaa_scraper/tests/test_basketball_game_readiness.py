@@ -28,6 +28,12 @@ def prediction(unknown_teams):
     }
 
 
+def calibrated_prediction():
+    value = prediction([])
+    value.update({"estimate_type": "primary", "unknown_teams": [], "total_low": 117.0, "total_high": 153.0, "total_half_width": 18.0})
+    return value
+
+
 class BasketballGameReadinessTests(unittest.TestCase):
     def test_cold_start_names_the_participant_outside_the_model_field(self):
         MODULE.validate_cold_start(
@@ -48,6 +54,27 @@ class BasketballGameReadinessTests(unittest.TestCase):
             MODULE.validate_cold_start(
                 prediction(["2"]), "game-1", "1", "2", {"1", "2"}
             )
+
+    def test_calibrated_total_interval_requires_complete_symmetric_range(self):
+        MODULE.validate_prediction(
+            calibrated_prediction(), "game-1 primary prediction", require_total_interval=True
+        )
+        for field in ("total_low", "total_high", "total_half_width"):
+            value = calibrated_prediction()
+            value.pop(field)
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, field):
+                MODULE.validate_prediction(value, "game-1 primary prediction", require_total_interval=True)
+
+    def test_calibrated_total_interval_rejects_width_or_bounds_mismatch(self):
+        for update in (
+            {"total_half_width": 17.0},
+            {"total_low": 120.0},
+            {"total_high": 150.0},
+        ):
+            value = calibrated_prediction()
+            value.update(update)
+            with self.subTest(update=update), self.assertRaisesRegex(ValueError, "total interval"):
+                MODULE.validate_prediction(value, "game-1 primary prediction", require_total_interval=True)
 
 
 if __name__ == "__main__":

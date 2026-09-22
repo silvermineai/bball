@@ -46,7 +46,7 @@ def read_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def validate_prediction(value: Any, label: str) -> None:
+def validate_prediction(value: Any, label: str, *, require_total_interval: bool = False) -> None:
     if not isinstance(value, dict):
         raise ValueError(f"{label} is missing an estimate")
     for field in PREDICTION_FIELDS:
@@ -65,6 +65,19 @@ def validate_prediction(value: Any, label: str) -> None:
         raise ValueError(f"{label} has a score/total mismatch")
     if value["pace"] <= 0:
         raise ValueError(f"{label} has a non-positive pace")
+    if require_total_interval:
+        for field in ("total_low", "total_high", "total_half_width"):
+            if not finite(value.get(field)):
+                raise ValueError(f"{label} has a non-numeric {field}")
+        if value["total_half_width"] <= 0:
+            raise ValueError(f"{label} has a non-positive total interval half-width")
+        if value["total_low"] > value["total_high"] or not value["total_low"] <= value["total"] <= value["total_high"]:
+            raise ValueError(f"{label} has a malformed total interval")
+        if (
+            abs((value["total"] - value["total_low"]) - value["total_half_width"]) > 0.05
+            or abs((value["total_high"] - value["total"]) - value["total_half_width"]) > 0.05
+        ):
+            raise ValueError(f"{label} has a total interval width mismatch")
 
 
 def validate_cold_start(
@@ -73,8 +86,14 @@ def validate_cold_start(
     home_id: str,
     away_id: str,
     model_team_ids: set[str],
+    *,
+    require_total_interval: bool = False,
 ) -> None:
-    validate_prediction(prediction, f"game {game_id} fallback prediction")
+    validate_prediction(
+        prediction,
+        f"game {game_id} fallback prediction",
+        require_total_interval=require_total_interval,
+    )
     if (
         not isinstance(prediction, dict)
         or prediction.get("estimate_type") != "cold_start"
@@ -228,6 +247,12 @@ def check(root: Path) -> dict[str, Any]:
         raise ValueError("roster model does not identify the active primary model")
     if not isinstance(calibration, dict):
         raise ValueError("overview model has no calibration")
+    total_interval_required = "total_half_width" in calibration
+    if total_interval_required and (
+        not finite(calibration.get("total_half_width"))
+        or calibration["total_half_width"] <= 0
+    ):
+        raise ValueError("overview model has an invalid total interval calibration")
     scenarios = {}
     for row in roster_model.get("scenarios", []):
         if not isinstance(row, dict):
@@ -261,7 +286,11 @@ def check(root: Path) -> dict[str, Any]:
             raise ValueError(f"game {game_id} has both primary and fallback predictions")
         if game.get("prediction") is not None:
             primary += 1
-            validate_prediction(game["prediction"], f"game {game_id} primary prediction")
+            validate_prediction(
+                game["prediction"],
+                f"game {game_id} primary prediction",
+                require_total_interval=total_interval_required,
+            )
             validate_factors(game)
             for team_id, side in ((home_id, "home"), (away_id, "away")):
                 validate_team(rating_by_id.get(team_id), team_id, f"game {game_id} {side} team")
@@ -292,6 +321,7 @@ def check(root: Path) -> dict[str, Any]:
                 home_id,
                 away_id,
                 model_team_ids,
+                require_total_interval=total_interval_required,
             )
         else:
             raise ValueError(f"game {game_id} has neither a primary nor fallback prediction")
@@ -307,6 +337,8 @@ def check(root: Path) -> dict[str, Any]:
         "upcoming_games": len(games),
         "primary_games": primary,
         "cold_start_games": fallback,
+        "total_interval_status": "calibrated" if total_interval_required else "unavailable",
+        "total_interval_games": primary + fallback if total_interval_required else 0,
         "primary_context": primary_context,
         "checked_profiles": len({str(g.get("home_id")) for g in games if g.get("prediction")} | {str(g.get("away_id")) for g in games if g.get("prediction")}),
     }
