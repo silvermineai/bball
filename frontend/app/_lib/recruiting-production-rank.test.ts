@@ -113,12 +113,15 @@ describe("recruiting production rank", () => {
   it("rolls exact-ID production up to destinations with game-weighted rates", () => {
     const rows = summarizeRecruitingDestinationProduction([
       person(),
-      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, id: "1002", ppg: 10, mpg: 18, rpg: 2, apg: 1, spg: 0.2, ts: 0.44 } }),
+      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, id: "1002", ppg: 10, mpg: 18, rpg: 2, apg: 1, spg: 0.2, ts: 0.44, three_rate: 0.2, ft_rate: 0.15, tov_rate: 0.2 } }),
       person({ key: "3-player-c", name: "C Player", team_id: "3", stats: { ...person().stats!, id: "1003", ppg: 20, mpg: 20 } }),
     ]);
     expect(rows.map((row) => row.teamId)).toEqual(["1", "3"]);
     expect(rows[0]).toMatchObject({ additions: 2, priorPrograms: 1, games: 60, weightedPpg: 14 });
     expect(rows[0].weightedTs).toBeCloseTo((0.58 * 30 + 0.44 * 30) / 60);
+    expect(rows[0].weightedThreeRate).toBeCloseTo((0.4 * 30 + 0.2 * 30) / 60);
+    expect(rows[0].weightedFtRate).toBeCloseTo((0.25 * 30 + 0.15 * 30) / 60);
+    expect(rows[0].weightedTovRate).toBeCloseTo((0.14 * 30 + 0.2 * 30) / 60);
   });
 
   it("audits source-listed roster location without inferring a transfer outcome", () => {

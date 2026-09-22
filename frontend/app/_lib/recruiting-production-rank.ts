@@ -72,6 +72,9 @@ export type RecruitingDestinationProductionSummary = {
   weightedRpg: number | null;
   weightedApg: number | null;
   weightedTs: number | null;
+  weightedThreeRate: number | null;
+  weightedFtRate: number | null;
+  weightedTovRate: number | null;
 };
 
 export type RecruitingDestinationRosterAudit = {
@@ -181,6 +184,13 @@ export function summarizeRecruitingDestinationProduction(
       ? values.reduce((sum, row) => sum + (row.stats[metric] as number) * row.stats.games, 0) / denominator
       : null;
   };
+  const weightedProfile = (group: RecruitingProductionRankRow[], metric: "three_rate" | "ft_rate" | "tov_rate") => {
+    const values = group.filter((row) => finiteNonnegative(row.stats[metric]));
+    const denominator = values.reduce((sum, row) => sum + row.stats.games, 0);
+    return denominator > 0
+      ? values.reduce((sum, row) => sum + (row.stats[metric] as number) * row.stats.games, 0) / denominator
+      : null;
+  };
   return [...groups.entries()]
     .map(([teamId, group]) => ({
       teamId,
@@ -192,6 +202,9 @@ export function summarizeRecruitingDestinationProduction(
       weightedRpg: weighted(group, "rpg"),
       weightedApg: weighted(group, "apg"),
       weightedTs: weighted(group, "ts"),
+      weightedThreeRate: weightedProfile(group, "three_rate"),
+      weightedFtRate: weightedProfile(group, "ft_rate"),
+      weightedTovRate: weightedProfile(group, "tov_rate"),
     }))
     .sort((left, right) => right.additions - left.additions || (right.weightedPpg ?? -Infinity) - (left.weightedPpg ?? -Infinity) || left.teamId.localeCompare(right.teamId));
 }
