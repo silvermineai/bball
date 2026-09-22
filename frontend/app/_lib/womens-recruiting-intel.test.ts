@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import release from "../../public/data/basketball/womens-recruiting.json";
-import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingRelease, womensRecruitingGradeBands, womensRecruitingPositionSupply, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows } from "./womens-recruiting-intel";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingHistory, validateWomensRecruitingRelease, womensRecruitingGradeBands, womensRecruitingPositionSupply, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows } from "./womens-recruiting-intel";
 
 const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[0][number]> = {}) => ({
   player_id: "p-1",
@@ -226,5 +226,35 @@ describe("women's recruiting prospect cohort", () => {
       source: { ...base.source, list_url: spoofedList, detail_url_template: spoofedTemplate },
       records: [{ ...base.records[0], source_url: spoofedRecord }],
     })).toBeNull();
+  });
+
+  it("validates multi-class history only when class boundaries and totals reconcile", () => {
+    const makeRelease = (season: number, edition: string) => ({
+      schema_version: 1,
+      sport: "basketball",
+      gender: "women",
+      season,
+      edition,
+      captured_at: "2026-09-22T04:10:24.839220Z",
+      source: {
+        ...source(1),
+        list_url: source(1).list_url.replace("/seasons/2027/", `/seasons/${season}/`),
+      },
+      coverage: { prospects: 1, graded: 1, ranked: 0, committed: 0 },
+      records: [{ athlete_id: String(season), name: "A", grade: 92, ...sourceFields(String(season)) , recruiting_class: season }],
+    });
+    const history = validateWomensRecruitingHistory({
+      schema_version: 1,
+      sport: "basketball",
+      gender: "women",
+      classes: [2026, 2027],
+      edition: "a".repeat(64),
+      captured_at: "2026-09-22T04:10:24.839220Z",
+      coverage: { seasons: 2, prospects: 2, graded: 2, ranked: 0, committed: 0 },
+      releases: [makeRelease(2026, "b".repeat(64)), makeRelease(2027, "c".repeat(64))],
+    });
+    expect(history?.classes).toEqual([2026, 2027]);
+    expect(validateWomensRecruitingHistory({ ...history, coverage: { ...history!.coverage, prospects: 1 } })).toBeNull();
+    expect(validateWomensRecruitingHistory({ ...history, classes: [2027, 2026] })).toBeNull();
   });
 });

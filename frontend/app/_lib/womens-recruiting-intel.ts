@@ -73,6 +73,23 @@ export type WomensRecruitingRelease = {
   records: WomensRecruitingProspect[];
 };
 
+export type WomensRecruitingHistory = {
+  schema_version: 1;
+  sport: "basketball";
+  gender: "women";
+  classes: number[];
+  edition: string;
+  captured_at: string;
+  coverage: {
+    seasons: number;
+    prospects: number;
+    graded: number;
+    ranked: number;
+    committed: number;
+  };
+  releases: WomensRecruitingRelease[];
+};
+
 export const womensRecruitingProspectCsvHeaders = [
   "athlete_id",
   "name",
@@ -233,6 +250,52 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
     source,
     coverage: { prospects, graded, ranked, committed },
     records,
+  };
+}
+
+/**
+ * Validate the multi-class index without collapsing source rows into a
+ * cross-class ranking. Each class must pass the same exact-ID and receipt
+ * checks as the standalone release, and aggregate counts must reconcile.
+ */
+export function validateWomensRecruitingHistory(value: unknown): WomensRecruitingHistory | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const payload = value as Record<string, unknown>;
+  if (payload.schema_version !== 1 || payload.sport !== "basketball" || payload.gender !== "women") return null;
+  const edition = typeof payload.edition === "string" ? payload.edition.trim().toLowerCase() : "";
+  const capturedAt = typeof payload.captured_at === "string" ? payload.captured_at.trim() : "";
+  if (!releaseDigest.test(edition) || !capturedAt || Number.isNaN(Date.parse(capturedAt))) return null;
+  const rawReleases = payload.releases;
+  const rawClasses = payload.classes;
+  if (!Array.isArray(rawReleases) || rawReleases.length === 0 || !Array.isArray(rawClasses) || rawClasses.length !== rawReleases.length) return null;
+  const releases = rawReleases.map(validateWomensRecruitingRelease);
+  if (releases.some((release): release is null => release === null)) return null;
+  const validReleases = releases as WomensRecruitingRelease[];
+  const classes = rawClasses.map((item) => Number(item));
+  if (classes.some((item) => !Number.isSafeInteger(item) || item < 2025 || item > 2035)
+    || new Set(classes).size !== classes.length
+    || validReleases.some((release, index) => release.season !== classes[index])) return null;
+  const rawCoverage = payload.coverage;
+  if (!rawCoverage || typeof rawCoverage !== "object" || Array.isArray(rawCoverage)) return null;
+  const coverage = rawCoverage as Record<string, unknown>;
+  const count = (key: string) => Number.isSafeInteger(coverage[key]) && Number(coverage[key]) >= 0 ? Number(coverage[key]) : null;
+  const measured = {
+    seasons: validReleases.length,
+    prospects: validReleases.reduce((sum, release) => sum + release.coverage.prospects, 0),
+    graded: validReleases.reduce((sum, release) => sum + release.coverage.graded, 0),
+    ranked: validReleases.reduce((sum, release) => sum + release.coverage.ranked, 0),
+    committed: validReleases.reduce((sum, release) => sum + release.coverage.committed, 0),
+  };
+  if (Object.keys(measured).some((key) => count(key) !== measured[key as keyof typeof measured])) return null;
+  return {
+    schema_version: 1,
+    sport: "basketball",
+    gender: "women",
+    classes,
+    edition,
+    captured_at: capturedAt,
+    coverage: measured,
+    releases: validReleases,
   };
 }
 

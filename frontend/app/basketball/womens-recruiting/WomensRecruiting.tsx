@@ -7,6 +7,7 @@ import {
   womensRecruitingGradeBands,
   womensRecruitingPositionSupply,
   type WomensRecruitingProspect,
+  type WomensRecruitingHistory,
   type WomensRecruitingRelease,
 } from "../../_lib/womens-recruiting-intel";
 
@@ -42,7 +43,9 @@ function exportRows(records: readonly WomensRecruitingProspect[], release: Women
   ]);
 }
 
-export default function WomensRecruiting({ release }: { release: WomensRecruitingRelease }) {
+export default function WomensRecruiting({ release: initialRelease, history }: { release: WomensRecruitingRelease; history?: WomensRecruitingHistory | null }) {
+  const [season, setSeason] = useState(initialRelease.season);
+  const release = history?.releases.find((item) => item.season === season) ?? initialRelease;
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState("");
   const [status, setStatus] = useState("");
@@ -72,7 +75,8 @@ export default function WomensRecruiting({ release }: { release: WomensRecruitin
     <div className="page-title">
       <div className="eyebrow">Women&apos;s basketball · recruiting</div>
       <h1>Keep the women&apos;s class in its own ledger.</h1>
-      <p>Search the retained 2027 prospect release by player, position and recorded status. Source fields stay separate from college roster identity, eligibility and future role.</p>
+      <p>Search the retained {release.season} prospect release by player, position and recorded status. Source fields stay separate from college roster identity, eligibility and future role.</p>
+      {history && history.releases.length > 1 ? <label className="control" style={{ display: "inline-flex", marginTop: 16, maxWidth: 220 }}><span>RECRUITING CLASS</span><select aria-label="Women's recruiting class" value={release.season} onChange={(event) => setSeason(Number(event.target.value))}>{history.releases.map((item) => <option key={item.season} value={item.season}>{item.season}</option>)}</select></label> : null}
     </div>
     <section className="stat-strip" aria-label="Women's recruiting coverage">
       <div><strong>{release.coverage.prospects.toLocaleString()}</strong><span>Prospects</span></div>
