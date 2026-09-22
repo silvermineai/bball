@@ -5,11 +5,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 import { exactRankingContextRows, rankingContextLabel, rankingContextSpecs, rankingRoleContext, type RankingContextRow } from "../../_lib/ncaa-ranking-context";
+import PlayerShotLocationCourt from "../../_components/PlayerShotLocationCourt";
+import { playerCardShotLocations } from "../../_components/LivePlayerShotMap";
+import type { PlayerShotCoordinate, PlayerShotCoordinateTuple } from "../../_lib/player-shot-locations";
 
 type Stats = Record<string, number | null>;
 type SeasonRow = { season: number; team_id: string; team_name: string | null; player_name: string | null; games: number; stats: Stats };
 type RosterRow = { season: number; team_name: string | null; player_name: string | null; profile: Record<string, string | number | null> };
-type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; identity_note: string };
+type ShootingRow = { season: number; team_id: string; team_name: string | null; stats: { attempts?: number; coordinates?: Array<PlayerShotCoordinate | PlayerShotCoordinateTuple> } };
+type Card = { player_id: string; selected_season: number; seasons: SeasonRow[]; rosters: RosterRow[]; shooting?: ShootingRow[]; identity_note: string };
 type Impact = { season: number; player_id: string; orapm: number | null; drapm: number | null; rapm_net: number | null; qualified: boolean; rank: number | null };
 type SearchRow = { player_id: string; player_name: string | null; team_id: string; team_name: string | null; games: number; points: number | null };
 type SourceReceipt = { dataset: string; season: number; fetched_at: string; sha256: string };
@@ -19,6 +23,11 @@ type RankingPayload = { metric: RankingContextRow["metric"]; total: number; rows
 const label = (season: number) => `${season - 1}–${String(season).slice(-2)}`;
 const format = (value: number | null, digits = 1) => value == null ? "—" : value.toFixed(digits);
 const percent = (value: number | null) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
+
+/** Keep comparison maps within the selected season and exact player ID. */
+export function comparisonShotLocations(card: Pick<Card, "shooting">, season: number, playerId: string) {
+  return playerCardShotLocations({ shooting: card.shooting || [] }, season, playerId);
+}
 
 export function comparisonPossessionContext(rows: SeasonRow[]) {
   const total = (key: string) => completeStatsSum(rows, key);
@@ -77,12 +86,18 @@ function PlayerColumn({ card, season, impact, rankingRows }: { card: Card; seaso
   }, [rows]);
   const name = rows[0]?.player_name || roster?.player_name || `Player ${card.player_id}`;
   const exactRows = rankingRows.filter((row) => row.player_id === card.player_id);
+  const shotLocations = useMemo(() => comparisonShotLocations(card, season, card.player_id), [card, season]);
+  const hasPlottableShots = shotLocations.some((shot) => typeof shot.x === "number" && Number.isFinite(shot.x) && typeof shot.y === "number" && Number.isFinite(shot.y));
+  const recordedAttempts = (card.shooting || [])
+    .filter((row) => row.season === season)
+    .reduce((total, row) => total + (typeof row.stats.attempts === "number" && Number.isFinite(row.stats.attempts) && row.stats.attempts >= 0 ? Math.trunc(row.stats.attempts) : 0), 0);
   return <article className="paper-panel">
     <div className="eyebrow">Player ID {card.player_id}</div>
     <h2>{name}</h2>
     <p className="note">{rows.map((row) => row.team_name || row.team_id).join(" · ") || "No selected-season team row"}</p>
     <div className="hero-actions"><Link className="hero-link" href={`/basketball/ncaa-player/?id=${encodeURIComponent(card.player_id)}&season=${season}`}>Open full player card →</Link></div>
     {!totals ? <p className="empty">No source row for {label(season)}.</p> : <>
+      {hasPlottableShots ? <section className="section" aria-label={`${name} shot profile`}><PlayerShotLocationCourt shots={shotLocations} recordedAttempts={recordedAttempts || null} playerName={name} title="Recorded shot locations" compact showEvents /></section> : <p className="note">No plotted shot coordinates are published for this player and season. Open the full player card for any aggregate shooting profile.</p>}
       <div className="strip"><div><strong>{totals.games || "—"}</strong><span>Games</span></div><div><strong>{format(totals.points == null || !totals.games ? null : totals.points / totals.games)}</strong><span>Points / game</span></div><div><strong>{format(totals.rebounds == null || !totals.games ? null : totals.rebounds / totals.games)}</strong><span>Rebounds / game</span></div><div><strong>{format(totals.assists == null || !totals.games ? null : totals.assists / totals.games)}</strong><span>Assists / game</span></div><div><strong>{format(totals.turnovers == null || !totals.games ? null : totals.turnovers / totals.games)}</strong><span>Turnovers / game</span></div><div><strong>{format(totals.fouls == null || !totals.games ? null : totals.fouls / totals.games)}</strong><span>Fouls / game</span></div></div>
       <dl className="raw-stat-grid"><div><dt>True shooting</dt><dd>{percent(totals.ts)}</dd></div><div><dt>Effective FG</dt><dd>{percent(totals.efg)}</dd></div><div><dt>Minutes / game</dt><dd>{format(totals.minutes == null || !totals.games ? null : totals.minutes / totals.games)}</dd></div><div><dt>Points / recorded possession</dt><dd>{format(totals.possessionContext.rates.pointsPerPossession, 3)}</dd></div><div><dt>Assists / recorded possession</dt><dd>{percent(totals.possessionContext.rates.assistRate)}</dd></div><div><dt>Turnovers / recorded possession</dt><dd>{percent(totals.possessionContext.rates.turnoverRate)}</dd></div><div><dt>3-point attempt rate</dt><dd>{percent(totals.possessionContext.rates.threePointAttemptRate)}</dd></div><div><dt>Free-throw attempt rate</dt><dd>{percent(totals.possessionContext.rates.freeThrowAttemptRate)}</dd></div><div><dt>Class / position</dt><dd>{roster?.profile.class || "—"} · {roster?.profile.position || "—"}</dd></div><div><dt>Net RAPM</dt><dd>{format(impact?.rapm_net ?? null, 2)}</dd></div><div><dt>RAPM status</dt><dd>{impact?.qualified ? "Qualified sample" : "Unavailable / unqualified"}</dd></div></dl>
       <p className="note">Recorded evidence: {format(totals.possessionContext.points, 0)} PTS / {format(totals.possessionContext.possessions, 0)} POSS · {format(totals.assists, 0)} AST · {format(totals.turnovers, 0)} TO · FG {format(totals.fgm, 0)}/{format(totals.fga, 0)} · 3P {format(totals.tpm, 0)}/{format(totals.tpa, 0)} · FT {format(totals.ftm, 0)}/{format(totals.fta, 0)}.</p>
@@ -148,7 +163,30 @@ export default function NcaaCompare() {
       fetch(`/api/basketball/research/ncaa-player-comparison?season=${season}&ids=${encodeURIComponent(ids.join(","))}`, { signal: controller.signal }).then(async (response) => { if (!response.ok) throw new Error("The exact-ID player comparison could not be loaded."); return response.json() as Promise<ComparisonPayload>; }),
       fetch(`/data/basketball/impact-${season}.json`, { signal: controller.signal }).then((response) => response.ok ? response.json() as Promise<{ players: Impact[] }> : { players: [] }).catch(() => ({ players: [] })),
       Promise.all(rankingRequests),
-    ]).then(([comparison, release, rankings]) => { if (!controller.signal.aborted) { setCards(comparison.cards); setSourceReceipts(comparison.source_receipts); setMissingIds(comparison.missing_ids); setIdentityPolicy(comparison.identity_policy); setImpact(release.players); setRankingRows(rankings.flatMap((payload) => payload ? payload.rows.map((row) => ({ ...row, metric: payload.metric, total: payload.total })) : [])); } }).catch((reason) => { if (reason.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The player comparison could not be loaded."); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    ]).then(async ([comparison, release, rankings]) => {
+      if (controller.signal.aborted) return;
+      // Shooting coordinates live in the exact player-card archive. Fetch the
+      // compact profile per requested ID so comparison never joins by name or
+      // pools a player's separate team stint with another ID.
+      const cards = await Promise.all(comparison.cards.map(async (card) => {
+        try {
+          const response = await fetch(`/api/basketball/research/ncaa-player-card/${encodeURIComponent(card.player_id)}?season=${season}`, { signal: controller.signal });
+          if (!response.ok) return card;
+          const payload = await response.json() as { shooting?: ShootingRow[] };
+          return { ...card, shooting: Array.isArray(payload.shooting) ? payload.shooting : [] };
+        } catch {
+          return card;
+        }
+      }));
+      if (!controller.signal.aborted) {
+        setCards(cards);
+        setSourceReceipts(comparison.source_receipts);
+        setMissingIds(comparison.missing_ids);
+        setIdentityPolicy(comparison.identity_policy);
+        setImpact(release.players);
+        setRankingRows(rankings.flatMap((payload) => payload ? payload.rows.map((row) => ({ ...row, metric: payload.metric, total: payload.total })) : []));
+      }
+    }).catch((reason) => { if (reason.name !== "AbortError") setError(reason instanceof Error ? reason.message : "The player comparison could not be loaded."); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [ids, season]);
   const submit = () => {
