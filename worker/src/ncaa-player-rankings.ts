@@ -9,6 +9,10 @@ const metrics = ["ppg", "rpg", "orpg", "drpg", "apg", "spg", "bpg", "fpg", "mpg"
 type Metric = (typeof metrics)[number];
 const querySchema = z.object({
   season: z.coerce.number().int().min(2010).max(2026).default(2026),
+  // The advanced warehouse is Division I only. Parse the requested division
+  // explicitly so a D2/D3 query cannot be silently stripped and served D1
+  // rows by Zod's default unknown-key behavior.
+  division: z.enum(["1", "2", "3"]).default("1"),
   metric: z.enum(metrics).default("ppg"),
   minGames: z.coerce.number().int().min(1).max(40).default(5),
   minMinutes: z.coerce.number().int().min(0).max(3000).default(200),
@@ -218,6 +222,8 @@ async function publishedRankingsFallback(
       const positions = [...new Set(players.map((player) => typeof player.position === "string" ? player.position : "").filter(Boolean))].sort();
       const response = c.json({
         seasons: [2026],
+        division: "1",
+        available_divisions: ["1"],
         metrics,
         classes,
         positions,
@@ -282,6 +288,7 @@ async function publishedRankingsFallback(
       : rankedRows.slice(start, start + 50);
     const response = c.json({
       season: 2026,
+      division: "1",
       metric: args.metric,
       direction: args.metric === "topg" || args.metric === "tov_rate" ? "asc" : "desc",
       min_games: args.minGames,
@@ -579,7 +586,16 @@ const impactQueries = (where: string, minGames: number, minMinutes: number) => {
 };
 
 ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, metric, minGames, minMinutes, minVolume, q, playerIds: playerIdsQuery, classYear, position, page, meta } = c.req.valid("query");
+  const { season, division, metric, minGames, minMinutes, minVolume, q, playerIds: playerIdsQuery, classYear, position, page, meta } = c.req.valid("query");
+  if (division !== "1") {
+    return c.json({
+      error: "Advanced NCAA player rankings are published for Division I only.",
+      code: "division_not_published",
+      requested_division: division,
+      available_divisions: ["1"],
+      alternative: `/api/basketball/research/ncaa-leaders?division=${division}`,
+    }, 409, { "Cache-Control": "no-store" });
+  }
   const playerIds = playerIdsQuery?.split(",").filter(Boolean) || [];
   const cache = edgeCache();
   const cacheKey = new Request(c.req.url, { method: "GET" });
@@ -601,6 +617,8 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       ]), DB_TIMEOUT_MS);
       const response = c.json({
         seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
+        division: "1",
+        available_divisions: ["1"],
         metrics,
         classes: classes.results.map((row) => String((row as { value: string }).value)),
         positions: positions.results.map((row) => String((row as { value: string }).value)),
@@ -694,7 +712,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
       ORDER BY value ${rankOrder}, player_name ASC, player_id ASC
       LIMIT 50 OFFSET ?`,
     ).bind(...binds, minGames, minMinutes, ...volumeBinds, ...playerIds, page * 50).all(), DB_TIMEOUT_MS);
-  const response = c.json({ season, metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
+  const response = c.json({ season, division: "1", metric, direction, min_games: minGames, min_minutes: minMinutes, min_volume: minVolume, page, page_size: 50, total: Number(count?.total || 0), rows: rows.results });
   response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
   if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
   return response;

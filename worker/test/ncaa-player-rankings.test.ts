@@ -2,6 +2,28 @@ import { describe, expect, it, vi } from "vitest";
 import { metricExpression, ncaaPlayerRankings, volumeColumn } from "../src/ncaa-player-rankings";
 
 describe("NCAA player rankings availability", () => {
+  it.each(["2", "3"])("fails closed for Division %s instead of serving Division I rows", async (division) => {
+    const prepare = vi.fn();
+    const fetch = vi.fn();
+    const response = await ncaaPlayerRankings.request(
+      `/?season=2026&division=${division}&metric=ppg`,
+      {},
+      { DB: { prepare }, ASSETS: { fetch } } as never,
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "Advanced NCAA player rankings are published for Division I only.",
+      code: "division_not_published",
+      requested_division: division,
+      available_divisions: ["1"],
+      alternative: `/api/basketball/research/ncaa-leaders?division=${division}`,
+    });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(prepare).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("exposes the retained NCAA double-double count as a ranking metric", () => {
     expect(metricExpression("dbl_dbl")).toBe("double_doubles");
     expect(volumeColumn("dbl_dbl")).toBeNull();
