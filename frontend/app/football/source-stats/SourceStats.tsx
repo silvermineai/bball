@@ -40,6 +40,12 @@ type Result = {
   field_catalog?: Array<{ key: string; observed_rows: number; share: number | null }>;
   field_catalog_scope?: "returned_page";
   division_coverage?: DivisionCoverageResult;
+  division_filter?: {
+    requested: Division;
+    status: "available" | "empty" | "unavailable";
+    matched_rows: number;
+    reason: string;
+  };
   source_receipts: Array<{ dataset: Exclude<Dataset, "all">; season: number; fetched_at: string; sha256: string }>;
   rows: Row[];
 };
@@ -214,7 +220,8 @@ export default function SourceStats() {
         <label className="control"><span>PLAYER, TEAM ID OR SOURCE FIELD</span><input type="search" maxLength={100} value={query} placeholder="Search literal source text" onChange={(event) => { setQuery(event.target.value); setPage(0); }} /></label>
         {result && <><button className="button secondary" type="button" onClick={downloadPage}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></>}
       </div>
-      {(teamFilter || division !== "all") && <p className="note" role="status">{teamFilter ? <>Exact source team key filter: <code>{teamFilter}</code>{division !== "all" ? " · " : ""}</> : null}{division !== "all" ? <>Exact team-directory division filter: <strong>{division === "unknown" ? "unavailable / unrecognised" : division.toUpperCase()}</strong></> : null} · <button className="text-link" type="button" onClick={() => { setTeamFilter(""); setDivision("all"); setPage(0); }}>Clear filters</button></p>}
+      {(teamFilter || division !== "all") && <p className="note" role="status">{teamFilter ? <>Exact source team key filter: <code>{teamFilter}</code>{division !== "all" ? " · " : ""}</> : null}{division !== "all" ? <>Division filter: <strong>{division === "unknown" ? "unavailable / unrecognised" : division.toUpperCase()}</strong>{result?.division_filter ? <> · <span className={result.division_filter.status === "unavailable" ? "text-brass" : ""}>{result.division_filter.status === "available" ? "verified" : result.division_filter.status === "empty" ? "verified empty" : "unavailable"}</span></> : null}</> : null} · <button className="text-link" type="button" onClick={() => { setTeamFilter(""); setDivision("all"); setPage(0); }}>Clear filters</button></p>}
+      {result?.division_filter?.status === "unavailable" && division !== "all" && <section className="paper-panel" style={{ marginBottom: 22 }} aria-labelledby="division-filter-boundary"><div className="eyebrow">Division filter boundary</div><h2 id="division-filter-boundary">The selected division cannot be verified for this source edition.</h2><p>{result.division_filter.reason}</p><p className="note">Open the all-source view to inspect the retained rows, or choose a dataset with an exact team-directory division join.</p></section>}
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
       <p className="note">The search is literal and bounded. Source fields are not renamed, inferred or combined across categories. Defensive, specialist and retained player releases are name-attributed when no stable athlete ID is supplied; those rows remain useful evidence but are never attached to a player career.</p>
       {error && <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={() => { setError(""); setRetryNonce((value) => value + 1); }}>Retry football source archive</button></div>}

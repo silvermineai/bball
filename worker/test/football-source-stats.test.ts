@@ -111,6 +111,36 @@ describe("football source statistics", () => {
     expect(sql).toContain("IN ('fbs','fcs','d2','d3','naia')");
   });
 
+  it("distinguishes an unjoinable NCAA player edition from a verified empty division", async () => {
+    const prepare = vi.fn((sql: string) => {
+      if (sql.includes("count(*) AS total")) {
+        return { bind: () => ({ first: async () => ({ total: 0 }) }) };
+      }
+      if (sql.includes("GROUP BY division")) {
+        return {
+          bind: () => ({
+            all: async () => ({ results: [{ division: "unknown", rows: 206832, teams: 3370 }] }),
+          }),
+        };
+      }
+      return { bind: () => ({ all: async () => ({ results: [] }) }) };
+    });
+    const response = await app.request(
+      "/api/football/source-stats?season=2025&dataset=ncaa_player_stats&division=d2",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      total: 0,
+      division_filter: {
+        requested: "d2",
+        status: "unavailable",
+        matched_rows: 0,
+      },
+    });
+  });
+
   it("exposes the available seasons and dataset row counts", async () => {
     const prepare = vi.fn((sql: string) => ({
       all: vi.fn().mockResolvedValue({

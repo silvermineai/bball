@@ -12,6 +12,8 @@ type DivisionCoverage = {
   teams: number;
 };
 
+type DivisionFilterStatus = "available" | "empty" | "unavailable";
+
 const querySchema = z.object({
   dataset: z.enum(["all", ...DATASETS]).default("box"),
   season: z.coerce.number().int().min(2010).max(2035).default(2025),
@@ -292,6 +294,30 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
       observed_rows: observedRows,
       share: parsedRows.length ? observedRows / parsedRows.length : null,
     }));
+  // A zero result can mean two different things: the exact source edition has
+  // no rows for the requested division, or the source cannot be joined to a
+  // division at all. Keep those states separate so an NCAA name-only release
+  // cannot look like a verified empty D2/D3 archive in the browser.
+  const coverageRows = divisionCoverage?.results || [];
+  const requestedCoverage = q.division === "all"
+    ? null
+    : coverageRows.find((row) => row.division === q.division);
+  const hasExplicitCoverage = coverageRows.some((row) => row.division !== "unknown" && row.rows > 0);
+  const hasUnknownCoverage = coverageRows.some((row) => row.division === "unknown" && row.rows > 0);
+  const divisionFilterStatus: DivisionFilterStatus = q.division === "all"
+    ? "available"
+    : divisionCoverage == null
+      ? "unavailable"
+      : requestedCoverage?.rows
+        ? "available"
+        : hasUnknownCoverage && !hasExplicitCoverage
+          ? "unavailable"
+          : "empty";
+  const divisionFilterReason = divisionFilterStatus === "unavailable"
+    ? "This source edition does not carry a verified season-and-team division join; the filtered zero is unavailable, not evidence that the requested division has no players."
+    : divisionFilterStatus === "empty"
+      ? "The retained team-directory join is exact and contains no rows for the requested division."
+      : "The selected division is backed by an exact season-and-team join in the retained directory.";
   const response = c.json({
     dataset: q.dataset,
     season: q.season,
@@ -315,6 +341,12 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
       status: "unavailable" as const,
       scope: "season_and_dataset" as const,
       rows: [],
+    },
+    division_filter: {
+      requested: q.division,
+      status: divisionFilterStatus,
+      matched_rows: count?.total ?? 0,
+      reason: divisionFilterReason,
     },
     source_receipts: sourceReceipts,
     filters: { q: q.q, team: q.team ?? null, game: q.game ?? null, division: q.division },
