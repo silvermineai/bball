@@ -27,6 +27,77 @@ describe("live research scorecard", () => {
     })).toBe("licensed-feed|draftkings|spreads|2027-01-01T12:00:00.000Z");
   });
 
+  it("withholds a quote whose source identity is incomplete", async () => {
+    const selected = {
+      id: "registration-missing-market-identity",
+      sport: "basketball",
+      game_id: "game-missing-market-identity",
+      model_id: "model-missing-market-identity",
+      generated_at: "2026-09-19T00:00:00.000000Z",
+      registered_at: "2026-09-19T00:01:00.000000Z",
+      starts_at: "2027-01-02T00:00:00.000000Z",
+      time_tbd: 0,
+      payload_json: JSON.stringify({
+        home_id: "home-missing-market-identity", away_id: "away-missing-market-identity", home_name: "Home", away_name: "Away", season: 2027,
+        prediction: { home_margin: 4, total: 140, home_win_probability: 0.65, margin_low: -6, margin_high: 14 },
+      }),
+      state_json: JSON.stringify({
+        home_id: "home-missing-market-identity", away_id: "away-missing-market-identity", starts_at: "2027-01-02T00:00:00.000000Z",
+        time_tbd: 0, completed: 0, home_score: null, away_score: null,
+      }),
+      exclusion: null,
+    };
+    const quote = {
+      id: "quote-missing-market-identity",
+      sport: "basketball",
+      game_id: "game-missing-market-identity",
+      provider: "licensed-feed",
+      bookmaker: "   ",
+      market: "spreads",
+      captured_at: "2026-09-20T12:00:00.000000Z",
+      updated_at: "2026-09-20T11:59:00.000000Z",
+      payload_json: JSON.stringify({
+        home_id: "home-missing-market-identity", away_id: "away-missing-market-identity", starts_at: "2027-01-02T00:00:00.000000Z",
+        line: -3.5, home_price: 1.91, away_price: 1.91,
+      }),
+    };
+    const prepare = vi.fn((sql: string) => {
+      const first = async () => {
+        if (sql.includes("MAX(CAST")) return { season: 2027 };
+        if (sql.includes("audit_predictions")) return { total: 1 };
+        return { total: 0 };
+      };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => sql.includes("FROM audit_predictions p")
+            ? { results: [selected] }
+            : sql.includes("SELECT id,sport,game_id,provider")
+              ? { results: [quote] }
+              : { results: [] },
+        }),
+      };
+    });
+    const response = await researchScorecard.request(
+      "/?sport=basketball&season=2027&model=model-missing-market-identity&limit=5000",
+      {},
+      { RESEARCH_DB: { prepare } as never },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      games: Array<Record<string, unknown>>;
+      sports: { basketball: { comparison_readiness: { selected_game_observations: number; eligible_observations: number; selected_comparisons: number; rejection_counts: Record<string, number> } } };
+    };
+    expect(body.games[0].comparisons).toEqual([]);
+    expect(body.sports.basketball.comparison_readiness).toMatchObject({
+      selected_game_observations: 1,
+      eligible_observations: 0,
+      selected_comparisons: 0,
+      rejection_counts: { missing_market_identity: 1 },
+    });
+  });
+
   it("withholds a market when one capture clock has conflicting prices", async () => {
     const selected = {
       id: "registration-ambiguous-market",

@@ -196,6 +196,7 @@ type MarketRejection =
   | "forecast_excluded"
   | "ambiguous_quote"
   | "invalid_payload"
+  | "missing_market_identity"
   | "participants_changed"
   | "schedule_changed"
   | "invalid_clock"
@@ -259,6 +260,12 @@ function gameMarketReadiness(
 
 function marketExclusion(quote: Json, prediction: Json, state: Json, now: string): MarketRejection | null {
   const q = parse(quote.payload_json) || {};
+  // A numeric line without source identity cannot be reproduced or reviewed.
+  // Keep the raw observation in the archive, but fail closed before it can be
+  // selected as model-versus-market evidence.
+  const provider = typeof quote.provider === "string" ? quote.provider.trim() : "";
+  const bookmaker = typeof quote.bookmaker === "string" ? quote.bookmaker.trim() : "";
+  if (!provider || !bookmaker) return "missing_market_identity";
   // Source adapters use both millisecond and microsecond ISO spellings. Work
   // in normalized instants so equivalent clocks do not become a false
   // schedule mismatch during forecast-versus-market comparison.

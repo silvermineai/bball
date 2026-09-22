@@ -272,6 +272,7 @@ export const reasons: Record<string, string> = {
   excluded: "Excluded",
   forecast_excluded: "Selected forecast is ineligible",
   invalid_payload: "Malformed quote payload",
+  missing_market_identity: "Provider or bookmaker identity missing",
   captured_before_registration: "Captured before forecast registration",
   captured_after_start: "Captured at or after tip",
   updated_after_capture: "Provider update follows capture",
