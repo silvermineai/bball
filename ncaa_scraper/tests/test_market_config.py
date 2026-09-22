@@ -14,6 +14,8 @@ class MarketConfigurationTests(unittest.TestCase):
         self.assertEqual(connectors["odds_api"]["credential_status"], "configured")
         self.assertEqual(connectors["cbbd_lines"]["credential_status"], "configured")
         self.assertEqual(connectors["espn_summary"]["credential_status"], "not_required")
+        self.assertIn("--sport basketball", connectors["odds_api"]["commands"]["basketball"])
+        self.assertIn("--season 2027", connectors["cbbd_lines"]["commands"]["basketball"])
         self.assertNotIn("odds-secret", json.dumps(result))
         self.assertNotIn("cbbd-secret", json.dumps(result))
 
@@ -25,6 +27,7 @@ class MarketConfigurationTests(unittest.TestCase):
         connectors = {row["id"]: row for row in result["connectors"]}
         self.assertEqual(connectors["odds_api"]["credential_status"], "configured")
         self.assertEqual(connectors["cbbd_lines"]["credential_status"], "configured")
+        self.assertIn("--sport football", connectors["licensed_csv"]["commands"]["football"])
         self.assertIn("exact-game", connectors["licensed_csv"]["next_step"])
 
     def test_reports_missing_credentials_without_attempting_a_provider_call(self):

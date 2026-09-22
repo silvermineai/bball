@@ -60,7 +60,7 @@ Before starting a capture, run the redacted connector preflight:
 PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_config
 ```
 
-It reports whether `THE_ODDS_API_KEY`/`ODDS_API_KEY` or `CBBD_API_KEY`/`COLLEGE_BASKETBALL_DATA_API_KEY` is configured, and lists the no-credential ESPN and licensed-CSV paths. It never prints credential values or makes a provider request. A `missing` status keeps the capture fail-closed; configure the server environment or use the exact-match CSV path below.
+It reports whether `THE_ODDS_API_KEY`/`ODDS_API_KEY` or `CBBD_API_KEY`/`COLLEGE_BASKETBALL_DATA_API_KEY` is configured, and lists copyable sport-specific commands for the credentialed, ESPN and licensed-CSV paths. It never prints credential values or makes a provider request. A `missing` status keeps the capture fail-closed; configure the server environment or use the exact-match CSV path below.
 
 ### Licensed CSV imports
 

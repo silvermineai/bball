@@ -31,6 +31,10 @@ def market_configuration(
                 "markets": ["h2h", "spreads", "totals"],
                 "credential_status": "configured" if odds_configured else "missing",
                 "credential_keys": ["THE_ODDS_API_KEY", "ODDS_API_KEY"],
+                "commands": {
+                    "basketball": "PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.odds_feed --sport basketball",
+                    "football": "PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.odds_feed --sport football",
+                },
                 "next_step": "Run the bounded licensed snapshot after confirming provider terms." if odds_configured else "Set THE_ODDS_API_KEY or ODDS_API_KEY in the server environment or ~/.env.",
             },
             {
@@ -40,6 +44,9 @@ def market_configuration(
                 "markets": ["h2h"],
                 "credential_status": "configured" if cbbd_configured else "missing",
                 "credential_keys": ["CBBD_API_KEY", "COLLEGE_BASKETBALL_DATA_API_KEY"],
+                "commands": {
+                    "basketball": "PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.cbbd_lines --season 2027",
+                },
                 "next_step": "Run the pregame moneyline capture after confirming provider terms." if cbbd_configured else "Set CBBD_API_KEY or COLLEGE_BASKETBALL_DATA_API_KEY in the server environment or ~/.env.",
             },
             {
@@ -49,6 +56,10 @@ def market_configuration(
                 "markets": ["h2h", "spreads", "totals"],
                 "credential_status": "not_required",
                 "credential_keys": [],
+                "commands": {
+                    "basketball": "PYTHONPATH=ncaa_scraper .venv/bin/python scripts/publish-research.py --sport basketball --espn-lines",
+                    "football": "PYTHONPATH=ncaa_scraper .venv/bin/python scripts/publish-research.py --sport football --espn-lines",
+                },
                 "next_step": "Use the bounded prospective summary capture; missing pickcenter values remain unavailable.",
             },
             {
@@ -58,6 +69,10 @@ def market_configuration(
                 "markets": ["h2h", "spreads", "totals"],
                 "credential_status": "not_required",
                 "credential_keys": [],
+                "commands": {
+                    "basketball": "PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_csv <file> --sport basketball --provider <name> --license-url <url>",
+                    "football": "PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_csv <file> --sport football --provider <name> --license-url <url>",
+                },
                 "next_step": "Use the exact-game CSV importer with provider identity, license URL and pregame clocks.",
             },
         ],
