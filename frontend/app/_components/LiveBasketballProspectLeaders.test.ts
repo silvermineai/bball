@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import { formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
+import { formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
 
 describe("homepage recruiting section", () => {
   it("renders the prospect board as the fifth dashboard section", () => {
@@ -27,6 +27,22 @@ describe("prospect size formatting", () => {
 describe("prospect class labels", () => {
   it("uses the selected class in the count label", () => {
     expect(prospectCountLabel(254, 2028)).toBe("254 prospects in the 2028 class");
+  });
+});
+
+describe("prospect release provenance", () => {
+  it("keeps a verified receipt distinct from an incomplete destination rollup", () => {
+    expect(prospectProvenanceLabel({
+      source_receipt: { integrity: "verified", source_rows: 383 },
+      destination_coverage: { returned: 12, total: 106, complete: false },
+    })).toBe("release receipt verified · 383 retained rows · 12 of 106 destination groups shown");
+  });
+
+  it("does not upgrade an unavailable receipt or malformed rollup", () => {
+    expect(prospectProvenanceLabel({
+      source_receipt: { integrity: "unavailable", source_rows: 383 },
+      destination_coverage: { returned: 12, total: 10, complete: true },
+    })).toBe("release receipt unavailable");
   });
 });
 

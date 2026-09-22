@@ -34,6 +34,17 @@ type ProspectResponse = {
   total: number;
   captured_at?: string | null;
   rows: Prospect[];
+  source_receipt?: {
+    source_rows?: number;
+    sha256?: string | null;
+    sha256_scope?: string;
+    integrity?: "verified" | "unavailable";
+  } | null;
+  destination_coverage?: {
+    returned?: number;
+    total?: number;
+    complete?: boolean;
+  } | null;
   cohort?: {
     committed?: number;
     ranked?: number;
@@ -91,6 +102,28 @@ export function prospectCsvRows(rows: Prospect[], season: number): CsvCell[][] {
 
 export const prospectCountLabel = (total: number, season: number) =>
   `${total.toLocaleString()} prospects in the ${season} class`;
+
+/**
+ * Describe the release and destination rollup without implying that a
+ * bounded destination list is complete. The API keeps the full release
+ * receipt separate from the visible top destination groups.
+ */
+export function prospectProvenanceLabel(payload: Pick<ProspectResponse, "source_receipt" | "destination_coverage">): string {
+  const receipt = payload.source_receipt;
+  const receiptLabel = receipt?.integrity === "verified"
+    ? `release receipt verified${Number.isSafeInteger(receipt.source_rows) && Number(receipt.source_rows) > 0 ? ` · ${Number(receipt.source_rows).toLocaleString()} retained rows` : ""}`
+    : "release receipt unavailable";
+  const coverage = payload.destination_coverage;
+  const returned = typeof coverage?.returned === "number" ? coverage.returned : null;
+  const total = typeof coverage?.total === "number" ? coverage.total : null;
+  if (!coverage || returned == null || total == null || !Number.isSafeInteger(returned) || !Number.isSafeInteger(total) || returned < 0 || total < returned) {
+    return receiptLabel;
+  }
+  const destinationLabel = coverage.complete
+    ? `${total.toLocaleString()} destination groups reconciled`
+    : `${returned.toLocaleString()} of ${total.toLocaleString()} destination groups shown`;
+  return `${receiptLabel} · ${destinationLabel}`;
+}
 
 export function validateProspectExportPage(
   payload: ProspectResponse,
@@ -272,6 +305,7 @@ export default function LiveBasketballProspectLeaders() {
             </div>
           </div>
           <p className="dashboard-updated">{prospectCountLabel(data.total, data.season)} · captured {data.captured_at ? date(data.captured_at) : "time unavailable"}</p>
+          <p className="note">Data integrity: {prospectProvenanceLabel(data)}. Destination groups are bounded for the visible table; the class export retains each prospect row.</p>
         </>
       )}
     </section>
