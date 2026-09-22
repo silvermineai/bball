@@ -5,6 +5,7 @@ import Link from "next/link";
 import { fmt } from "../_lib/format";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
+import { ncaaPlayerHref, ncaaPlayerShotHref } from "../_lib/ncaa-player-links";
 
 export type LiveNCAAMetric = "ppg" | "rpg" | "orpg" | "drpg" | "apg" | "spg" | "bpg" | "fpg" | "mpg" | "topg" | "dbl_dbl" | "ts" | "efg" | "fg_pct" | "half_ts" | "three_pct" | "two_pct" | "ft_pct" | "per40" | "ast_to" | "usage_rate" | "stocks40" | "tov_rate" | "three_rate" | "ft_rate" | "ast_rate" | "points_poss" | "poss_share" | "orb40" | "drb40" | "reb40" | "rim_pct" | "mid_pct" | "putback_pct" | "rim_rate" | "transition_share" | "assisted_make_share" | "unassisted_rate" | "unassisted_share" | "rapm_net" | "orapm" | "drapm" | "impact_index" | "balanced_index";
 type Metric = LiveNCAAMetric;
@@ -498,7 +499,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
               const detailGroups = playerRecordedDetailGroups(row);
               return <tr key={`${row.player_id}-${row.team_id}`}>
                 <td className="rank-number">{row.rank}</td>
-                <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small><small>{coverage.observed}/{coverage.total} core stat fields recorded</small><small><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>Open shot map →</Link></small>{detailGroups.length > 0 && <details className="ranking-recorded-details"><summary>More recorded stats</summary>{detailGroups.map((group) => <div key={group.key}><small><strong>{group.label}</strong></small><div className="ranking-recorded-grid">{group.items.map((item) => <span key={item.label}><small>{item.label}</small><b>{fmt(item.value, item.decimals ?? 0)}{item.percent ? "%" : ""}</b></span>)}</div></div>)}</details>}</th>
+                <th scope="row"><Link href={ncaaPlayerHref(row.player_id, season)}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small><small>{coverage.observed}/{coverage.total} core stat fields recorded</small><small><Link href={ncaaPlayerShotHref(row.player_id, season)}>Open shot map →</Link></small>{detailGroups.length > 0 && <details className="ranking-recorded-details"><summary>More recorded stats</summary>{detailGroups.map((group) => <div key={group.key}><small><strong>{group.label}</strong></small><div className="ranking-recorded-grid">{group.items.map((item) => <span key={item.label}><small>{item.label}</small><b>{fmt(item.value, item.decimals ?? 0)}{item.percent ? "%" : ""}</b></span>)}</div></div>)}</details>}</th>
                 <td>{row.team_name || "—"}<small>Source team ID: {row.team_id}</small></td>
                 <td className="numeric">{row.games}</td>
                 <td className="numeric">{fmt(row.minutes, 0)}</td>
