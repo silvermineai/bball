@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBMatchupFactors } from "./basketball-types";
-import { compactMatchupSignals, forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "./forecast-lab-analysis";
+import { compactMatchupSignals, forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastModelEvidence, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "./forecast-lab-analysis";
 
 const factors: BBMatchupFactors = {
   season: 2026,
@@ -9,6 +9,59 @@ const factors: BBMatchupFactors = {
 };
 
 describe("forecast lab matchup signals", () => {
+  it("attaches holdout evidence only to the exact forecast edition", () => {
+    const model = {
+      id: "edition-a",
+      evaluation: {
+        season: 2026,
+        games: 5734,
+        winner_accuracy: 0.676,
+        margin_mae: 10.26,
+        baseline_margin_mae: 11.96,
+        interval_coverage: 0.791,
+      },
+    } as const;
+    expect(forecastModelEvidence(model, "edition-a")).toEqual({
+      state: "matched",
+      modelId: "edition-a",
+      forecastModelId: "edition-a",
+      holdoutSeason: 2026,
+      games: 5734,
+      winnerAccuracy: 0.676,
+      marginMae: 10.26,
+      baselineMarginMae: 11.96,
+      intervalCoverage: 0.791,
+      improvementVsBaseline: 1.7,
+    });
+    expect(forecastModelEvidence(model, "edition-b")).toMatchObject({
+      state: "mismatch",
+      modelId: "edition-a",
+      forecastModelId: "edition-b",
+    });
+  });
+
+  it("withholds malformed or unlabelled evaluation metrics", () => {
+    expect(forecastModelEvidence({
+      id: "edition-a",
+      evaluation: {
+        season: 2026,
+        games: 0,
+        winner_accuracy: 1.4,
+        margin_mae: -1,
+        interval_coverage: Number.NaN,
+      },
+    }, "edition-a")).toMatchObject({
+      state: "unavailable",
+      modelId: "edition-a",
+      forecastModelId: "edition-a",
+      holdoutSeason: 2026,
+      games: null,
+      winnerAccuracy: null,
+      marginMae: null,
+      intervalCoverage: null,
+    });
+  });
+
   it("marks a stored primary row verified only when prediction and lineage checks pass", () => {
     expect(forecastIntegrity({
       prediction: {

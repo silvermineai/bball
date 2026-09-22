@@ -9,7 +9,7 @@ import type {
 } from "../_lib/basketball-types";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel } from "../_lib/market-display";
-import { forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
+import { forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastModelEvidence, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
 import { explainBasketballPrediction, publishedScoreArithmetic } from "../_lib/basketball-prediction-explanation";
@@ -40,7 +40,7 @@ export default function BasketballCard({
   publisherAwayRating?: { team: string; value: number | null };
   forecastModelId?: string | null;
   forecastCreatedAt?: string | null;
-  model?: Pick<BBOverview["model"], "teams" | "efficiency" | "tempo"> | null;
+  model?: Pick<BBOverview["model"], "id" | "teams" | "efficiency" | "tempo" | "evaluation"> | null;
 }) {
   const primaryPrediction = isUsableBasketballPrediction(g.prediction) ? g.prediction : null;
   const fallbackPrediction = isUsableBasketballPrediction(g.fallback_prediction) ? g.fallback_prediction : null;
@@ -49,6 +49,7 @@ export default function BasketballCard({
     modelId: forecastModelId,
     generatedAt: forecastCreatedAt,
   });
+  const modelEvidence = model ? forecastModelEvidence(model, forecastEdition.modelId) : null;
   const coldStart = !primaryPrediction && !!fallbackPrediction;
   const scoreExplanation = p ? explainBasketballPrediction(model, g, p) : null;
   const publishedArithmetic = p ? publishedScoreArithmetic(p) : null;
@@ -124,6 +125,35 @@ export default function BasketballCard({
             </div>
             <small>{confidence.range_context}. The probability and range are from forecast edition <span className="mono">{forecastEdition.modelId || "unavailable"}</span>; this context does not include a market quote.</small>
           </div>
+          {modelEvidence && (
+            <details className="match-card-details model-track-record">
+              <summary>Model track record</summary>
+              {modelEvidence.state === "matched" ? (
+                <>
+                  <p className="factor-source">
+                    Historical holdout evidence for the exact forecast edition attached to this row. These metrics describe the test set; they do not guarantee this game&apos;s result.
+                  </p>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead><tr><th>Holdout evidence</th><th className="numeric">Value</th></tr></thead>
+                      <tbody>
+                        <tr><th scope="row">Games tested</th><td className="numeric">{modelEvidence.games?.toLocaleString() || "—"}</td></tr>
+                        <tr><th scope="row">Winner accuracy</th><td className="numeric">{modelEvidence.winnerAccuracy == null ? "—" : `${fmt(modelEvidence.winnerAccuracy * 100, 1)}%`}</td></tr>
+                        <tr><th scope="row">Margin error</th><td className="numeric">{modelEvidence.marginMae == null ? "—" : `${fmt(modelEvidence.marginMae, 2)} pts MAE`}</td></tr>
+                        <tr><th scope="row">80% margin band coverage</th><td className="numeric">{modelEvidence.intervalCoverage == null ? "—" : `${fmt(modelEvidence.intervalCoverage * 100, 1)}%`}</td></tr>
+                        {modelEvidence.improvementVsBaseline != null && <tr><th scope="row">Margin MAE vs baseline</th><td className="numeric">{modelEvidence.improvementVsBaseline >= 0 ? "−" : "+"}{fmt(Math.abs(modelEvidence.improvementVsBaseline), 2)} pts</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                  <small className="factor-source">Holdout season ending {modelEvidence.holdoutSeason} · edition <span className="mono">{modelEvidence.modelId}</span>. Lower margin error is better.</small>
+                </>
+              ) : modelEvidence.state === "mismatch" ? (
+                <p className="status-warn">The bundled holdout record is for edition <span className="mono">{modelEvidence.modelId}</span>, while this forecast row is from <span className="mono">{modelEvidence.forecastModelId}</span>. Historical metrics are withheld until the exact evaluation edition is available.</p>
+              ) : (
+                <p className="note">The exact forecast edition does not have a complete, validated holdout record attached. Historical performance stays unavailable rather than being borrowed from another edition.</p>
+              )}
+            </details>
+          )}
           <div className="analysis-readiness" aria-label="Game analysis packet">
             <div className="analysis-readiness-heading">
               <strong>Game analysis packet</strong>

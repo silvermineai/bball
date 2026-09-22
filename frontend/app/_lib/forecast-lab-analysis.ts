@@ -1,4 +1,5 @@
 import type { BBFactorKey, BBGame, BBMatchupFactors, BBPrediction } from "./basketball-types";
+import type { BBOverview } from "./basketball-types";
 
 const FACTORS: ReadonlyArray<{ key: BBFactorKey; label: string }> = [
   { key: "efg", label: "Shot quality" },
@@ -6,6 +7,73 @@ const FACTORS: ReadonlyArray<{ key: BBFactorKey; label: string }> = [
   { key: "orb", label: "Second chances" },
   { key: "ftr", label: "Free-throw pressure" },
 ];
+
+export type ForecastModelEvidence = {
+  state: "matched" | "mismatch" | "unavailable";
+  modelId: string | null;
+  forecastModelId: string | null;
+  holdoutSeason: number | null;
+  games: number | null;
+  winnerAccuracy: number | null;
+  marginMae: number | null;
+  baselineMarginMae: number | null;
+  intervalCoverage: number | null;
+  improvementVsBaseline: number | null;
+};
+
+const modelIdText = (value: unknown) => {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || null;
+};
+
+const boundedRate = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1 ? value : null;
+
+const nonNegative = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+
+const positiveInteger = (value: unknown) =>
+  typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+
+const integer = (value: unknown) =>
+  typeof value === "number" && Number.isInteger(value) ? value : null;
+
+/**
+ * Keep historical model performance beside a forecast only when both records
+ * identify the same immutable edition. A static overview can outlive the
+ * latest live forecast, so showing its accuracy beside a newer row would be a
+ * misleading claim even when every metric is individually well formed.
+ */
+export function forecastModelEvidence(
+  model: { id?: unknown; evaluation?: Partial<BBOverview["model"]["evaluation"]> } | null | undefined,
+  forecastModelId: string | null | undefined,
+): ForecastModelEvidence {
+  const modelId = modelIdText(model?.id);
+  const liveId = modelIdText(forecastModelId);
+  const evaluation = model?.evaluation;
+  const holdoutSeason = integer(evaluation?.season);
+  const games = positiveInteger(evaluation?.games);
+  const winnerAccuracy = boundedRate(evaluation?.winner_accuracy);
+  const marginMae = nonNegative(evaluation?.margin_mae);
+  const baselineMarginMae = nonNegative(evaluation?.baseline_margin_mae);
+  const intervalCoverage = boundedRate(evaluation?.interval_coverage);
+  const complete = !!modelId && !!liveId && holdoutSeason != null && games != null && winnerAccuracy != null && marginMae != null;
+  const state = !complete ? "unavailable" : modelId === liveId ? "matched" : "mismatch";
+  return {
+    state,
+    modelId,
+    forecastModelId: liveId,
+    holdoutSeason,
+    games,
+    winnerAccuracy,
+    marginMae,
+    baselineMarginMae,
+    intervalCoverage,
+    improvementVsBaseline: baselineMarginMae != null && marginMae != null
+      ? Number((baselineMarginMae - marginMae).toFixed(2))
+      : null,
+  };
+}
 
 /**
  * Turn a Four Factor contrast into a film question. These prompts are
