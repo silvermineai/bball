@@ -12,6 +12,8 @@ import {
   womensPlayerCsvHeaders,
   womensPlayerCsvRows,
   paginateWomensPlayerRows,
+  compareWomensPlayerRows,
+  womensPlayerStatValue,
   type WomensPlayerStats,
 } from "../_lib/womens-player-detail";
 import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
@@ -168,8 +170,11 @@ export default function WomensBasketballPlayers() {
     return displayPlayers
       .filter((player) => !needle || `${player.name} ${player.team} ${player.player_id}`.toLowerCase().includes(needle))
       .filter((player) => position === "all" || player.position === position)
-      .filter((player) => Number(player.stats.gamesPlayed) >= minGames)
-      .sort((left, right) => (Number(right.stats[metric]) || -Infinity) - (Number(left.stats[metric]) || -Infinity) || left.name.localeCompare(right.name));
+      .filter((player) => {
+        const games = womensPlayerStatValue(player.stats, "gamesPlayed");
+        return games != null && games >= minGames;
+      })
+      .sort((left, right) => compareWomensPlayerRows(left, right, metric));
   }, [displayPlayers, metric, minimumGames, position, query]);
   const visibleRows = useMemo(() => paginateWomensPlayerRows(rows, page, pageSize), [page, rows]);
   const csvStatFields = useMemo(() => orderedWomensPlayerStatFields(rows), [rows]);

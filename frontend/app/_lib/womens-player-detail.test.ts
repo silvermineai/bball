@@ -8,6 +8,7 @@ import {
   orderedWomensPlayerStatFields,
   womensPlayerCsvHeaders,
   womensPlayerCsvRows,
+  compareWomensPlayerRows,
 } from "./womens-player-detail";
 
 describe("women's player retained detail", () => {
@@ -52,5 +53,25 @@ describe("women's player retained detail", () => {
       ["1", "A Player", "North", "G", "season", null, null, null, 10, null, null],
       ["2", "B Player", "South", "G", "box", 3, 1, 8.5, null, null, null],
     ]);
+  });
+
+  it("keeps recorded zeroes ahead of unavailable values when ranking players", () => {
+    const rows = [
+      { player_id: "missing", name: "Missing", stats: { avgBlocks: null } },
+      { player_id: "zero", name: "Zero", stats: { avgBlocks: 0 } },
+      { player_id: "leader", name: "Leader", stats: { avgBlocks: 2.5 } },
+    ];
+    expect(rows.sort((left, right) => compareWomensPlayerRows(left, right, "avgBlocks")).map((row) => row.player_id))
+      .toEqual(["leader", "zero", "missing"]);
+  });
+
+  it("uses exact ID as a deterministic tie break and leaves non-finite values unavailable", () => {
+    const rows = [
+      { player_id: "2", name: "Same", stats: { avgPoints: Number.NaN } },
+      { player_id: "1", name: "Same", stats: { avgPoints: 10 } },
+      { player_id: "3", name: "Same", stats: { avgPoints: 10 } },
+    ];
+    expect(rows.sort((left, right) => compareWomensPlayerRows(left, right, "avgPoints")).map((row) => row.player_id))
+      .toEqual(["1", "3", "2"]);
   });
 });

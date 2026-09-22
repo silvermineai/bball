@@ -128,6 +128,27 @@ export function womensPlayerStatValue(stats: WomensPlayerStats, key: string): nu
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/**
+ * Sort player rows by one retained statistic without collapsing a recorded
+ * zero into the unavailable bucket. Missing and non-finite values stay at the
+ * bottom; name and exact source ID make ties deterministic across releases.
+ */
+export function compareWomensPlayerRows(
+  left: { player_id: string; name: string; stats: WomensPlayerStats },
+  right: { player_id: string; name: string; stats: WomensPlayerStats },
+  key: string,
+): number {
+  const leftValue = womensPlayerStatValue(left.stats, key);
+  const rightValue = womensPlayerStatValue(right.stats, key);
+  if (leftValue == null && rightValue != null) return 1;
+  if (leftValue != null && rightValue == null) return -1;
+  if (leftValue != null && rightValue != null && leftValue !== rightValue) {
+    return rightValue - leftValue;
+  }
+  return left.name.localeCompare(right.name)
+    || String(left.player_id).localeCompare(String(right.player_id));
+}
+
 /** Format a recorded value without implying that missing data is zero. */
 export function formatWomensPlayerStat(
   stats: WomensPlayerStats,
