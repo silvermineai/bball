@@ -196,6 +196,52 @@ export const lowerFootballCategories: ReadonlyArray<{
   { key: "puntReturns", label: "Punt returns", metric: "puntReturnYards", unit: "yards" },
 ];
 
+export type LowerFootballPlayerSelection = {
+  athlete_id: string;
+  team_id: string;
+  category: LowerFootballCategory;
+};
+
+const selectionToken = (value: string | null) =>
+  value != null && /^[A-Za-z0-9_-]{1,80}$/.test(value) ? value : null;
+
+/**
+ * Read a lower-division player detail target from a shareable URL.
+ * Athlete and team IDs remain separate because an athlete can have more than
+ * one team row in a release. Invalid or incomplete targets fail closed.
+ */
+export function parseLowerFootballPlayerSelection(search: string): LowerFootballPlayerSelection | null {
+  const params = new URLSearchParams(search);
+  const athleteId = selectionToken(params.get("player"));
+  const teamId = selectionToken(params.get("team"));
+  const category = params.get("category");
+  if (!athleteId || !teamId || !lowerFootballCategories.some((item) => item.key === category)) return null;
+  return { athlete_id: athleteId, team_id: teamId, category: category as LowerFootballCategory };
+}
+
+/**
+ * Preserve existing scope/search controls while adding or removing one exact
+ * lower-division player target. The returned query is suitable for history
+ * state or a normal anchor URL.
+ */
+export function lowerFootballPlayerSelectionSearch(
+  search: string,
+  selection: LowerFootballPlayerSelection | null,
+) {
+  const params = new URLSearchParams(search);
+  if (!selection) {
+    params.delete("player");
+    params.delete("team");
+    params.delete("category");
+  } else {
+    params.set("player", selection.athlete_id);
+    params.set("team", selection.team_id);
+    params.set("category", selection.category);
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export type LowerFootballPlayer = {
   athlete_id: string;
   athlete: string;

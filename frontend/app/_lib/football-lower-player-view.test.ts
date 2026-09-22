@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballPlayerRankValue, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballPlayerRankValue, lowerFootballPlayerSelectionSearch, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, parseLowerFootballPlayerSelection, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -152,5 +152,27 @@ describe("lower football player aggregation", () => {
       [2026, "D2", "2026-09-01T00:00:00Z", "g1", "passing", "A Player", "a1", "QB", "Example State", "t1", JSON.stringify(["C/ATT", "YDS", "TD"]), "10/20", "2", "200"],
       [2026, "D2", "2026-09-02T00:00:00Z", "g2", "passing", "A Player", "a1", "QB", "Example State", "t1", JSON.stringify(["C/ATT", "YDS", "TD"]), "5/10", "1", "100"],
     ]);
+  });
+
+  it("parses only complete exact-ID player selections", () => {
+    expect(parseLowerFootballPlayerSelection("?division=2&player=a1&team=t1&category=passing")).toEqual({
+      athlete_id: "a1",
+      team_id: "t1",
+      category: "passing",
+    });
+    expect(parseLowerFootballPlayerSelection("?player=a1&category=passing")).toBeNull();
+    expect(parseLowerFootballPlayerSelection("?player=a1&team=t1&category=not-a-category")).toBeNull();
+    expect(parseLowerFootballPlayerSelection("?player=a%201&team=t1&category=passing")).toBeNull();
+  });
+
+  it("round-trips an exact player/team/category target without dropping scope", () => {
+    const query = lowerFootballPlayerSelectionSearch("?division=3&q=Smith+Jr.", {
+      athlete_id: "a1",
+      team_id: "t1",
+      category: "defensive",
+    });
+    expect(query).toBe("?division=3&q=Smith+Jr.&player=a1&team=t1&category=defensive");
+    expect(parseLowerFootballPlayerSelection(query)).toEqual({ athlete_id: "a1", team_id: "t1", category: "defensive" });
+    expect(lowerFootballPlayerSelectionSearch(query, null)).toBe("?division=3&q=Smith+Jr.");
   });
 });
