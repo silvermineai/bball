@@ -11,6 +11,7 @@ import ScopeUnavailable from "../../_components/ScopeUnavailable";
 import { parseSportScopeSearch } from "../../_lib/sport-scope";
 import { coordinateCoverage } from "./coordinateCoverage";
 import { shootingArchiveAvailable, shootingArchiveScopeParams } from "./ncaa-shooting-scope";
+import { readShootingMapSelection, writeShootingMapSelection, type ShootingMapSelection } from "./shooting-map-selection";
 
 type Metric = "volume" | "fg_pct" | "3p_pct" | "rim_pct" | "mid_pct" | "distance" | "rim_share" | "paint_share" | "mid_share" | "three_share";
 type Zone = { attempts: number; makes: number; points: number };
@@ -42,6 +43,7 @@ export default function NcaaShooting() {
   const searchParams = useSearchParams();
   const scopeSearch = searchParams.toString();
   const scope = useMemo(() => parseSportScopeSearch(scopeSearch), [scopeSearch]);
+  const requestedMapSelection = useMemo(() => readShootingMapSelection(searchParams), [scopeSearch, searchParams]);
   const initialMetric = searchParams.get("metric");
   const [season, setSeason] = useState(searchParams.get("season") || "2026");
   const [metric, setMetric] = useState<Metric>(initialMetric && Object.prototype.hasOwnProperty.call(labels, initialMetric) ? initialMetric as Metric : "volume");
@@ -56,25 +58,34 @@ export default function NcaaShooting() {
   const [error, setError] = useState("");
   const [retryNonce, setRetryNonce] = useState(0);
   const [mapPlayer, setMapPlayer] = useState<Row | null>(null);
+  // Keep the selected archive identity in the URL so a coach can share a
+  // filtered table with the exact court profile already open.
+  const [mapSelection, setMapSelection] = useState<ShootingMapSelection | null>(requestedMapSelection);
   const [mapCard, setMapCard] = useState<PlayerCard | null>(null);
   const [mapLoading, setMapLoading] = useState(false);
   const [mapError, setMapError] = useState("");
   const [copied, setCopied] = useState(""), [exporting, setExporting] = useState(false), [exportMessage, setExportMessage] = useState("");
-  useEffect(() => { if (!shootingArchiveAvailable(scope)) return; const params = new URLSearchParams({ season, metric, minAttempts }); if (query.trim()) params.set("q", query.trim()); if (page) params.set("page", String(page)); shootingArchiveScopeParams(scope).forEach((value, key) => params.set(key, value)); window.history.replaceState(null, "", `${window.location.pathname}?${params}`); }, [season, metric, minAttempts, query, page, scope]);
+  useEffect(() => { if (!shootingArchiveAvailable(scope)) return; const params = new URLSearchParams({ season, metric, minAttempts }); if (query.trim()) params.set("q", query.trim()); if (page) params.set("page", String(page)); shootingArchiveScopeParams(scope).forEach((value, key) => params.set(key, value)); writeShootingMapSelection(params, mapSelection); window.history.replaceState(null, "", `${window.location.pathname}?${params}`); }, [season, metric, minAttempts, query, page, scope, mapSelection]);
   useEffect(() => { if (!shootingArchiveAvailable(scope)) return; fetch(`/api/basketball/research/ncaa-shooting?meta=1&season=${season}`).then((r) => { if (!r.ok) throw Error("The College shooting catalog could not be loaded."); return r.json() as Promise<Meta>; }).then(setMeta).catch((e) => setError(e.message)); }, [retryNonce, season, scope]);
   useEffect(() => { if (!shootingArchiveAvailable(scope)) return; const controller = new AbortController(); const params = new URLSearchParams({ season, metric, minAttempts, page: String(page) }); if (query.trim()) params.set("q", query.trim()); setResult(null); fetch(`/api/basketball/research/ncaa-shooting?${params}`, { signal: controller.signal }).then((r) => { if (!r.ok) throw Error("The College shooting profiles could not be loaded."); return r.json() as Promise<Result>; }).then((v) => { if (!controller.signal.aborted) setResult(v); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); }); return () => controller.abort(); }, [metric, minAttempts, page, query, retryNonce, season, scope]);
   const pages = useMemo(() => Math.max(1, Math.ceil((result?.total || 0) / 40)), [result]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
   const retryLiveArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
+  const closeMap = () => {
+    setMapPlayer(null);
+    setMapSelection(null);
+    setMapCard(null);
+    setMapLoading(false);
+    setMapError("");
+  };
   const openMap = (row: Row) => {
     if (sourceLabelRow(row)) return;
     if (mapPlayer?.player_id === row.player_id && mapPlayer.team_id === row.team_id) {
-      setMapPlayer(null);
-      setMapCard(null);
-      setMapError("");
+      closeMap();
       return;
     }
     setMapPlayer(row);
+    setMapSelection({ playerId: row.player_id, teamId: row.team_id });
     setMapCard(null);
     setMapError("");
     setMapLoading(true);
@@ -87,6 +98,20 @@ export default function NcaaShooting() {
       .catch((reason: unknown) => setMapError(reason instanceof Error ? reason.message : "This player’s shot coordinates could not be loaded."))
       .finally(() => setMapLoading(false));
   };
+  // A copied shooting URL can open a map as soon as its row is available. If
+  // a filter or page no longer contains that identity, clear the stale map
+  // instead of showing a profile disconnected from the visible table.
+  useEffect(() => {
+    if (!result) return;
+    if (mapPlayer) {
+      if (!result.rows.some((row) => row.player_id === mapPlayer.player_id && row.team_id === mapPlayer.team_id)) closeMap();
+      return;
+    }
+    if (!mapSelection) return;
+    const row = result.rows.find((candidate) => candidate.player_id === mapSelection.playerId && candidate.team_id === mapSelection.teamId);
+    if (row && !sourceLabelRow(row)) openMap(row);
+    else setMapSelection(null);
+  }, [result, mapPlayer, mapSelection]);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
