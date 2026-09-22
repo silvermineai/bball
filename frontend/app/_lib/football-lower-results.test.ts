@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { lowerDivisionSelection, lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, validateLowerFootballResults } from "./football-lower-results";
+import { lowerDivisionSelection, lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, lowerTeamRowsForDivision, validateLowerFootballResults } from "./football-lower-results";
 
 const row = (division: "fcs" | "d2" | "d3", score_complete = true) => ({
   game_id: `${division}-1`, kickoff: "2026-09-01T00:00:00Z", week: 1,
@@ -41,6 +41,29 @@ describe("lower-division football results", () => {
     expect(lowerResultsForDivision(archive, "d3")).toHaveLength(1);
     expect(archive.coverage.d2).toEqual({ games: 2, score_complete: 1, scores_missing: 1, upcoming_games: 0, forecast_games: 0 });
     expect(archive.coverage.d3).toEqual({ games: 1, score_complete: 1, scores_missing: 0, upcoming_games: 0, forecast_games: 0 });
+  });
+
+  it("filters the team board within the requested division and preserves source order", () => {
+    const archive = validateLowerFootballResults({
+      schema_version: 2, sport: "football", season: 2026, generated_at: "now", rows: [],
+      teams: {
+        fcs: [],
+        d2: [
+          { team_id: "d2-record", team: "D2 Record Team", division: "d2", games: 3, wins: 2, losses: 1, points_for: 80, points_against: 60 },
+        ],
+        d3: [{ team_id: "d3-only", team: "D3 Only Team", division: "d3", games: 3, wins: 3, losses: 0, points_for: 90, points_against: 30 }],
+      },
+      models: {
+        d2: model("d2", [
+          { team_id: "d2-ranked-1", team: "D2 Ranked One", division: "d2", rating: 9, rank: 1 },
+          { team_id: "d2-ranked-2", team: "D2 Ranked Two", division: "d2", rating: 4, rank: 2 },
+        ]),
+      },
+      limitations: [],
+    });
+    expect(lowerTeamRowsForDivision(archive, "d2").map((team) => team.team_id)).toEqual(["d2-ranked-1", "d2-ranked-2"]);
+    expect(lowerTeamRowsForDivision(archive, "d2", "ranked two").map((team) => team.team_id)).toEqual(["d2-ranked-2"]);
+    expect(lowerTeamRowsForDivision(archive, "d3", "d3 only").map((team) => team.team_id)).toEqual(["d3-only"]);
   });
 
   it("fails closed instead of dropping a malformed schedule row", () => {

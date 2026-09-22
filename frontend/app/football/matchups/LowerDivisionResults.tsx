@@ -8,6 +8,7 @@ import {
   lowerForecastUncertainty,
   lowerDivisionSelection,
   lowerResultsForDivision,
+  lowerTeamRowsForDivision,
   validateLowerFootballResults,
   type LowerFootballDivision,
   type LowerFootballForecastSort,
@@ -23,6 +24,7 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
   const [playerReadiness, setPlayerReadiness] = useState<FootballLowerPlayerReadiness | null>(null);
   const [division, setDivision] = useState<LowerFootballDivision>(() => lowerDivisionSelection(initialDivision));
   const [query, setQuery] = useState("");
+  const [teamQuery, setTeamQuery] = useState("");
   const [forecastQuery, setForecastQuery] = useState("");
   const [forecastSort, setForecastSort] = useState<LowerFootballForecastSort>("kickoff");
   const [error, setError] = useState("");
@@ -55,6 +57,7 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
     return lowerResultsForDivision(archive, division).filter((row) => !needle || `${row.home_name} ${row.away_name} ${row.game_id}`.toLowerCase().includes(needle));
   }, [archive, division, query]);
   const teams = archive?.teams[division] || [];
+  const teamRows = archive ? lowerTeamRowsForDivision(archive, division, teamQuery) : [];
   const coverage = archive?.coverage[division];
   const readiness = archive ? lowerFootballReadiness(archive, playerReadiness?.event_archive ? {
     status: playerReadiness.event_archive.status === "partial" ? "partial" : "recorded",
@@ -114,7 +117,7 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
           <label className="control"><span>TEAM OR GAME</span><input type="search" maxLength={100} value={query} placeholder="Search a team or game ID" onChange={(event) => setQuery(event.target.value)} /></label>
         </div>
         <div className="two-col" style={{ marginTop: 20 }}>
-          <div><h3>Team records and model ratings</h3><div className="table-scroll"><table className="data-table"><thead><tr><th>Team</th><th className="numeric">W–L</th><th className="numeric">PF</th><th className="numeric">PA</th><th className="numeric">Model</th></tr></thead><tbody>{(archive.models[division]?.ratings ?? teams).slice(0, 12).map((team) => { const record = teams.find((item) => item.team_id === team.team_id); return <tr key={team.team_id}><th scope="row">{team.team}<small>{team.team_id}{"rank" in team ? ` · rank ${team.rank}` : ""}</small></th><td className="numeric">{record ? <><strong>{record.wins}–{record.losses}</strong><small>{record.games} scored games</small></> : "—"}</td><td className="numeric">{record ? fmt(record.points_for, 0) : "—"}</td><td className="numeric">{record ? fmt(record.points_against, 0) : "—"}</td><td className="numeric">{"rating" in team ? fmt(team.rating) : "—"}</td></tr>; })}</tbody></table></div>{archive.models[division] ? <p className="note">{archive.models[division].training_games.toLocaleString()} exact-division finals across {archive.models[division].training_seasons.join(", ")}; model {archive.models[division].id}.</p> : <p className="note">No validated model edition is published for this division.</p>}</div>
+          <div><h3>Team records and model ratings</h3><label className="control"><span>SEARCH TEAM RANKINGS</span><input type="search" maxLength={100} value={teamQuery} placeholder="Team or team ID" onChange={(event) => setTeamQuery(event.target.value)} /></label><p className="note">{teamRows.length.toLocaleString()} matching {archive.models[division] ? "exact-division ratings" : "team records"}; the ranking board stays within {divisionLabel}.</p><div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Team</th><th className="numeric">W–L</th><th className="numeric">PF</th><th className="numeric">PA</th><th className="numeric">Model</th></tr></thead><tbody>{teamRows.slice(0, 24).map((team) => { const record = teams.find((item) => item.team_id === team.team_id); return <tr key={team.team_id}><td className="rank-number">{"rank" in team ? team.rank : "—"}</td><th scope="row">{team.team}<small>{team.team_id}</small></th><td className="numeric">{record ? <><strong>{record.wins}–{record.losses}</strong><small>{record.games} scored games</small></> : "—"}</td><td className="numeric">{record ? fmt(record.points_for, 0) : "—"}</td><td className="numeric">{record ? fmt(record.points_against, 0) : "—"}</td><td className="numeric">{"rating" in team ? fmt(team.rating) : "—"}</td></tr>; })}</tbody></table></div>{teamRows.length > 24 ? <p className="note">Showing 24 of {teamRows.length.toLocaleString()} matching teams. Search by team for the full ranking board.</p> : null}{archive.models[division] ? <p className="note">{archive.models[division].training_games.toLocaleString()} exact-division finals across {archive.models[division].training_seasons.join(", ")}; model {archive.models[division].id}.</p> : <p className="note">No validated model edition is published for this division; score-derived team records remain visible without a model rank.</p>}</div>
           <div><h3>Recorded results</h3><div className="table-scroll"><table className="data-table"><thead><tr><th>Start</th><th>Matchup</th><th className="numeric">Score</th></tr></thead><tbody>{rows.slice(0, 16).map((row) => <tr key={`${row.scope_division}-${row.game_id}`}><td>{kick(row.kickoff)}<small>{row.week == null ? "Week unavailable" : `Week ${row.week}`}</small></td><th scope="row">{row.away_name} at {row.home_name}<small>{row.game_id}{row.neutral ? " · neutral" : ""}</small></th><td className="numeric">{row.score_complete ? <strong>{row.away_score}–{row.home_score}</strong> : "—"}</td></tr>)}</tbody></table></div>{!rows.length ? <p className="empty">No recorded rows match this filter.</p> : rows.length > 16 ? <p className="note">Showing 16 of {rows.length.toLocaleString()} matching results.</p> : null}</div>
         </div>
         <div style={{ marginTop: 20 }}>

@@ -278,6 +278,24 @@ export function lowerResultsForDivision(archive: LowerFootballResults, division:
 }
 
 /**
+ * Return the exact-division team board used by the lower-division desk.
+ * Published model ratings are already ordered by their source-backed rank;
+ * when a model is unavailable, keep score-derived team records visible
+ * without inventing a rank or rating.
+ */
+export function lowerTeamRowsForDivision(
+  archive: LowerFootballResults,
+  division: LowerFootballDivision,
+  query = "",
+) {
+  const needle = query.trim().toLowerCase();
+  const rows = archive.models[division]?.ratings || archive.teams[division];
+  return rows.filter((row) =>
+    !needle || `${row.team} ${row.team_id} ${row.division}`.toLowerCase().includes(needle),
+  );
+}
+
+/**
  * Select and order upcoming forecasts without ever crossing the archive's
  * exact-division boundary.  The uncertainty sort uses the published margin
  * interval; it does not invent a confidence score from the point estimate.
