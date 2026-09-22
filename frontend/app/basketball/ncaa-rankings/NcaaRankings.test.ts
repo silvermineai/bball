@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { accuracySample, rankingPlayerShotMapHref, rankingRecordedDetail, rankingStatLine, validateNcaaRankingExportPage, type NcaaRankingResult } from "./NcaaRankings";
+import { accuracySample, rankingPlayerShotMapHref, rankingRecordedDetail, rankingStatLine, rankingTeamDossierHref, validateNcaaRankingExportPage, type NcaaRankingResult } from "./NcaaRankings";
 
 describe("NCAA ranking stat context", () => {
   it("hands exact ranking IDs directly to the player shot profile", () => {
     expect(rankingPlayerShotMapHref("10007029", 2026)).toBe("/basketball/ncaa-player/?id=10007029&season=2026#shot-profile");
     expect(rankingPlayerShotMapHref("source:player/42", 2025)).toBe("/basketball/ncaa-player/?id=source%3Aplayer%2F42&season=2025#shot-profile");
+  });
+
+  it("hands exact ranking team IDs directly to the program dossier", () => {
+    expect(rankingTeamDossierHref("609638")).toBe("/basketball/programs/609638/");
+    expect(rankingTeamDossierHref("source:team/42")).toBe("/basketball/programs/source%3Ateam%2F42/");
   });
 
   it("keeps common per-game and shooting rates visible for every selected metric", () => {
