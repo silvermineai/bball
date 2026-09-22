@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects } from "./womens-recruiting-intel";
+import release from "../../public/data/basketball/womens-recruiting.json";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingRelease } from "./womens-recruiting-intel";
 
 const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[0][number]> = {}) => ({
   player_id: "p-1",
@@ -36,6 +37,13 @@ describe("women's recruiting production context", () => {
 });
 
 describe("women's recruiting prospect cohort", () => {
+  it("accepts the checked-in release receipt and full source row count", () => {
+    const validated = validateWomensRecruitingRelease(release);
+    expect(validated?.records).toHaveLength(release.coverage.prospects);
+    expect(validated?.edition).toBe(release.edition);
+    expect(validated?.coverage).toEqual(release.coverage);
+  });
+
   it("sorts observed grades and filters exact retained fields", () => {
     const rows = rankWomensRecruitingProspects([
       { athlete_id: "2", name: "B", grade: 88, high_school: "North" },
@@ -64,5 +72,36 @@ describe("women's recruiting prospect cohort", () => {
       { athlete_id: "1", name: "A" },
       { athlete_id: "1", name: "Duplicate" },
     ])).toEqual([]);
+  });
+
+  it("admits a receipt-backed complete release when counts and IDs reconcile", () => {
+    const release = validateWomensRecruitingRelease({
+      edition: "a".repeat(64),
+      captured_at: "2026-09-22T04:10:24.839220Z",
+      coverage: { prospects: 2, graded: 1, ranked: 1, committed: 0 },
+      records: [
+        { athlete_id: "101", name: "A", grade: 92, rank: 4, committed_team_id: null },
+        { athlete_id: "102", name: "B", grade: null, rank: null, committed_team_id: null },
+      ],
+    });
+    expect(release?.records.map((row) => row.athlete_id)).toEqual(["101", "102"]);
+    expect(release?.coverage).toEqual({ prospects: 2, graded: 1, ranked: 1, committed: 0 });
+  });
+
+  it("withholds a truncated, duplicated, or count-mismatched release", () => {
+    const base = {
+      edition: "b".repeat(64),
+      captured_at: "2026-09-22T04:10:24.839220Z",
+      coverage: { prospects: 2, graded: 2, ranked: 0, committed: 0 },
+      records: [
+        { athlete_id: "101", name: "A", grade: 92 },
+        { athlete_id: "102", name: "B", grade: 90 },
+      ],
+    };
+    expect(validateWomensRecruitingRelease(base)?.records).toHaveLength(2);
+    expect(validateWomensRecruitingRelease({ ...base, records: base.records.slice(0, 1) })).toBeNull();
+    expect(validateWomensRecruitingRelease({ ...base, records: [{ ...base.records[0] }, { ...base.records[0] }] })).toBeNull();
+    expect(validateWomensRecruitingRelease({ ...base, coverage: { ...base.coverage, graded: 1 } })).toBeNull();
+    expect(validateWomensRecruitingRelease({ ...base, edition: "not-a-digest" })).toBeNull();
   });
 });

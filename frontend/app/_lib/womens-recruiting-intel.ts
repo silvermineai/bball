@@ -32,6 +32,82 @@ export type WomensRecruitingStatusSummary = {
   destinationIds: number;
 };
 
+export type WomensRecruitingRelease = {
+  edition: string;
+  captured_at: string;
+  coverage: {
+    prospects: number;
+    graded: number;
+    ranked: number;
+    committed: number;
+  };
+  records: WomensRecruitingProspect[];
+};
+
+const releaseDigest = /^[a-f0-9]{64}$/i;
+const sourceId = /^\d{1,15}$/;
+
+/**
+ * Validate the complete source-native women's prospect release before the UI
+ * treats its counts or rows as a coherent cohort. The release is static at
+ * the edge today, so this keeps a truncated or duplicated artifact from
+ * looking like a complete recruiting board while preserving source missingness.
+ */
+export function validateWomensRecruitingRelease(value: unknown): WomensRecruitingRelease | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const payload = value as Record<string, unknown>;
+  const edition = typeof payload.edition === "string" ? payload.edition.trim().toLowerCase() : "";
+  const capturedAt = typeof payload.captured_at === "string" ? payload.captured_at.trim() : "";
+  if (!releaseDigest.test(edition) || !capturedAt || Number.isNaN(Date.parse(capturedAt))) return null;
+  const rawCoverage = payload.coverage;
+  if (!rawCoverage || typeof rawCoverage !== "object" || Array.isArray(rawCoverage)) return null;
+  const coverage = rawCoverage as Record<string, unknown>;
+  const count = (key: string) => {
+    const number = coverage[key];
+    return Number.isSafeInteger(number) && Number(number) >= 0 ? Number(number) : null;
+  };
+  const prospects = count("prospects");
+  const graded = count("graded");
+  const ranked = count("ranked");
+  const committed = count("committed");
+  if (prospects == null || graded == null || ranked == null || committed == null) return null;
+  const rawRecords = payload.records;
+  if (!Array.isArray(rawRecords) || rawRecords.length === 0 || rawRecords.length !== prospects) return null;
+  const ids = new Set<string>();
+  const records: WomensRecruitingProspect[] = [];
+  for (const raw of rawRecords) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const record = raw as Record<string, unknown>;
+    const athleteId = typeof record.athlete_id === "string" ? record.athlete_id.trim() : "";
+    const name = typeof record.name === "string" ? record.name.trim() : "";
+    if (!sourceId.test(athleteId) || !name || ids.has(athleteId)) return null;
+    const grade = record.grade == null ? null : record.grade;
+    const rank = record.rank == null ? null : record.rank;
+    if (grade != null && (typeof grade !== "number" || !Number.isFinite(grade) || grade < 0)) return null;
+    if (rank != null && (typeof rank !== "number" || !Number.isSafeInteger(rank) || rank <= 0)) return null;
+    ids.add(athleteId);
+    records.push({
+      athlete_id: athleteId,
+      name,
+      position: typeof record.position === "string" && record.position.trim() ? record.position.trim() : null,
+      grade: grade as number | null,
+      rank: rank as number | null,
+      status: typeof record.status === "string" && record.status.trim() ? record.status.trim() : null,
+      committed_team_id: typeof record.committed_team_id === "string" && record.committed_team_id.trim() ? record.committed_team_id.trim() : null,
+      committed_team_name: typeof record.committed_team_name === "string" && record.committed_team_name.trim() ? record.committed_team_name.trim() : null,
+      high_school: typeof record.high_school === "string" && record.high_school.trim() ? record.high_school.trim() : null,
+      hometown: typeof record.hometown === "string" && record.hometown.trim() ? record.hometown.trim() : null,
+    });
+  }
+  const measured = {
+    graded: records.filter((record) => record.grade != null).length,
+    ranked: records.filter((record) => record.rank != null).length,
+    committed: records.filter((record) => record.committed_team_id != null).length,
+  };
+  if (measured.graded !== graded || measured.ranked !== ranked || measured.committed !== committed) return null;
+  return { edition, captured_at: capturedAt, coverage: { prospects, graded, ranked, committed }, records };
+}
+
 /** Filter and sort the women-specific prospect cohort without inventing ranks. */
 export function rankWomensRecruitingProspects(
   records: WomensRecruitingProspect[],
