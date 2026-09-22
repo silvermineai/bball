@@ -14,6 +14,17 @@ export type RecruitingCoverageAssessment = {
   unrepresentedPrograms: number | null;
   observedProgramShare: number | null;
   countsConsistent: boolean;
+  reviewQueue: RecruitingReviewQueueAssessment | null;
+};
+
+export type RecruitingReviewQueueAssessment = {
+  observedPrograms: number;
+  reviewedPrograms: number;
+  unreviewedPrograms: number;
+  sourceReviewedPrograms: number;
+  reviewedNotObservedPrograms: number;
+  rows: number;
+  countsConsistent: boolean;
 };
 
 const nonnegativeInteger = (value: number | null | undefined) => {
@@ -33,6 +44,14 @@ export function assessRecruitingCoverage(input: {
   eventCount: number;
   sourceCount: number;
   directoryProgramCount?: number;
+  reviewQueue?: {
+    observed_programs: number;
+    reviewed_programs: number;
+    unreviewed_programs: number;
+    source_reviewed_programs: number;
+    reviewed_not_observed_programs: number;
+    rows: number;
+  } | null;
 }): RecruitingCoverageAssessment {
   const directoryPrograms = input.directoryProgramCount == null
     ? null
@@ -48,6 +67,20 @@ export function assessRecruitingCoverage(input: {
     input.coverage.events === nonnegativeInteger(input.eventCount),
     input.coverage.sources === nonnegativeInteger(input.sourceCount),
   ].every(Boolean);
+  const queue = input.reviewQueue;
+  const reviewQueue = queue == null ? null : {
+    observedPrograms: nonnegativeInteger(queue.observed_programs),
+    reviewedPrograms: nonnegativeInteger(queue.reviewed_programs),
+    unreviewedPrograms: nonnegativeInteger(queue.unreviewed_programs),
+    sourceReviewedPrograms: nonnegativeInteger(queue.source_reviewed_programs),
+    reviewedNotObservedPrograms: nonnegativeInteger(queue.reviewed_not_observed_programs),
+    rows: nonnegativeInteger(queue.rows),
+    countsConsistent: [
+      queue.reviewed_programs + queue.unreviewed_programs === queue.observed_programs,
+      queue.reviewed_programs + queue.reviewed_not_observed_programs === queue.source_reviewed_programs,
+      queue.rows === queue.observed_programs,
+    ].every(Boolean),
+  };
   return {
     status,
     observedPrograms,
@@ -59,5 +92,6 @@ export function assessRecruitingCoverage(input: {
       ? Math.min(1, observedPrograms / directoryPrograms)
       : null,
     countsConsistent,
+    reviewQueue,
   };
 }

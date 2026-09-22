@@ -103,6 +103,16 @@ export default function Page() {
     eventCount: data.events.length,
     sourceCount: data.sources.length,
     directoryProgramCount: programDirectory.length,
+    reviewQueue: data.review_queue
+      ? {
+          observed_programs: data.review_queue.observed_programs,
+          reviewed_programs: data.review_queue.reviewed_programs,
+          unreviewed_programs: data.review_queue.unreviewed_programs,
+          source_reviewed_programs: data.review_queue.source_reviewed_programs,
+          reviewed_not_observed_programs: data.review_queue.reviewed_not_observed_programs,
+          rows: data.review_queue.rows.length,
+        }
+      : null,
   });
   const playerCoverage = recruitingPlayerCoverage(data.people, data.events);
   const continuityRows = (rosters.team_summaries || [])

@@ -40,6 +40,9 @@ export default function RecruitingCoverageBoundary({
         {" "}
         {assessment.countsConsistent ? "Release counts reconcile to the visible people, event and source arrays." : "The release counts do not reconcile to its visible arrays; treat the edition as unreconciled."}
       </p>
+      {assessment.reviewQueue && <p className="note" role="status">
+        Roster review queue: {assessment.reviewQueue.reviewedPrograms.toLocaleString()} of {assessment.reviewQueue.observedPrograms.toLocaleString()} observed programs have reviewed announcements; {assessment.reviewQueue.unreviewedPrograms.toLocaleString()} remain roster observations to review. {assessment.reviewQueue.reviewedNotObservedPrograms.toLocaleString()} reviewed source program{assessment.reviewQueue.reviewedNotObservedPrograms === 1 ? " is" : "s are"} absent from this roster snapshot. {assessment.reviewQueue.countsConsistent ? "Queue counts reconcile to its retained rows." : "Queue counts do not reconcile; treat the queue denominator as unreconciled."}
+      </p>}
       <Link className="hero-link" href="/research/coverage/">Review capture clocks and dataset coverage →</Link>
     </section>
   );
