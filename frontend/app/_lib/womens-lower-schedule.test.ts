@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeWomensLowerSchedule, type WomensLowerScheduleContest } from "./womens-lower-schedule";
+import { summarizeWomensLowerSchedule, type WomensLowerScheduleContest, womensLowerScheduleExport } from "./womens-lower-schedule";
 
 const contest = (id: number, homeScore: number | null, awayScore: number | null, division = 2): WomensLowerScheduleContest => ({
   division,
@@ -53,5 +53,25 @@ describe("women's lower division schedule summaries", () => {
     ], "2");
     expect(rows.filter((row) => row.slug == null)).toHaveLength(2);
     expect(rows.filter((row) => row.slug == null).every((row) => row.games === 1)).toBe(true);
+  });
+
+  it("exports exact-division schedule rows while retaining missing source values", () => {
+    const exported = womensLowerScheduleExport([
+      {
+        ...contest(9, 72, null),
+        source_path: "/game/9",
+        contest_date: "11/04/2026",
+        start_time: "19:00",
+        state: "F",
+        status: "final",
+        teams: [
+          { home: true, slug: "home", name: "Home", score: 72, winner: true },
+          { home: false, slug: "away", name: "Away", score: null, winner: null },
+        ],
+      },
+      contest(10, 80, 70, 3),
+    ], "2");
+    expect(exported.headers).toEqual(["Division", "Contest ID", "Source path", "Date", "Start time", "State", "Status", "Home team", "Home slug", "Home score", "Home winner", "Away team", "Away slug", "Away score", "Away winner"]);
+    expect(exported.rows).toEqual([["D2", 9, "/game/9", "11/04/2026", "19:00", "F", "final", "Home", "home", 72, "true", "Away", "away", null, null]]);
   });
 });

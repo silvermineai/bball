@@ -4,11 +4,14 @@ export type WomensLowerScheduleTeam = {
   name?: string;
   conference?: string;
   score?: number | null;
+  winner?: boolean | null;
 };
 
 export type WomensLowerScheduleContest = {
   division: number;
   contest_id: number;
+  source_path?: string | null;
+  start_time?: string | null;
   contest_date?: string | null;
   state?: string | null;
   status?: string | null;
@@ -45,6 +48,11 @@ export type WomensLowerScheduleEvidence = {
   missing_team_slugs: number;
   first_date: string | null;
   last_date: string | null;
+};
+
+export type WomensLowerScheduleExport = {
+  headers: string[];
+  rows: Array<Array<string | number | null>>;
 };
 
 const finiteScore = (value: unknown): value is number =>
@@ -109,6 +117,50 @@ export function summarizeWomensLowerScheduleEvidence(
     missing_team_slugs: missingTeamSlugs,
     first_date: dates[0] || null,
     last_date: dates[dates.length - 1] || null,
+  };
+}
+
+/**
+ * Export the retained two-team schedule rows for one exact division. Team
+ * labels, slugs, scores, and status values remain source-native; missing
+ * values stay empty and no display-name identity is added.
+ */
+export function womensLowerScheduleExport(
+  contests: readonly WomensLowerScheduleContest[],
+  division: "2" | "3",
+): WomensLowerScheduleExport {
+  const scoped = contests
+    .filter((contest) => contest.division === Number(division)
+      && Number.isInteger(contest.contest_id)
+      && contest.teams.length === 2);
+  const teamValue = (team: WomensLowerScheduleTeam | undefined, field: "name" | "slug" | "score" | "winner") => {
+    if (!team) return null;
+    const value = team[field];
+    return value == null || value === "" ? null : typeof value === "boolean" ? String(value) : value;
+  };
+  return {
+    headers: ["Division", "Contest ID", "Source path", "Date", "Start time", "State", "Status", "Home team", "Home slug", "Home score", "Home winner", "Away team", "Away slug", "Away score", "Away winner"],
+    rows: scoped.map((contest) => {
+      const home = contest.teams.find((team) => team.home === true) || contest.teams[0];
+      const away = contest.teams.find((team) => team.home === false) || contest.teams[1];
+      return [
+        `D${division}`,
+        contest.contest_id,
+        contest.source_path || null,
+        contest.contest_date || null,
+        contest.start_time || null,
+        contest.state || null,
+        contest.status || null,
+        teamValue(home, "name") || teamValue(home, "slug"),
+        teamValue(home, "slug"),
+        teamValue(home, "score"),
+        teamValue(home, "winner"),
+        teamValue(away, "name") || teamValue(away, "slug"),
+        teamValue(away, "slug"),
+        teamValue(away, "score"),
+        teamValue(away, "winner"),
+      ];
+    }),
   };
 }
 

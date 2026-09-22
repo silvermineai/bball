@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { downloadCsv, toCsv } from "../_lib/csv";
 import { summarizeLowerDivisionTargetProbe, type LowerDivisionTargetProbe, type LowerDivisionTargetProbeSummary } from "../_lib/lower-division-target-probe";
-import { summarizeWomensLowerSchedule, summarizeWomensLowerScheduleEvidence, type WomensLowerTeamRecord } from "../_lib/womens-lower-schedule";
+import { summarizeWomensLowerSchedule, summarizeWomensLowerScheduleEvidence, womensLowerScheduleExport, type WomensLowerTeamRecord } from "../_lib/womens-lower-schedule";
 
 type ScheduleTeam = { home?: boolean; name?: string; slug?: string; score?: number | null; winner?: boolean | null };
 type ScheduleContest = {
@@ -83,6 +83,10 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
       records.map((row) => [row.rank, `D${division}`, row.team, row.slug, row.conference, row.games, row.wins, row.losses, row.win_pct * 100, row.points_for, row.points_against, row.margin]),
     ),
   );
+  const downloadSchedule = () => {
+    const exported = womensLowerScheduleExport(contests, division);
+    downloadCsv(`womens-d${division}-schedule.csv`, toCsv(exported.headers, exported.rows));
+  };
 
   return <div className="paper-panel" style={{ marginTop: 18 }} aria-label={`Women’s D${division} schedule readiness`}>
     <div className="eyebrow">SCHEDULE EVIDENCE · WOMEN&apos;S D{division}</div>
@@ -109,7 +113,7 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
       <p className="muted">Calendar index count: {calendarCount.toLocaleString()} · Predictions: unavailable until the women&apos;s lower-division model contract passes.</p>
       <div className="section-heading" style={{ marginTop: 18 }}>
         <div><div className="eyebrow">DESCRIPTIVE TEAM BOARD · D{division}</div><h4>Recorded records within the exact NCAA scope</h4></div>
-        <button className="button secondary" type="button" onClick={downloadRecords} disabled={!records.length}>Download team records ↓</button>
+        <div className="button-row"><button className="button secondary" type="button" onClick={downloadRecords} disabled={!records.length}>Download team records ↓</button><button className="button secondary" type="button" onClick={downloadSchedule} disabled={!contests.length}>Download schedule CSV ↓</button></div>
       </div>
       <p className="note">Ranks use recorded win percentage, then average scoring margin and points scored. This board is descriptive source evidence; it does not infer opponent strength, roster availability, or a forecast.</p>
       {records.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Team</th><th className="numeric">GP</th><th className="numeric">W–L</th><th className="numeric">Win %</th><th className="numeric">PF</th><th className="numeric">PA</th><th className="numeric">Margin</th></tr></thead><tbody>{records.slice(0, 50).map((row: WomensLowerTeamRecord) => <tr key={row.team_key}><td className="rank-number">{row.rank}</td><th scope="row">{row.team}<small>{row.slug || "Source slug unavailable"}{row.conference ? ` · ${row.conference}` : ""}</small></th><td className="numeric">{row.games}</td><td className="numeric"><strong>{row.wins}–{row.losses}</strong></td><td className="numeric">{(row.win_pct * 100).toFixed(1)}%</td><td className="numeric">{row.points_for.toLocaleString()}</td><td className="numeric">{row.points_against.toLocaleString()}</td><td className="numeric">{row.margin.toFixed(1)}</td></tr>)}</tbody></table></div> : <p className="empty">No complete finals are available for this exact division.</p>}
