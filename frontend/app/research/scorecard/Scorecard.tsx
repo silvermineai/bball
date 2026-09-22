@@ -6,6 +6,7 @@ import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelMarketComparisonDetail, modelMarketComparisonLabel, modelMarketComparisonScope, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
 import { marketCaptureCoverageDetail, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccessLabel, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { comparisonGapDirectionLabel, comparisonGapLabel, comparisonTimingLabel } from "../../_lib/market-display";
+import { comparisonGateStateLabel, marketComparisonReadinessChecklist } from "../../_lib/market-comparison-readiness";
 import { gameMarketReadinessExport, gameMarketReadinessLabel } from "../../_lib/game-market-readiness";
 import { timingQualifiedFootballMarketMetrics, type FootballMarketBenchmarkMetric } from "../../_lib/football-market-benchmark";
 import { downloadCsv, toCsv } from "../../_lib/csv";
@@ -220,6 +221,7 @@ export default function Scorecard() {
     marketMetadataStatus === "checking",
   );
   const activeModelMarket = modelMarketComparisonScope(summary, liveModelId);
+  const comparisonGates = marketComparisonReadinessChecklist({ capture: marketReadiness, activeModel: activeModelMarket, readiness });
   const marketCaptureNote = marketCaptureDiagnostic(marketMetadata);
   const marketCaptureHistoryNote = marketCaptureHistoryDiagnostic(marketMetadata);
   const marketCaptureCoverageNote = marketCaptureCoverageDetail(marketMetadata);
@@ -535,6 +537,22 @@ export default function Scorecard() {
               {activeModelMarket.settled_comparisons.toLocaleString()} settled · {activeModelMarket.pending_comparisons.toLocaleString()} awaiting finals. Settled accuracy and pending context stay separate.
             </p>
           ) : null}
+        </div>
+        <div className="paper-panel" style={{ marginTop: 16 }} aria-label="Model versus market comparison gates">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Comparison gates</div>
+              <h3>What must be true before a line is scored.</h3>
+            </div>
+            <span className="note">Evidence status</span>
+          </div>
+          <p className="note">The checklist keeps a model estimate separate from market evidence. A retained row becomes a comparison only after its capture clock, participants, values, and model edition pass the recorded integrity gates.</p>
+          <div className="table-scroll" style={{ marginTop: 12 }}>
+            <table className="data-table">
+              <thead><tr><th>Gate</th><th>Status</th><th>Recorded evidence</th></tr></thead>
+              <tbody>{comparisonGates.map((gate) => <tr key={gate.key}><th scope="row">{gate.label}</th><td><span className={`status-pill ${gate.state === "ready" ? "settled" : ""}`}>{comparisonGateStateLabel(gate.state)}</span></td><td>{gate.detail}</td></tr>)}</tbody>
+            </table>
+          </div>
         </div>
         <p className="note" role="status" style={{ marginTop: 12 }}>
           {marketReadinessScorecardNote(marketReadiness)}
