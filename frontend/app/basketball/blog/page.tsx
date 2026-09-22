@@ -1,9 +1,10 @@
 import Link from "next/link";
 import LiveBasketballJournal from "../../blog/LiveBasketballJournal";
-import { getBasketball } from "../../_lib/basketball-data";
+import { getBasketball, getRosterModel } from "../../_lib/basketball-data";
 import { date } from "../../_lib/format";
 import NotebookFinder from "./NotebookFinder";
 import type { NotebookIndexGame } from "./notebook-index";
+import { selectRecruitingGameLenses } from "../../blog/recruiting-game-lens";
 
 export const metadata = {
   title: "Upcoming basketball game notebooks",
@@ -14,6 +15,7 @@ export const metadata = {
 
 export default function Page() {
   const basketball = getBasketball();
+  const rosterModel = getRosterModel();
   const games = basketball.upcoming
     .filter((game) => game.prediction || game.fallback_prediction);
   const notebookIndex: NotebookIndexGame[] = games.slice(0, 8).map((game) => {
@@ -38,6 +40,11 @@ export default function Page() {
     };
   });
   const nextGame = games[0];
+  const recruitingLenses = selectRecruitingGameLenses(
+    games,
+    rosterModel,
+    rosterModel.scenarios,
+  );
   return (
     <>
       <div className="page-title">
@@ -76,6 +83,37 @@ export default function Page() {
           a claim about availability or a betting edge.
         </p>
         <LiveBasketballJournal games={games.slice(0, 12)} ratings={basketball.ratings} />
+      </section>
+      <section className="section" aria-labelledby="recruiting-game-lens">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Recruiting lens / exact game joins</div>
+            <h2 id="recruiting-game-lens">Where roster evidence changes the matchup question.</h2>
+          </div>
+          <Link href="/basketball/recruiting/">Open the recruiting board →</Link>
+        </div>
+        <p className="note">
+          These are the upcoming games with the largest absolute difference between the primary efficiency forecast and the same-edition roster-continuity challenger. The challenger uses recorded roster identity, prior workload and retained player production; it is research context, not a replacement forecast or an availability ruling.
+        </p>
+        <div className="article-grid">
+          {recruitingLenses.map(({ game, scenario }) => {
+            const watched = [...(scenario.home_player_watch || []), ...(scenario.away_player_watch || [])]
+              .sort((a, b) => b.prior_minutes - a.prior_minutes)
+              .slice(0, 2);
+            return (
+              <article className="article-card" key={game.id}>
+                <div className="eyebrow">{date(game.starts_at)} · Roster continuity</div>
+                <h2>{game.away_name} at {game.home_name}</h2>
+                <p>
+                  Primary margin {game.prediction!.home_margin > 0 ? "+" : ""}{game.prediction!.home_margin.toFixed(1)} · roster lens {scenario.roster_margin > 0 ? "+" : ""}{scenario.roster_margin.toFixed(1)} · shift {scenario.margin_delta > 0 ? "+" : ""}{scenario.margin_delta.toFixed(1)} points.
+                </p>
+                {watched.length ? <p className="note">Largest prior-minute files: {watched.map((player) => `${player.name} (${Math.round(player.prior_minutes).toLocaleString()} min)`).join(" · ")}.</p> : <p className="note">No player watch rows were retained for this scenario.</p>}
+                <Link href={`/basketball/briefs/${encodeURIComponent(game.id)}/`}>Read the matchup evidence →</Link>
+              </article>
+            );
+          })}
+        </div>
+        {!recruitingLenses.length && <p className="empty">No exact-edition roster scenarios are available for the current notebook queue.</p>}
       </section>
       <section className="section two-col">
         <article className="paper-panel">
