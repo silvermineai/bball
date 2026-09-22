@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   divisionPlayerDetailGroups,
   retainedPlayerDetailCount,
+  retainedPlayerSourceRank,
   retainedPlayerValue,
   sortDivisionPlayers,
 } from "./division-player-detail";
@@ -34,5 +35,21 @@ describe("division player retained detail", () => {
       "Zero",
       "Unavailable",
     ]);
+  });
+
+  it("exposes only the exact selected publisher rank", () => {
+    const player = {
+      division: 2,
+      player_id: 11,
+      name: "Ranked Guard",
+      ppg_rank: 7,
+      source_stats: {
+        ppg: { headers: ["Rank", "PPG"], cells: ["7", "20.0"], rank: 7, value: 20 },
+      },
+    };
+    expect(retainedPlayerSourceRank(player, "ppg")).toBe(7);
+    expect(retainedPlayerSourceRank(player, "pts")).toBeNull();
+    expect(retainedPlayerSourceRank({ ...player, source_stats: {} }, "ppg")).toBe(7);
+    expect(retainedPlayerSourceRank({ ...player, ppg_rank: 0, source_stats: {} }, "ppg")).toBeNull();
   });
 });

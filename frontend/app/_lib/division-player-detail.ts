@@ -91,6 +91,24 @@ export function retainedPlayerDetailCount(player: DivisionPlayer): number {
 }
 
 /**
+ * Return the publisher rank for the exact field selected by the archive.
+ * Prefer the retained source evidence, then use the normalized rank column
+ * when an older release did not keep that evidence object. A rank for a
+ * different leaderboard is never presented as if it belonged to this field.
+ */
+export function retainedPlayerSourceRank(
+  player: DivisionPlayerWithEvidence,
+  key: string,
+): number | null {
+  const evidenceRank = player.source_stats?.[key]?.rank;
+  if (typeof evidenceRank === "number" && Number.isFinite(evidenceRank) && evidenceRank > 0) return evidenceRank;
+  const normalizedRank = player[`${key}_rank`];
+  return typeof normalizedRank === "number" && Number.isFinite(normalizedRank) && normalizedRank > 0
+    ? normalizedRank
+    : null;
+}
+
+/**
  * Sort a lower-division player table by a retained field without collapsing a
  * recorded zero into the unavailable bucket. Missing values remain at the
  * bottom and ties use the stable source identity for deterministic paging.
