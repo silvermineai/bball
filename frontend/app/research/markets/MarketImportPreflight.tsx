@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { marketImportMatchState, marketImportPrediction, marketImportScheduleSummary, parseMarketImportRows, validateMarketImportCsv, type MarketImportPreflight as Preflight, type MarketImportRow } from "../../_lib/market-import";
+import { marketImportCommand, marketImportMatchState, marketImportPrediction, marketImportScheduleSummary, parseMarketImportRows, validateMarketImportCsv, type MarketImportPreflight as Preflight, type MarketImportRow } from "../../_lib/market-import";
 import type { BBGame } from "../../_lib/basketball-types";
 
 const fixed = (value: number | null, digits = 1) => value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
@@ -38,7 +38,7 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
       <div>
         <div className="eyebrow">Operator preflight / stays in this browser</div>
         <h3>Check an authorized line export before import.</h3>
-        <p>Select a licensed feed CSV to validate its exact-match columns, timing clocks, market type and paired prices locally. The file is never uploaded; a clean preflight still requires the server importer, feed identity and license URL.</p>
+        <p>Select a licensed feed CSV to validate its exact-match columns, timing clocks, market type and paired prices locally. The file is never uploaded; a clean preflight prepares the durable CLI importer, which still requires feed identity and license URL.</p>
       </div>
       <label className="button secondary market-import-file">
         {fileName ? `Check ${fileName}` : "Choose authorized market CSV"}
@@ -57,7 +57,7 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
         }} />
       </label>
       {preflight && <div className={`market-import-preflight-result ${preflight.errors.length || !scheduleSummary.ready ? "has-errors" : "is-ready"}`} role="status">
-        {preflight.errors.length ? <><strong>Needs fixes before import</strong><ul>{preflight.errors.map((error) => <li key={error}>{error}</li>)}</ul></> : scheduleSummary.ready ? <><strong>Ready for the server importer</strong><p>{preflight.rows.toLocaleString()} rows · {Object.entries(preflight.markets).map(([market, count]) => `${count} ${market}`).join(" · ")} · every row joins the published schedule exactly</p></> : <><strong>CSV structure valid; schedule joins need fixes</strong><p>{preflight.rows.toLocaleString()} rows · {scheduleSummary.exact.toLocaleString()} exact · {scheduleSummary.missingSchedule.toLocaleString()} missing schedule IDs · {scheduleSummary.identityOrClockMismatch.toLocaleString()} participant or tip mismatches</p></>}
+        {preflight.errors.length ? <><strong>Needs fixes before import</strong><ul>{preflight.errors.map((error) => <li key={error}>{error}</li>)}</ul></> : scheduleSummary.ready ? <><strong>Ready for the durable importer</strong><p>{preflight.rows.toLocaleString()} rows · {Object.entries(preflight.markets).map(([market, count]) => `${count} ${market}`).join(" · ")} · every row joins the published schedule exactly</p><p className="note">Run this command on the operator environment after replacing the provider and license placeholders:</p><code className="market-import-command">{marketImportCommand(fileName)}</code></> : <><strong>CSV structure valid; schedule joins need fixes</strong><p>{preflight.rows.toLocaleString()} rows · {scheduleSummary.exact.toLocaleString()} exact · {scheduleSummary.missingSchedule.toLocaleString()} missing schedule IDs · {scheduleSummary.identityOrClockMismatch.toLocaleString()} participant or tip mismatches</p></>}
         {preflight.warnings.length > 0 && <p className="note">{preflight.warnings.length} row warning{preflight.warnings.length === 1 ? "" : "s"}: blank event IDs will be derived by the importer.</p>}
       </div>}
       {rows.length > 0 && <div className="market-import-preview">

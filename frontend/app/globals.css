@@ -1749,6 +1749,14 @@ th,
 .market-import-preflight-result ul {
   margin: 8px 0 0 18px;
 }
+.market-import-command {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--paper) 82%, var(--line));
+  font: 12px/1.5 "IBM Plex Mono", monospace;
+}
 .market-import-preview {
   border-top: 1px solid var(--line);
   margin-top: 22px;

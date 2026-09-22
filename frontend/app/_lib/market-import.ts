@@ -3,6 +3,14 @@ export const marketImportColumns = [
   "line", "home_price", "away_price", "over_price", "under_price", "home_american", "away_american", "over_american", "under_american", "event_id",
 ] as const;
 
+/** Show the durable, receipt-producing import command without exposing a
+ * credential or implying that the browser preflight writes to the ledger. */
+export function marketImportCommand(fileName: string): string {
+  const file = fileName.trim() || "licensed-lines.csv";
+  const shell = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  return `PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_csv ${shell(file)} --sport basketball --provider "<provider name>" --license-url "<license URL>"`;
+}
+
 const requiredColumns = ["game_id", "market", "starts_at", "captured_at", "updated_at", "home_name", "away_name", "bookmaker"] as const;
 const markets = new Set(["spreads", "totals", "h2h"]);
 
