@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import { buildProspectParams, formatProspectRank, formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
+import { buildProspectParams, formatProspectRank, formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, prospectRankBreakdown, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
 
 describe("homepage recruiting section", () => {
   it("renders the prospect board as the fifth dashboard section", () => {
@@ -33,6 +33,24 @@ describe("prospect position rank formatting", () => {
     expect(formatProspectRank(null)).toBe("—");
     expect(formatProspectRank(0)).toBe("—");
     expect(formatProspectRank(Number.NaN)).toBe("—");
+  });
+});
+
+describe("prospect dimensional rank formatting", () => {
+  it("keeps position, state and region ranks distinct", () => {
+    expect(prospectRankBreakdown({ position_rank: 7, state_rank: 3, region_rank: 12 })).toEqual({
+      position: "#7",
+      state: "#3",
+      region: "#12",
+    });
+  });
+
+  it("does not turn missing dimensional ranks into zeroes", () => {
+    expect(prospectRankBreakdown({ position_rank: null, state_rank: 0, region_rank: Number.NaN })).toEqual({
+      position: "—",
+      state: "—",
+      region: "—",
+    });
   });
 });
 

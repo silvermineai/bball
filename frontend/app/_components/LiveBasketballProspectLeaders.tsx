@@ -97,6 +97,19 @@ const movement = (row: Prospect) => {
 export const formatProspectRank = (value: number | null | undefined) =>
   typeof value === "number" && Number.isFinite(value) && value > 0 ? `#${Math.trunc(value)}` : "—";
 
+/**
+ * Keep the publisher's dimensional ranks visible as separate fields. These
+ * are source ranks within their own cohorts, not Silvermine estimates or
+ * interchangeable substitutes for the national rank.
+ */
+export function prospectRankBreakdown(row: Pick<Prospect, "position_rank" | "state_rank" | "region_rank">) {
+  return {
+    position: formatProspectRank(row.position_rank),
+    state: formatProspectRank(row.state_rank),
+    region: formatProspectRank(row.region_rank),
+  };
+}
+
 export const prospectCsvHeaders = [
   "Class", "Rank", "Previous rank", "Movement", "Prospect ID", "Prospect", "Position",
   "Grade", "Position rank", "State rank", "Region rank", "Status", "Destination ID",
@@ -286,7 +299,7 @@ export default function LiveBasketballProspectLeaders() {
         </div>
       </div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
-      <p className="dashboard-caption">Current national ranking, position rank, movement, grade and destination in a compact {season} class view. Position rank is the publisher&apos;s recorded rank within the listed position; it is not a Silvermine grade or role projection. The full board supports every tracked class, position and commitment filter. “No recorded destination” means the release has no committed team ID; it does not mean no recruiting interest.</p>
+      <p className="dashboard-caption">Current national, position, state and region ranks, movement, grade and destination in a compact {season} class view. Each dimensional rank is the publisher&apos;s recorded rank within that cohort; it is not a Silvermine grade or role projection. The full board supports every tracked class, position and commitment filter. “No recorded destination” means the release has no committed team ID; it does not mean no recruiting interest.</p>
       {status === "checking" ? <p className="empty" role="status">Loading current prospects…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live prospect board is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : (
         <>
           <div className="dashboard-strip dashboard-recruiting-strip">
@@ -297,20 +310,23 @@ export default function LiveBasketballProspectLeaders() {
           </div>
           <div className="dashboard-table-wrap">
             <table className="data-table dashboard-table">
-              <thead><tr><th>Rank</th><th>Prospect</th><th>Position</th><th className="numeric">Position rank</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Size</th><th>Hometown</th><th>Destination</th></tr></thead>
-              <tbody>{data.rows.slice(0, rowLimit).map((row) => (
-                <tr key={row.athlete_id}>
+              <thead><tr><th>Rank</th><th>Prospect</th><th>Position</th><th className="numeric">Position rank</th><th className="numeric">State rank</th><th className="numeric">Region rank</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Size</th><th>Hometown</th><th>Destination</th></tr></thead>
+              <tbody>{data.rows.slice(0, rowLimit).map((row) => {
+                const ranks = prospectRankBreakdown(row);
+                return <tr key={row.athlete_id}>
                   <td className="rank-number">{row.rank ?? "—"}</td>
                   <th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${data.season}&id=${encodeURIComponent(row.athlete_id)}`}>{row.name}</Link></th>
                   <td>{row.position || "—"}</td>
-                  <td className="numeric">{formatProspectRank(row.position_rank)}</td>
+                  <td className="numeric">{ranks.position}</td>
+                  <td className="numeric">{ranks.state}</td>
+                  <td className="numeric">{ranks.region}</td>
                   <td className={`numeric${row.previous_rank != null && row.rank != null && row.rank < row.previous_rank ? " movement-up" : row.previous_rank != null && row.rank != null && row.rank > row.previous_rank ? " movement-down" : ""}`}>{movement(row)}</td>
                   <td className="numeric">{row.grade == null || row.grade <= 0 ? "—" : fmt(row.grade, 1)}</td>
                   <td>{formatProspectSize(row)}</td>
                   <td>{row.hometown || row.high_school || "—"}</td>
                   <td>{row.committed_team_id ? <Link href={`/basketball/programs/${encodeURIComponent(row.committed_team_id)}/`}>{row.committed_team_name || "Recorded destination"}</Link> : row.committed_team_name || row.status || "Undecided"}</td>
                 </tr>
-              ))}</tbody>
+              })}</tbody>
             </table>
           </div>
           <div className="dashboard-two-col" style={{ marginTop: 18 }}>
