@@ -5,6 +5,11 @@ export type RecruitingGameLens = {
   scenario: BBRosterScenario;
 };
 
+/** Link a watched scenario row to the exact prior-season player archive. */
+export function recruitingGamePlayerHref(athleteId: string, priorSeason = 2026): string {
+  return `/basketball/ncaa-player/?id=${encodeURIComponent(athleteId)}&season=${encodeURIComponent(String(priorSeason))}`;
+}
+
 /**
  * Select upcoming games where the roster-continuity challenger can be read
  * beside the same-edition primary forecast. Exact game and team IDs keep a

@@ -4,7 +4,7 @@ import { getBasketball, getRosterModel } from "../../_lib/basketball-data";
 import { date } from "../../_lib/format";
 import NotebookFinder from "./NotebookFinder";
 import type { NotebookIndexGame } from "./notebook-index";
-import { selectRecruitingGameLenses } from "../../blog/recruiting-game-lens";
+import { recruitingGamePlayerHref, selectRecruitingGameLenses } from "../../blog/recruiting-game-lens";
 
 export const metadata = {
   title: "Upcoming basketball game notebooks",
@@ -93,7 +93,7 @@ export default function Page() {
           <Link href="/basketball/recruiting/">Open the recruiting board →</Link>
         </div>
         <p className="note">
-          These are the upcoming games with the largest absolute difference between the primary efficiency forecast and the same-edition roster-continuity challenger. The challenger uses recorded roster identity, prior workload and retained player production; it is research context, not a replacement forecast or an availability ruling.
+          These are the upcoming games with the largest absolute difference between the primary efficiency forecast and the same-edition roster-continuity challenger. The challenger uses recorded roster identity, prior workload and retained player production; it is research context, not a replacement forecast or an availability ruling. Watched player names link to the exact prior-season player archive by athlete ID.
         </p>
         <div className="article-grid">
           {recruitingLenses.map(({ game, scenario }) => {
@@ -107,7 +107,7 @@ export default function Page() {
                 <p>
                   Primary margin {game.prediction!.home_margin > 0 ? "+" : ""}{game.prediction!.home_margin.toFixed(1)} · roster lens {scenario.roster_margin > 0 ? "+" : ""}{scenario.roster_margin.toFixed(1)} · shift {scenario.margin_delta > 0 ? "+" : ""}{scenario.margin_delta.toFixed(1)} points.
                 </p>
-                {watched.length ? <p className="note">Largest prior-minute files: {watched.map((player) => `${player.name} (${Math.round(player.prior_minutes).toLocaleString()} min)`).join(" · ")}.</p> : <p className="note">No player watch rows were retained for this scenario.</p>}
+                {watched.length ? <p className="note">Largest prior-minute files: {watched.map((player, index) => <span key={player.athlete_id}>{index > 0 ? " · " : ""}<Link href={recruitingGamePlayerHref(player.athlete_id, rosterModel.target_season - 1)}>{player.name}</Link> ({Math.round(player.prior_minutes).toLocaleString()} min)</span>)}.</p> : <p className="note">No player watch rows were retained for this scenario.</p>}
                 <Link href={`/basketball/briefs/${encodeURIComponent(game.id)}/`}>Read the matchup evidence →</Link>
               </article>
             );

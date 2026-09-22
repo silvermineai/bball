@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BBGame, BBRosterScenario } from "../_lib/basketball-types";
-import { selectRecruitingGameLenses } from "./recruiting-game-lens";
+import { recruitingGamePlayerHref, selectRecruitingGameLenses } from "./recruiting-game-lens";
 
 const game = (overrides: Partial<BBGame> = {}): BBGame => ({
   id: "g-1",
@@ -41,6 +41,12 @@ const scenario = (overrides: Partial<BBRosterScenario> = {}): BBRosterScenario =
   roster_margin_low: -1,
   roster_margin_high: 17,
   ...overrides,
+});
+
+describe("recruiting game player links", () => {
+  it("preserves the exact athlete ID and prior season in the player archive URL", () => {
+    expect(recruitingGamePlayerHref("a/b", 2026)).toBe("/basketball/ncaa-player/?id=a%2Fb&season=2026");
+  });
 });
 
 describe("selectRecruitingGameLenses", () => {
