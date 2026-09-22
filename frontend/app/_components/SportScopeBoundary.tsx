@@ -42,6 +42,11 @@ export function isWomensPlayerRankingDesk(pathname: string) {
   return pathname === "/basketball/ncaa-rankings" || pathname.startsWith("/basketball/ncaa-rankings/");
 }
 
+/** The women’s D1 recruiting board owns a separate source-native release. */
+export function isWomensRecruitingDesk(pathname: string) {
+  return pathname === "/basketball/womens-recruiting" || pathname.startsWith("/basketball/womens-recruiting/");
+}
+
 /** The shared basketball Overview owns the published women's D1 snapshot. */
 export function isWomensOverviewDesk(pathname: string) {
   return pathname === "/basketball" || pathname === "/basketball/";
@@ -58,6 +63,9 @@ export function isPublishedBoundary(sport: Props["sport"], scope: SportScope, pa
   // component renders only the women’s release after it resolves the URL;
   // this prevents the generic unavailable shell from hiding a valid edition.
   if (sport === "basketball" && scope.gender === "women" && scope.division === "1" && isWomensPlayerRankingDesk(pathname)) {
+    return false;
+  }
+  if (sport === "basketball" && isWomensRecruitingDesk(pathname)) {
     return false;
   }
   if (sport === "basketball" && scope.gender === "women" && scope.division === "1" && isWomensOverviewDesk(pathname)) {

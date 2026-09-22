@@ -16,6 +16,8 @@ export type WomensRecruitingProspect = {
   position?: string | null;
   grade?: number | null;
   rank?: number | null;
+  height_inches?: number | null;
+  weight_pounds?: number | null;
   status?: string | null;
   committed_team_id?: string | null;
   committed_team_name?: string | null;
@@ -168,6 +170,10 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
     const rank = record.rank == null ? null : record.rank;
     if (grade != null && (typeof grade !== "number" || !Number.isFinite(grade) || grade < 0)) return null;
     if (rank != null && (typeof rank !== "number" || !Number.isSafeInteger(rank) || rank <= 0)) return null;
+    const height = record.height_inches == null ? null : record.height_inches;
+    const weight = record.weight_pounds == null ? null : record.weight_pounds;
+    if (height != null && (typeof height !== "number" || !Number.isFinite(height) || height < 0)) return null;
+    if (weight != null && (typeof weight !== "number" || !Number.isFinite(weight) || weight < 0)) return null;
     ids.add(athleteId);
     records.push({
       athlete_id: athleteId,
@@ -175,6 +181,8 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
       position: typeof record.position === "string" && record.position.trim() ? record.position.trim() : null,
       grade: grade as number | null,
       rank: rank as number | null,
+      height_inches: height as number | null,
+      weight_pounds: weight as number | null,
       status: typeof record.status === "string" && record.status.trim() ? record.status.trim() : null,
       committed_team_id: typeof record.committed_team_id === "string" && record.committed_team_id.trim() ? record.committed_team_id.trim() : null,
       committed_team_name: typeof record.committed_team_name === "string" && record.committed_team_name.trim() ? record.committed_team_name.trim() : null,

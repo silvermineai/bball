@@ -126,6 +126,12 @@ describe("sport navigation", () => {
     }
   });
 
+  it("keeps women's D1 recruiting on the women-specific prospect release", () => {
+    const recruiting = SPORT_NAVIGATION["womens-basketball"].items.find((item) => item.label === "Recruiting")!;
+    expect(divisionAwareNavHref("womens-basketball", "1", recruiting)).toBe("/basketball/womens-recruiting/?gender=women");
+    expect(sportForPathname("/basketball/womens-recruiting/", null)).toBe("womens-basketball");
+  });
+
   it("opens the men’s within-division ranking explorer from every division", () => {
     const rankings = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Rankings")!;
     expect(divisionAwareNavHref("mens-basketball", "1", rankings)).toBe("/basketball/ncaa-rankings/");

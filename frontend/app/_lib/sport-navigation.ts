@@ -21,7 +21,7 @@ export type SportNavConfig = {
 const BASKETBALL_ITEMS: SportNavItem[] = [
   { label: "Teams", href: "/basketball/ratings/", match: ["/basketball/ratings", "/basketball/teams", "/basketball/team-stats", "/basketball/standings"] },
   { label: "Players", href: "/basketball/players/", match: ["/basketball/players", "/basketball/player", "/basketball/ncaa", "/basketball/ncaa-rosters"] },
-  { label: "Recruiting", href: "/basketball/recruiting/", match: ["/basketball/recruiting"] },
+  { label: "Recruiting", href: "/basketball/recruiting/", match: ["/basketball/recruiting", "/basketball/womens-recruiting"] },
   { label: "Matches", href: "/basketball/matchups/", match: ["/basketball/matchups", "/basketball/games", "/basketball/briefs", "/basketball/gameplan"] },
   { label: "Predictions", href: "/basketball/forecast-lab/", match: ["/basketball/forecast-lab", "/research/scorecard"] },
   { label: "Learn", href: "/basketball/learn/", match: ["/basketball/learn"] },
@@ -112,6 +112,9 @@ export function divisionDeskHref(sport: Sport): string {
 /** Keep lower-division football tabs on the exact-division archive desk. */
 export function divisionAwareNavHref(sport: Sport, division: Division, item: SportNavItem): string {
   const archiveAnchor = (anchor: string) => `/basketball/wbb-readiness/?nav=${encodeURIComponent(item.label.toLowerCase())}#${anchor}`;
+  if (sport === "womens-basketball" && division === "1" && item.label === "Recruiting") {
+    return "/basketball/womens-recruiting/?gender=women";
+  }
   // Women’s D2/D3 already has source-native schedule, team, player and
   // ranking evidence, but the identity-linked dashboard is intentionally not
   // published for those cohorts. Keep every shared tab useful by taking the
@@ -165,6 +168,7 @@ export function sportForPathname(pathname: string, gender: string | null = null,
   if (pathname === "/research/coverage" || pathname.startsWith("/research/coverage/")) {
     return sport === "football" ? "football" : gender === "women" ? "womens-basketball" : "mens-basketball";
   }
+  if (pathname === "/basketball/womens-recruiting" || pathname.startsWith("/basketball/womens-recruiting/")) return "womens-basketball";
   return gender === "women" ? "womens-basketball" : "mens-basketball";
 }
 

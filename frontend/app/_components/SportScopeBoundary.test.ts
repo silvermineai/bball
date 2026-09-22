@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublishedBoundary, isWomensDivisionDesk, isWomensOverviewDesk, isWomensPlayerRankingDesk, scopeBoundaryView } from "./SportScopeBoundary";
+import { isPublishedBoundary, isWomensDivisionDesk, isWomensOverviewDesk, isWomensPlayerRankingDesk, isWomensRecruitingDesk, scopeBoundaryView } from "./SportScopeBoundary";
 
 describe("sport scope boundary", () => {
   it("does not render the default men's page before the URL scope hydrates", () => {
@@ -23,6 +23,8 @@ describe("sport scope boundary", () => {
   it("keeps women’s basketball isolated on every route", () => {
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/players")).toBe(true);
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/recruiting/")).toBe(true);
+    expect(isWomensRecruitingDesk("/basketball/womens-recruiting/")).toBe(true);
+    expect(isPublishedBoundary("basketball", { gender: "men", division: "1" }, "/basketball/womens-recruiting/")).toBe(false);
     expect(isPublishedBoundary("basketball", { gender: "women", division: "1" }, "/basketball/ncaa-rankings/")).toBe(false);
   });
 
