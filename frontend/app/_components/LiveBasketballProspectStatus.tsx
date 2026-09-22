@@ -17,6 +17,11 @@ type ProspectSnapshot = {
     sha256?: string | null;
     integrity?: "verified" | "unavailable";
   } | null;
+  destination_coverage?: {
+    returned?: number;
+    total?: number;
+    complete?: boolean;
+  } | null;
   rank_movement?: {
     moved_up: number;
     moved_down: number;
@@ -25,6 +30,40 @@ type ProspectSnapshot = {
     rank_unavailable: number;
   };
 };
+
+const validCount = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
+
+/** Keep the release clock visible in the compact homepage archive summary. */
+export function prospectCaptureFreshnessLabel(capturedAt: string | null | undefined, now = new Date()): string {
+  const capturedMs = typeof capturedAt === "string" ? Date.parse(capturedAt) : Number.NaN;
+  const nowMs = now.getTime();
+  if (!Number.isFinite(capturedMs) || !Number.isFinite(nowMs)) return "capture age unavailable";
+  const ageMs = nowMs - capturedMs;
+  if (ageMs < 0) return "future capture clock";
+  const ageDays = Math.floor(ageMs / 86_400_000);
+  if (ageDays <= 7) return "current capture";
+  if (ageDays <= 30) return "review capture age";
+  return "stale capture";
+}
+
+/** Validate the bounded destination rollup before showing it as coverage. */
+export function prospectDestinationCoverageLabel(snapshot: Pick<ProspectSnapshot, "destination_coverage">): string {
+  const coverage = snapshot.destination_coverage;
+  const returned = coverage?.returned;
+  const total = coverage?.total;
+  if (!coverage || !validCount(returned) || !validCount(total) || returned > total || typeof coverage.complete !== "boolean" || coverage.complete !== (returned === total)) {
+    return "destination coverage unreconciled";
+  }
+  return coverage.complete
+    ? `${total.toLocaleString()} destinations reconciled`
+    : `${returned.toLocaleString()} of ${total.toLocaleString()} destinations shown`;
+}
+
+/** Provide one compact, class-specific audit label for the national archive. */
+export function prospectReleaseAuditLabel(snapshot: ProspectSnapshot, now = new Date()): string {
+  const receipt = snapshot.source_receipt?.integrity === "verified" ? "receipt verified" : "receipt unavailable";
+  return `${snapshot.season}: ${prospectCaptureFreshnessLabel(snapshot.captured_at, now)} · ${receipt} · ${prospectDestinationCoverageLabel(snapshot)}`;
+}
 
 /** Keep the board summary honest when a release includes unranked rows. */
 export function prospectCoverageSummary(snapshot: Pick<ProspectSnapshot, "season" | "total" | "ranked" | "committed">) {
@@ -74,7 +113,7 @@ export default function LiveBasketballProspectStatus() {
     const controller = new AbortController();
     setStatus("checking");
     Promise.allSettled(requestedSeasons.map(async (season) => {
-      const payload = await fetchJson<{ total?: number; captured_at?: string | null; cohort?: { ranked?: number; committed?: number; graded?: number }; rank_movement?: ProspectSnapshot["rank_movement"]; source_receipt?: ProspectSnapshot["source_receipt"] }>(
+      const payload = await fetchJson<{ total?: number; captured_at?: string | null; cohort?: { ranked?: number; committed?: number; graded?: number }; rank_movement?: ProspectSnapshot["rank_movement"]; source_receipt?: ProspectSnapshot["source_receipt"]; destination_coverage?: ProspectSnapshot["destination_coverage"] }>(
         `/api/basketball/research/recruiting-rankings?season=${season}&page=0&committed=all`,
         { signal: controller.signal },
       );
@@ -86,6 +125,7 @@ export default function LiveBasketballProspectStatus() {
         graded: Number(payload.cohort?.graded || 0),
         captured_at: payload.captured_at || null,
         source_receipt: payload.source_receipt || null,
+        destination_coverage: payload.destination_coverage || null,
         rank_movement: payload.rank_movement,
       } satisfies ProspectSnapshot;
     })).then((results) => {
@@ -106,7 +146,7 @@ export default function LiveBasketballProspectStatus() {
     <p className="note" role="status">
       {status === "live"
         ? <>
-            Live prospect board: {snapshots.map(prospectCoverageSummary).join("  /  ")} across {snapshots.length} of {requestedSeasons.length} tracked classes{snapshots[0]?.captured_at ? ` · latest capture ${date(snapshots.reduce((latest, snapshot) => snapshot.captured_at && snapshot.captured_at > latest ? snapshot.captured_at : latest, snapshots[0].captured_at))}` : ""}. {archive.classes > 0 && <>National archive summary: {archive.total.toLocaleString()} retained prospect rows · {archive.ranked.toLocaleString()} ranked · {archive.committed.toLocaleString()} with recorded destinations. </>}{snapshots.some((snapshot) => snapshot.rank_movement) && <>{snapshots.map((snapshot) => snapshot.rank_movement ? `${snapshot.season}: ${snapshot.rank_movement.moved_up} up · ${snapshot.rank_movement.moved_down} down · ${snapshot.rank_movement.new_to_release} new` : null).filter(Boolean).join("  /  ")}. </>}{prospectReceiptSummary(snapshots)}. Rank and commitment fields remain recorded board evidence. <Link href="/basketball/recruiting/">Open the national recruiting board →</Link>
+            Live prospect board: {snapshots.map(prospectCoverageSummary).join("  /  ")} across {snapshots.length} of {requestedSeasons.length} tracked classes{snapshots[0]?.captured_at ? ` · latest capture ${date(snapshots.reduce((latest, snapshot) => snapshot.captured_at && snapshot.captured_at > latest ? snapshot.captured_at : latest, snapshots[0].captured_at))}` : ""}. {archive.classes > 0 && <>National archive summary: {archive.total.toLocaleString()} retained prospect rows · {archive.ranked.toLocaleString()} ranked · {archive.committed.toLocaleString()} with recorded destinations. </>}{snapshots.some((snapshot) => snapshot.rank_movement) && <>{snapshots.map((snapshot) => snapshot.rank_movement ? `${snapshot.season}: ${snapshot.rank_movement.moved_up} up · ${snapshot.rank_movement.moved_down} down · ${snapshot.rank_movement.new_to_release} new` : null).filter(Boolean).join("  /  ")}. </>}{prospectReceiptSummary(snapshots)}. <span>Class audit: {snapshots.map((snapshot) => prospectReleaseAuditLabel(snapshot)).join("  /  ")}.</span> Rank and commitment fields remain recorded board evidence. <Link href="/basketball/recruiting/">Open the national recruiting board →</Link>
           </>
         : status === "fallback"
           ? <>The live prospect board is temporarily unavailable; the recruiting research file remains available. <Link href="/basketball/recruiting/">Open the recruiting board →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>

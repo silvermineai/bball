@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { prospectArchiveSummary, prospectCoverageSummary, prospectReceiptSummary } from "./LiveBasketballProspectStatus";
+import { prospectArchiveSummary, prospectCaptureFreshnessLabel, prospectCoverageSummary, prospectDestinationCoverageLabel, prospectReceiptSummary, prospectReleaseAuditLabel } from "./LiveBasketballProspectStatus";
 
 describe("prospect coverage summary", () => {
   it("reconciles national prospect rows across unique tracked classes", () => {
@@ -36,5 +36,33 @@ describe("prospect coverage summary", () => {
   it("does not turn missing receipt rows into a zero", () => {
     expect(prospectReceiptSummary([{ source_receipt: null }])).toBe("0 of 1 release receipts verified · 1 unavailable");
     expect(prospectReceiptSummary([])).toBe("No release receipt available");
+  });
+
+  it("labels source freshness without hiding future or undated clocks", () => {
+    const now = new Date("2026-09-22T12:00:00Z");
+    expect(prospectCaptureFreshnessLabel("2026-09-20T12:00:00Z", now)).toBe("current capture");
+    expect(prospectCaptureFreshnessLabel("2026-08-01T12:00:00Z", now)).toBe("stale capture");
+    expect(prospectCaptureFreshnessLabel("2026-09-23T12:00:00Z", now)).toBe("future capture clock");
+    expect(prospectCaptureFreshnessLabel(null, now)).toBe("capture age unavailable");
+  });
+
+  it("keeps destination coverage bounded and rejects inconsistent denominators", () => {
+    expect(prospectDestinationCoverageLabel({ destination_coverage: { returned: 12, total: 20, complete: false } })).toBe("12 of 20 destinations shown");
+    expect(prospectDestinationCoverageLabel({ destination_coverage: { returned: 20, total: 20, complete: true } })).toBe("20 destinations reconciled");
+    expect(prospectDestinationCoverageLabel({ destination_coverage: { returned: 20, total: 12, complete: true } })).toBe("destination coverage unreconciled");
+    expect(prospectDestinationCoverageLabel({ destination_coverage: null })).toBe("destination coverage unreconciled");
+  });
+
+  it("combines class freshness, receipt and destination audit labels", () => {
+    expect(prospectReleaseAuditLabel({
+      season: 2027,
+      total: 10,
+      ranked: 8,
+      committed: 4,
+      graded: 7,
+      captured_at: "2026-09-20T12:00:00Z",
+      source_receipt: { integrity: "verified" },
+      destination_coverage: { returned: 12, total: 20, complete: false },
+    }, new Date("2026-09-22T12:00:00Z"))).toBe("2027: current capture · receipt verified · 12 of 20 destinations shown");
   });
 });
