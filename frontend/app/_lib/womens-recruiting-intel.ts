@@ -103,6 +103,18 @@ const releaseDigest = /^[a-f0-9]{64}$/i;
 const sourceId = /^\d{1,15}$/;
 const httpsUrl = /^https:\/\/[^\s]+$/i;
 
+/** Keep the ESPN-labelled release tied to ESPN's public API host. */
+function isEspnRecruitingUrl(value: unknown): value is string {
+  if (typeof value !== "string" || !httpsUrl.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return url.hostname === "sports.core.api.espn.com"
+      && url.pathname.startsWith("/v2/sports/basketball/leagues/womens-college-basketball/");
+  } catch {
+    return false;
+  }
+}
+
 type ValidatedSource = WomensRecruitingRelease["source"];
 
 function validateSource(value: unknown, season: number, recordCount: number): ValidatedSource | null {
@@ -112,8 +124,8 @@ function validateSource(value: unknown, season: number, recordCount: number): Va
   const detailUrlTemplate = typeof source.detail_url_template === "string" ? source.detail_url_template.trim() : "";
   const receiptCount = source.receipt_count;
   if (source.publisher !== "ESPN" || source.league !== "womens-college-basketball") return null;
-  if (!httpsUrl.test(listUrl) || !listUrl.includes(`/seasons/${season}/recruits`)) return null;
-  if (!httpsUrl.test(detailUrlTemplate) || !detailUrlTemplate.includes("/recruits/{athlete_id}")) return null;
+  if (!isEspnRecruitingUrl(listUrl) || !listUrl.includes(`/seasons/${season}/recruits`)) return null;
+  if (!isEspnRecruitingUrl(detailUrlTemplate) || !detailUrlTemplate.includes("/recruits/{athlete_id}")) return null;
   if (!releaseDigest.test(String(source.list_sha256 || ""))) return null;
   if (!Number.isSafeInteger(receiptCount) || receiptCount !== recordCount + 1) return null;
   return {
@@ -168,7 +180,7 @@ export function validateWomensRecruitingRelease(value: unknown): WomensRecruitin
     const sourceSha256 = typeof record.source_sha256 === "string" ? record.source_sha256.trim().toLowerCase() : "";
     const sourceUrl = typeof record.source_url === "string" ? record.source_url.trim() : "";
     const recordCapturedAt = typeof record.captured_at === "string" ? record.captured_at.trim() : "";
-    if (!releaseDigest.test(sourceSha256) || !httpsUrl.test(sourceUrl)
+    if (!releaseDigest.test(sourceSha256) || !isEspnRecruitingUrl(sourceUrl)
       || sourceUrl !== source.detail_url_template.replace("{athlete_id}", athleteId)
       || record.recruiting_class !== season
       || recordCapturedAt !== capturedAt

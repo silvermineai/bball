@@ -186,4 +186,27 @@ describe("women's recruiting prospect cohort", () => {
     expect(validateWomensRecruitingRelease({ ...base, records: [{ ...base.records[0], source_url: "https://example.test/recruit/101" }] })).toBeNull();
     expect(validateWomensRecruitingRelease({ ...base, records: [{ ...base.records[0], captured_at: "2026-09-22T04:10:24.839221Z" }] })).toBeNull();
   });
+
+  it("rejects an ESPN-labelled release whose receipts use another host", () => {
+    const base = {
+      schema_version: 1,
+      sport: "basketball",
+      gender: "women",
+      season: 2027,
+      edition: "f".repeat(64),
+      captured_at: "2026-09-22T04:10:24.839220Z",
+      source: source(1),
+      coverage: { prospects: 1, graded: 1, ranked: 0, committed: 0 },
+      records: [{ athlete_id: "101", name: "A", grade: 92, ...sourceFields("101") }],
+    };
+    const spoofedHost = "example.test";
+    const spoofedList = base.source.list_url.replace("sports.core.api.espn.com", spoofedHost);
+    const spoofedTemplate = base.source.detail_url_template.replace("sports.core.api.espn.com", spoofedHost);
+    const spoofedRecord = base.records[0].source_url.replace("sports.core.api.espn.com", spoofedHost);
+    expect(validateWomensRecruitingRelease({
+      ...base,
+      source: { ...base.source, list_url: spoofedList, detail_url_template: spoofedTemplate },
+      records: [{ ...base.records[0], source_url: spoofedRecord }],
+    })).toBeNull();
+  });
 });
