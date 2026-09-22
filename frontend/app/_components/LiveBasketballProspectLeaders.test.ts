@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import { buildProspectParams, formatProspectRank, formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, prospectRankBreakdown, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
+import { buildProspectParams, formatProspectRank, formatProspectSize, parseProspectBoardFilters, prospectBoardFilterSearch, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, prospectRankBreakdown, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
 
 describe("homepage recruiting section", () => {
   it("renders the prospect board as the fifth dashboard section", () => {
@@ -66,6 +66,30 @@ describe("prospect class labels", () => {
 
   it("omits empty optional filters instead of broadening them into values", () => {
     expect(buildProspectParams({ season: 2028, page: 0 }).toString()).toBe("season=2028&page=0&committed=all");
+  });
+});
+
+describe("shareable homepage prospect filters", () => {
+  it("round-trips class, position, destination, search and row count", () => {
+    const filters = {
+      season: 2029 as const,
+      query: "  Crawford  ",
+      position: "PG" as const,
+      committed: "no" as const,
+      rowLimit: 50 as const,
+    };
+    const params = prospectBoardFilterSearch(filters);
+    expect(params.toString()).toBe("prospectSeason=2029&prospectQ=Crawford&prospectPosition=PG&prospectCommitted=no&prospectRows=50");
+    expect(parseProspectBoardFilters(params)).toEqual({ ...filters, query: "Crawford" });
+  });
+
+  it("fails closed on unsupported values and bounds search text", () => {
+    const params = new URLSearchParams(`prospectSeason=1900&prospectPosition=G&prospectCommitted=maybe&prospectRows=100&prospectQ=${"x".repeat(140)}`);
+    expect(parseProspectBoardFilters(params)).toEqual({ season: 2027, query: "x".repeat(120), position: "", committed: "all", rowLimit: 10 });
+  });
+
+  it("omits defaults so the page URL stays compatible with sport scope", () => {
+    expect(prospectBoardFilterSearch({ season: 2027, query: "", position: "", committed: "all", rowLimit: 10 }).toString()).toBe("");
   });
 });
 

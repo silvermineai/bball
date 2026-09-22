@@ -66,6 +66,47 @@ export type ProspectSeason = (typeof prospectSeasons)[number];
 export type ProspectCommitment = "all" | "yes" | "no";
 const prospectPositions = ["PG", "SG", "SF", "PF", "C"] as const;
 export type ProspectPosition = "" | (typeof prospectPositions)[number];
+export type ProspectBoardFilters = {
+  season: ProspectSeason;
+  query: string;
+  position: ProspectPosition;
+  committed: ProspectCommitment;
+  rowLimit: 10 | 25 | 50;
+};
+
+const prospectFilterKeys = ["prospectSeason", "prospectQ", "prospectPosition", "prospectCommitted", "prospectRows"] as const;
+
+/** Parse only this compact dashboard's filters; unrelated sport scope stays untouched. */
+export function parseProspectBoardFilters(params: Pick<URLSearchParams, "get">): ProspectBoardFilters {
+  const seasonValue = Number(params.get("prospectSeason"));
+  const season = prospectSeasons.includes(seasonValue as ProspectSeason) ? seasonValue as ProspectSeason : 2027;
+  const positionValue = params.get("prospectPosition") || "";
+  const position = prospectPositions.includes(positionValue as (typeof prospectPositions)[number]) ? positionValue as ProspectPosition : "";
+  const committedValue = params.get("prospectCommitted");
+  const committed: ProspectCommitment = committedValue === "yes" || committedValue === "no" ? committedValue : "all";
+  const rowValue = Number(params.get("prospectRows"));
+  const rowLimit: 10 | 25 | 50 = rowValue === 25 || rowValue === 50 ? rowValue : 10;
+  return {
+    season,
+    query: (params.get("prospectQ") || "").slice(0, 120),
+    position,
+    committed,
+    rowLimit,
+  };
+}
+
+/** Serialize prospect filters without overwriting gender, division or other page scope. */
+export function prospectBoardFilterSearch(filters: ProspectBoardFilters) {
+  const params = new URLSearchParams();
+  if (filters.season !== 2027) params.set("prospectSeason", String(filters.season));
+  if (filters.query.trim()) params.set("prospectQ", filters.query.trim().slice(0, 120));
+  if (filters.position) params.set("prospectPosition", filters.position);
+  if (filters.committed !== "all") params.set("prospectCommitted", filters.committed);
+  if (filters.rowLimit !== 10) params.set("prospectRows", String(filters.rowLimit));
+  return params;
+}
+
+export { prospectFilterKeys };
 
 /** Keep class, position, commitment and search filters identical for reads and exports. */
 export function buildProspectParams({
@@ -213,6 +254,25 @@ export default function LiveBasketballProspectLeaders() {
   const [rowLimit, setRowLimit] = useState<10 | 25 | 50>(10);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const filters = parseProspectBoardFilters(new URLSearchParams(window.location.search));
+    setSeason(filters.season);
+    setQuery(filters.query);
+    setPosition(filters.position);
+    setCommitted(filters.committed);
+    setRowLimit(filters.rowLimit);
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    prospectFilterKeys.forEach((key) => url.searchParams.delete(key));
+    prospectBoardFilterSearch({ season, query, position, committed, rowLimit }).forEach((value, key) => url.searchParams.set(key, value));
+    window.history.replaceState(window.history.state, "", url);
+  }, [committed, hydrated, position, query, rowLimit, season]);
 
   const exportProspects = async () => {
     if (!data || exporting) return;
@@ -299,7 +359,7 @@ export default function LiveBasketballProspectLeaders() {
         </div>
       </div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
-      <p className="dashboard-caption">Current national, position, state and region ranks, movement, grade and destination in a compact {season} class view. Each dimensional rank is the publisher&apos;s recorded rank within that cohort; it is not a Silvermine grade or role projection. The full board supports every tracked class, position and commitment filter. “No recorded destination” means the release has no committed team ID; it does not mean no recruiting interest.</p>
+      <p className="dashboard-caption">Current national, position, state and region ranks, movement, grade and destination in a compact {season} class view. Each dimensional rank is the publisher&apos;s recorded rank within that cohort; it is not a Silvermine grade or role projection. Filters are preserved in the URL so a board view can be shared with a staff member. The full board supports every tracked class, position and commitment filter. “No recorded destination” means the release has no committed team ID; it does not mean no recruiting interest.</p>
       {status === "checking" ? <p className="empty" role="status">Loading current prospects…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live prospect board is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : (
         <>
           <div className="dashboard-strip dashboard-recruiting-strip">
