@@ -2121,7 +2121,7 @@ WHERE (? IS NULL OR pgs.team_org_id = (SELECT org_id FROM teams WHERE ncaa_team_
 GROUP BY p.ncaa_player_id
 ORDER BY COALESCE(ppg, 0) DESC, games DESC, name ASC`;
 
-const PLAYER_DETAIL_SQL = `SELECT MAX(internal_id) AS id, MAX(name) AS name FROM players WHERE ncaa_player_id = ? GROUP BY ncaa_player_id`;
+const PLAYER_DETAIL_SQL = `SELECT MAX(internal_id) AS id, MAX(name) AS name, MAX(ncaa_player_id) AS ncaaPlayerId FROM players WHERE ncaa_player_id = ? GROUP BY ncaa_player_id`;
 const PLAYER_SUMMARY_SQL = `
 SELECT COUNT(*) AS games, ROUND(AVG(points), 1) AS ppg, ROUND(AVG(total_rebounds), 1) AS rpg,
        ROUND(AVG(assists), 1) AS apg, SUM(fgm) AS fgm, SUM(fga) AS fga,

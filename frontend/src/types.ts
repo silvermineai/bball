@@ -29,6 +29,7 @@ export type GameListItem = {
 
 export type PlayerListItem = {
   id: string;
+  ncaaPlayerId?: string | number;
   sportCode?: string;
   division?: string;
   name: string;
@@ -42,6 +43,43 @@ export type PlayerListItem = {
   fga?: number;
   threeFga?: number;
   isFavorite?: boolean;
+};
+
+export type NcaaPlayerSeasonRow = {
+  season: number;
+  player_id: string;
+  team_id?: string;
+  team_name?: string;
+  player_name?: string;
+  games?: number;
+  stats: Record<string, number | string | null>;
+};
+
+export type NcaaPlayerShootingRow = {
+  season: number;
+  player_id: string;
+  team_id?: string;
+  team_name?: string;
+  player_name?: string;
+  stats: Record<string, number | string | null>;
+};
+
+export type NcaaPlayerCard = {
+  player_id: string;
+  selected_season: number;
+  seasons: NcaaPlayerSeasonRow[];
+  shooting: NcaaPlayerShootingRow[];
+  impact?: Record<string, number | string | null> | null;
+  games?: Array<Record<string, unknown>>;
+  game_stat_coverage?: Record<string, number | string | null>;
+  source_receipts?: Array<{ dataset?: string; fetched_at?: string; url?: string | null; sha256?: string | null }>;
+  identity_note?: string;
+};
+
+export type NcaaPlayerRanking = {
+  metric: string;
+  total: number;
+  rows: Array<{ player_id: string; player_name?: string | null; value?: number | null; rank?: number | null }>;
 };
 
 export type Shot = {

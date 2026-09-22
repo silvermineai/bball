@@ -1,6 +1,6 @@
 import { sampleGames, samplePlayers, sampleShots, sampleSummary, sampleTeams } from "@/lib/sampleData";
 import { sourceSportCode } from "@/lib/sports";
-import type { GameListItem, PlayerSummary, Shot } from "@/types";
+import type { GameListItem, NcaaPlayerCard, NcaaPlayerRanking, PlayerSummary, Shot } from "@/types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 const LOCAL_RUNNER_BASE = import.meta.env.VITE_LOCAL_RUNNER_URL ?? "http://127.0.0.1:8790";
@@ -225,6 +225,10 @@ export const api = {
   players: (q = "", sport = "s_mbb", division = "1") =>
     request(`/players?q=${encodeURIComponent(q)}&sport=${encodeURIComponent(sport)}&division=${encodeURIComponent(division)}`, { players: filterBySport(samplePlayers, sport) }),
   player: (id: string, search = "") => requestOrLoad(`/players/${id}${search}`, () => loadSamplePlayer(id)),
+  ncaaPlayerCard: (id: string | number, season = 2026) =>
+    request<NcaaPlayerCard | null>(`/basketball/research/ncaa-player-card/${encodeURIComponent(String(id))}?season=${season}`, null),
+  ncaaPlayerRanking: (id: string | number, season = 2026) =>
+    request<NcaaPlayerRanking | null>(`/basketball/research/ncaa-player-rankings?season=${season}&division=1&metric=ppg&playerIds=${encodeURIComponent(String(id))}`, null),
   backfillStatus: () =>
     fetch(`${LOCAL_RUNNER_BASE}/backfill/status`).then((res) => {
       if (!res.ok) throw new Error("Local runner unavailable");
