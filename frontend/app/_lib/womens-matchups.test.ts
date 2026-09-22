@@ -20,6 +20,14 @@ describe("women's matchup slate", () => {
     expect(filterWomensMatchups(rows, { coverage: "unavailable" }).map((row) => row.game_id)).toEqual(["3"]);
   });
 
+  it("keeps an explicit unknown estimate type out of the primary bucket", () => {
+    const rows = mergeWomensMatchups([
+      { game_id: "4", date: "2026-12-05T05:00Z", away: "D", home: "East", prediction: { home_win_probability: 0.7, predicted_margin: 8, predicted_home_score: 74, predicted_away_score: 66, estimate_type: "experimental_v9" } },
+    ], []);
+    expect(filterWomensMatchups(rows, { coverage: "primary" })).toEqual([]);
+    expect(filterWomensMatchups(rows, { coverage: "unavailable" }).map((row) => row.game_id)).toEqual(["4"]);
+  });
+
   it("sorts by confidence and keeps page boundaries deterministic", () => {
     const rows = sortWomensMatchups(mergeWomensMatchups(forecasts, []), "confidence");
     expect(rows.map((row) => row.game_id)).toEqual(["1", "2", "3"]);

@@ -5,6 +5,7 @@ import { date } from "../../_lib/format";
 import NotebookFinder from "./NotebookFinder";
 import type { NotebookIndexGame } from "./notebook-index";
 import { recruitingGamePlayerEvidence, recruitingGamePlayerHref, selectRecruitingGameLenses } from "../../blog/recruiting-game-lens";
+import { normalizeEstimateType } from "../../_lib/upcoming-game-analysis";
 
 export const metadata = {
   title: "Upcoming basketball game notebooks",
@@ -17,7 +18,10 @@ export default function Page() {
   const basketball = getBasketball();
   const rosterModel = getRosterModel();
   const games = basketball.upcoming
-    .filter((game) => game.prediction || game.fallback_prediction);
+    .filter((game) => {
+      const forecast = game.prediction || game.fallback_prediction;
+      return Boolean(forecast && normalizeEstimateType(forecast.estimate_type));
+    });
   const notebookIndex: NotebookIndexGame[] = games.slice(0, 8).map((game) => {
     const forecast = game.prediction || game.fallback_prediction!;
     return {
@@ -35,7 +39,7 @@ export default function Page() {
         homeWinProbability: forecast.home_win_probability,
         marginLow: forecast.margin_low,
         marginHigh: forecast.margin_high,
-        estimateType: forecast.estimate_type === "cold_start" ? "cold_start" : "primary",
+        estimateType: normalizeEstimateType(forecast.estimate_type) === "cold-start" ? "cold_start" : "primary",
       },
     };
   });

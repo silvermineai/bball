@@ -22,6 +22,20 @@ export type UpcomingGameAnalysisInput = {
   marketQuoteCount?: number | null;
 };
 
+export type RecognizedEstimateType = "primary" | "cold-start";
+
+/**
+ * Keep model coverage labels closed over the editions we understand. An
+ * omitted label is the legacy representation of a primary estimate; an
+ * explicit unknown label must stay unavailable until its semantics are
+ * reviewed.
+ */
+export function normalizeEstimateType(value: unknown): RecognizedEstimateType | null {
+  if (value == null || value === "primary") return "primary";
+  if (value === "cold_start" || value === "cold-start") return "cold-start";
+  return null;
+}
+
 export type UpcomingGameAnalysis = {
   state: "ready" | "partial" | "unavailable";
   identity: { gameId: string | null; homeId: string | null; awayId: string | null };
@@ -64,18 +78,21 @@ export function buildUpcomingGameAnalysis(
   const scoreAway = finite(p?.scoreAway) ? p!.scoreAway! : null;
   const marginLow = finite(p?.marginLow) ? p!.marginLow! : null;
   const marginHigh = finite(p?.marginHigh) ? p!.marginHigh! : null;
+  const estimateType = normalizeEstimateType(p?.estimateType);
   const validRange = marginLow != null && marginHigh != null && marginLow <= marginHigh;
   const rangeWidth = validRange ? marginHigh! - marginLow! : null;
-  const validPrediction = probability != null && margin != null && scoreHome != null && scoreAway != null;
-  const confidence = probability == null
+  const validPrediction = probability != null && margin != null && scoreHome != null && scoreAway != null && estimateType != null;
+  const confidence = !validPrediction
     ? "unavailable"
     : Math.max(probability, 1 - probability) >= 0.75
       ? "strong"
       : Math.max(probability, 1 - probability) >= 0.6
         ? "lean"
         : "toss-up";
-  const lean = probability == null || probability === 0.5
-    ? probability == null ? "unavailable" : "toss-up"
+  const lean = !validPrediction
+    ? "unavailable"
+    : probability === 0.5
+      ? "toss-up"
     : probability > 0.5 ? "home" : "away";
   const uncertainty = rangeWidth == null
     ? "unavailable"
@@ -84,6 +101,7 @@ export function buildUpcomingGameAnalysis(
   const missing: string[] = [];
   if (validPrediction) evidence.push("published score and win probability");
   else missing.push("a complete finite forecast row");
+  if (p && estimateType == null) missing.push("recognized estimate type");
   if (modelId) evidence.push(`model edition ${modelId}`);
   else missing.push("model edition identity");
   if (gameId && homeId && awayId) evidence.push("exact game and team IDs");
@@ -99,7 +117,7 @@ export function buildUpcomingGameAnalysis(
   return {
     state,
     identity: { gameId, homeId, awayId },
-    estimate: !validPrediction ? "unavailable" : p?.estimateType === "cold_start" ? "cold-start" : "primary",
+    estimate: !validPrediction ? "unavailable" : estimateType!,
     lean,
     confidence,
     homeWinProbability: probability,

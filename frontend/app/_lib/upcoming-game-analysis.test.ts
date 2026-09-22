@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildUpcomingGameAnalysis } from "./upcoming-game-analysis";
+import { buildUpcomingGameAnalysis, normalizeEstimateType } from "./upcoming-game-analysis";
 
 describe("upcoming game analysis", () => {
   const complete = {
@@ -52,5 +52,23 @@ describe("upcoming game analysis", () => {
     expect(result.lean).toBe("unavailable");
     expect(result.confidence).toBe("unavailable");
     expect(result.estimate).toBe("unavailable");
+  });
+
+  it("does not promote an explicit unknown estimate type to primary", () => {
+    const result = buildUpcomingGameAnalysis({
+      ...complete,
+      prediction: { ...complete.prediction, estimateType: "experimental_v9" },
+    });
+    expect(result.state).toBe("unavailable");
+    expect(result.estimate).toBe("unavailable");
+    expect(result.lean).toBe("unavailable");
+    expect(result.missing).toContain("recognized estimate type");
+  });
+
+  it("keeps legacy omitted labels as primary and recognizes cold-start spelling", () => {
+    expect(normalizeEstimateType(undefined)).toBe("primary");
+    expect(normalizeEstimateType("cold_start")).toBe("cold-start");
+    expect(normalizeEstimateType("cold-start")).toBe("cold-start");
+    expect(normalizeEstimateType("future_model")).toBeNull();
   });
 });

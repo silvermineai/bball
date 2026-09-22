@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useState } from "react";
 import { date, fmt, signed } from "../../_lib/format";
 import { loadLiveBasketballForecasts } from "../../_lib/live-basketball-forecasts";
+import { normalizeEstimateType } from "../../_lib/upcoming-game-analysis";
 import {
   notebookSearchParams,
   readNotebookSearch,
@@ -51,7 +52,8 @@ export default function NotebookFinder({
           if (controller.signal.aborted) return;
           const complete = rows.flatMap((row): NotebookIndexGame[] => {
             const prediction = row.prediction;
-            if (!row.away_name || !row.home_name || !prediction) return [];
+            const estimateType = normalizeEstimateType(prediction?.estimate_type);
+            if (!row.away_name || !row.home_name || !prediction || !estimateType) return [];
             const numeric = [
               prediction.away_score,
               prediction.home_score,
@@ -75,7 +77,7 @@ export default function NotebookFinder({
                 homeWinProbability: prediction.home_win_probability,
                 marginLow: prediction.margin_low,
                 marginHigh: prediction.margin_high,
-                estimateType: prediction.estimate_type === "cold_start" ? "cold_start" : "primary",
+                estimateType: estimateType === "cold-start" ? "cold_start" : "primary",
               },
             }];
           });

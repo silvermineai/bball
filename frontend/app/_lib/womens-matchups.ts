@@ -1,3 +1,5 @@
+import { normalizeEstimateType } from "./upcoming-game-analysis";
+
 export type WomensGamePrediction = {
   home_win_probability: number;
   away_win_probability?: number;
@@ -64,7 +66,9 @@ export function filterWomensMatchups(
   const coverage = options.coverage || "all";
   return rows.filter((row) => {
     const prediction = row.prediction;
-    const estimateType = prediction?.estimate_type === "cold_start" ? "cold-start" : prediction ? "primary" : "unavailable";
+    const estimateType = prediction
+      ? normalizeEstimateType(prediction.estimate_type) || "unavailable"
+      : "unavailable";
     return (!query || `${row.away || ""} ${row.home || ""} ${row.game_id}`.toLowerCase().includes(query))
       && (month === "all" || String(row.date || "").startsWith(month))
       && (coverage === "all" || estimateType === coverage);
