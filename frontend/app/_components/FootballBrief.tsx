@@ -5,6 +5,7 @@ import { date, fmt, kick, signed } from "../_lib/format";
 import FootballMatchupEvidence from "./FootballMatchupEvidence";
 import BriefNotebook from "../basketball/briefs/BriefNotebook";
 import { footballModelFactors, type FootballModelFactor } from "../_lib/football-model-factors";
+import { footballMarketComparison } from "../_lib/football-market-lens";
 const tasks = [
   "Confirm the quarterback, offensive line and current availability for both programs.",
   "Review passing efficiency alongside protection and coverage on film.",
@@ -23,6 +24,11 @@ export default function FootballBrief({
   const uncertain = p.margin_low <= 0 && p.margin_high >= 0;
   const evidence = getFootballBriefEvidence(g);
   const factors = footballModelFactors(d.model, g);
+  const marketComparison = footballMarketComparison({
+    homeName: g.home_name,
+    homeMargin: p.home_margin,
+    homeSpread: g.market?.home_spread,
+  });
   const record = `/research/game/?sport=football&id=${g.id}`;
   return (
     <article className="matchup-brief football-brief">
@@ -157,11 +163,7 @@ export default function FootballBrief({
                 ? `The separate imported archive lists a home spread of ${fmt(g.market.home_spread)} and total of ${fmt(g.market.total)}, observed ${kick(g.market.observed_at)}. Its bookmaker publication time is unavailable. This archive entry cannot establish a pregame price or market edge.`
                 : "The separate imported archive has no line for this game. See the dated game record for any qualifying feed observations; an absent quote is not replaced with a guessed price."}
             </p>
-            <p>
-              A model home margin of +5 and a home spread of −3 differ by +2
-              points toward the home side. This describes disagreement, not a
-              betting return.
-            </p>
+            <p>{marketComparison.text}</p>
           </div>
         </div>
       </section>
