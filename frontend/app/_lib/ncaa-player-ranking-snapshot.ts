@@ -108,11 +108,25 @@ export const snapshotRow = (
   result: ApiResult | null,
   playerId: string,
 ): SnapshotRow => {
-  const total = Number.isFinite(Number(result?.total)) ? Number(result?.total) : 0;
+  const rawTotal = Number(result?.total);
+  const validTotal = Number.isInteger(rawTotal) && rawTotal > 0;
+  const total = validTotal ? rawTotal : 0;
   const row = result?.rows?.find((candidate) => String(candidate.player_id || "") === playerId);
-  const rank = Number.isInteger(Number(row?.rank)) && Number(row?.rank) > 0 ? Number(row?.rank) : null;
-  const value = typeof row?.value === "number" && Number.isFinite(row.value) ? row.value : null;
-  const status = rank != null && value != null ? "qualified" : total > 0 ? "not_qualified" : "unavailable";
+  const candidateRank = Number.isInteger(Number(row?.rank)) && Number(row?.rank) > 0 ? Number(row?.rank) : null;
+  const rankInCohort = validTotal && candidateRank != null && candidateRank <= total;
+  const rank = rankInCohort ? candidateRank : null;
+  const value = rankInCohort && typeof row?.value === "number" && Number.isFinite(row.value) ? row.value : null;
+  const malformedPosition = candidateRank != null && !rankInCohort;
+  const status = malformedPosition || !validTotal
+    ? "unavailable"
+    : rank != null && value != null
+      ? "qualified"
+      : "not_qualified";
+  const note = !validTotal
+    ? "Board denominator unavailable"
+    : malformedPosition
+      ? "Board rank is outside its qualified cohort"
+      : definition.note;
   return {
     metric: definition.metric,
     label: definition.label,
@@ -121,7 +135,7 @@ export const snapshotRow = (
     total,
     percentile: rank == null ? null : percentile(rank, total),
     status,
-    note: definition.note,
+    note,
   };
 };
 

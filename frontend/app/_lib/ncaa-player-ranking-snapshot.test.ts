@@ -25,6 +25,30 @@ describe("NCAA player ranking snapshot", () => {
     expect(row.total).toBe(8);
   });
 
+  it("withholds a ranking when the returned rank exceeds its cohort denominator", () => {
+    const row = snapshotRow(definition, {
+      total: 8,
+      rows: [{ player_id: "42", value: 19.2, rank: 9 }],
+    }, "42");
+    expect(row.status).toBe("unavailable");
+    expect(row.rank).toBeNull();
+    expect(row.value).toBeNull();
+    expect(row.percentile).toBeNull();
+    expect(row.note).toContain("outside");
+  });
+
+  it("withholds rank and percentile when the board denominator is malformed", () => {
+    const row = snapshotRow(definition, {
+      total: 8.5,
+      rows: [{ player_id: "42", value: 19.2, rank: 2 }],
+    }, "42");
+    expect(row.status).toBe("unavailable");
+    expect(row.total).toBe(0);
+    expect(row.rank).toBeNull();
+    expect(row.value).toBeNull();
+    expect(row.note).toBe("Board denominator unavailable");
+  });
+
   it("summarizes only qualified boards without mixing raw metric units", () => {
     const rows: SnapshotRow[] = [
       { metric: "ppg", label: "Points", value: 20, rank: 6, total: 101, percentile: 95, status: "qualified", note: "sample" },
