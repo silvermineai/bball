@@ -9,6 +9,7 @@ import MovementWatch from "./MovementWatch";
 import RecruitingBoard from "./RecruitingBoard";
 import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecruitingStatus";
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
+import LiveBasketballProspectLeaders from "../../_components/LiveBasketballProspectLeaders";
 import {
   eventLabels,
   recruitingProductionEvidenceCoverage,
@@ -138,6 +139,7 @@ export default function Page() {
       </section>
       <LiveBasketballRecruitingStatus />
       <LiveBasketballProspectStatus />
+      <LiveBasketballProspectLeaders />
       <RecruitingCoverageBoundary
         assessment={recruitingCoverage}
         edition={data.edition}
