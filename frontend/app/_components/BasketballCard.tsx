@@ -13,6 +13,7 @@ import { forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDe
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
 import { explainBasketballPrediction, publishedScoreArithmetic } from "../_lib/basketball-prediction-explanation";
+import { matchupPaceLens } from "../_lib/basketball-pace-lens";
 import RotationWatchPanel from "./RotationWatchPanel";
 
 export default function BasketballCard({
@@ -48,6 +49,7 @@ export default function BasketballCard({
   const coldStart = !g.prediction && !!g.fallback_prediction;
   const scoreExplanation = p ? explainBasketballPrediction(model, g, p) : null;
   const publishedArithmetic = p ? publishedScoreArithmetic(p) : null;
+  const paceLens = matchupPaceLens(p, homeRating, awayRating);
   const signalContext = forecastSignalContext(p, !!g.prediction);
   const confidence = forecastConfidenceSummary(p, !!g.prediction);
   const strongestFactor = strongestMatchupSignal(g.matchup_factors, g.matchup_factors_same_edition !== false);
@@ -188,6 +190,33 @@ export default function BasketballCard({
             <span>Estimated possessions</span>
             <span>{fmt(p.pace)}</span>
           </div>
+          {paceLens && (
+            <div className="pace-lens" aria-label="Tempo game script">
+              <div className="match-detail">
+                <strong>Tempo game script</strong>
+                <span className="muted">
+                  {paceLens.environment === "faster"
+                    ? "faster than prior baseline"
+                    : paceLens.environment === "slower"
+                      ? "slower than prior baseline"
+                      : "near prior baseline"}
+                </span>
+              </div>
+              <div className="match-detail muted">
+                <span>Prior adjusted tempo · H / A</span>
+                <span>{fmt(paceLens.prior_home, 1)} / {fmt(paceLens.prior_away, 1)}</span>
+              </div>
+              <div className="match-detail muted">
+                <span>Forecast vs prior mean</span>
+                <span>{paceLens.projected_delta >= 0 ? "+" : ""}{fmt(paceLens.projected_delta, 1)} possessions</span>
+              </div>
+              <small>
+                {paceLens.faster_team === "even"
+                  ? "Both teams carried nearly the same prior adjusted tempo."
+                  : `${paceLens.faster_team === "home" ? g.home_name : g.away_name} carried the faster prior adjusted tempo by ${fmt(Math.abs(paceLens.tempo_gap), 1)} possessions.`} Historical exact-ID tempo context is descriptive and does not alter this forecast.
+              </small>
+            </div>
+          )}
           <div className="match-detail muted">
             <span>Projected efficiency · A / H</span>
             <span>{p.away_efficiency == null || p.home_efficiency == null ? "—" : `${fmt(p.away_efficiency, 1)} / ${fmt(p.home_efficiency, 1)} pts per 100`}</span>

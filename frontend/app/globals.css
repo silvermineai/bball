@@ -835,6 +835,18 @@ th,
   margin-top: 14px;
   padding-top: 11px;
 }
+.pace-lens {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.pace-lens > small {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  line-height: 1.45;
+  margin-top: 8px;
+}
 .matchup-factors > .match-detail {
   margin-bottom: 8px;
 }
