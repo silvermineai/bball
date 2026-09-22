@@ -1664,7 +1664,7 @@ describe("bball api", () => {
         binds.push(args);
         return sql.includes("count(*) AS total")
           ? { first: async () => ({ total: 2, non_null: 2 }) }
-          : { all: async () => ({ results: [{ team_id: "150", team_name: "Example", team_abbreviation: "EX", value: 82.1, display: "82.1" }] }) };
+          : { all: async () => ({ results: [{ team_id: "150", team_name: "Example", team_abbreviation: "EX", value: 82.1, display: "82.1", rank: 2 }] }) };
       },
     }));
     const response = await app.request(
@@ -1673,8 +1673,14 @@ describe("bball api", () => {
       { DB: { prepare } },
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ total: 2, page_size: 500, rows: [{ id: "150", value: 82.1 }] });
+    expect(await response.json()).toMatchObject({
+      total: 2,
+      page_size: 500,
+      ranking: { direction: "desc", ranked_count: 2, ties: "competition_rank" },
+      rows: [{ id: "150", value: 82.1, rank: 2 }],
+    });
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("team_id IN (?,?)"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("RANK() OVER"))).toBe(true);
     expect(binds.some((args) => args.includes(500) && args.includes(0))).toBe(true);
   });
 

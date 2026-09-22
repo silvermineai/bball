@@ -8,6 +8,12 @@ describe("team stat cohort position", () => {
     expect(teamStatCohortRank(0, 40, 362, 39)).toBe(40);
   });
 
+  it("uses an authoritative competition rank when the API supplies one", () => {
+    expect(teamStatCohortRank(4, 40, 362, 0, 7)).toBe(7);
+    expect(teamStatCohortRank(0, 40, 362, 1, 0)).toBe(2);
+    expect(teamStatCohortRank(0, 40, 362, 1, 363)).toBe(2);
+  });
+
   it("withholds positions when pagination metadata cannot support them", () => {
     expect(teamStatCohortRank(-1, 40, 362, 0)).toBeNull();
     expect(teamStatCohortRank(0, 0, 362, 0)).toBeNull();

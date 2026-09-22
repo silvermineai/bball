@@ -159,7 +159,13 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
     const rows = await withTimeout(db.prepare(
     `SELECT team_id,team_name,team_abbreviation,
             json_extract(stats_json, '${valuePath}') AS value,
-            json_extract(stats_json, '${displayPath}') AS display
+            json_extract(stats_json, '${displayPath}') AS display,
+            CASE WHEN json_extract(stats_json, '${valuePath}') IS NULL THEN NULL
+                 ELSE RANK() OVER (
+                   ORDER BY json_extract(stats_json, '${valuePath}') IS NULL,
+                            json_extract(stats_json, '${valuePath}') ${direction === "asc" ? "ASC" : "DESC"}
+                 )
+            END AS rank
        FROM bb_team_season WHERE ${where}
       ORDER BY ${order} LIMIT ? OFFSET ?`,
     ).bind(...binds, limit, page * limit).all(), DB_TIMEOUT_MS);
@@ -178,11 +184,18 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
     const response = c.json({
     season, field, page, page_size: limit,
     total: count?.total ?? 0, non_null: count?.non_null ?? 0,
+    ranking: {
+      direction,
+      population: "matching rows with a recorded metric value",
+      ranked_count: count?.non_null ?? 0,
+      ties: "competition_rank",
+    },
     source,
     rows: rows.results.map((row) => ({
       id: row.team_id, team: row.team_name || row.team_id, abbreviation: row.team_abbreviation,
       value: typeof row.value === "number" ? row.value : null,
       display: row.display == null ? null : String(row.display),
+      rank: typeof row.rank === "number" && Number.isInteger(row.rank) ? row.rank : null,
     })),
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

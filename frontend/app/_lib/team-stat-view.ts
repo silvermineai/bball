@@ -9,7 +9,13 @@ export function teamStatCohortRank(
   pageSize: number,
   total: number,
   rowIndex: number,
+  authoritativeRank: number | null | undefined = null,
 ): number | null {
+  // The API can provide a tie-aware competition rank. Keep the positional
+  // calculation as a compatibility fallback for older cached responses.
+  if (authoritativeRank != null && Number.isInteger(authoritativeRank) && authoritativeRank >= 1 && authoritativeRank <= total) {
+    return authoritativeRank;
+  }
   if (!Number.isInteger(page) || page < 0
     || !Number.isInteger(pageSize) || pageSize < 1
     || !Number.isInteger(total) || total < 0
