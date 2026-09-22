@@ -42,6 +42,13 @@ describe("women's lower-division release integrity", () => {
     expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/D2.*source path/);
   });
 
+  it("rejects a division envelope whose source URL points at another division", () => {
+    const value = edition();
+    value.divisions.d2.source_url = "https://www.ncaa.com/stats/basketball-women/d3/current";
+    value.receipts.push(receipt(value.divisions.d2.source_url));
+    expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/D2 source URL/);
+  });
+
   it("rejects rows without exact source fields", () => {
     const value = edition();
     delete (value.divisions.d3.individual[0].rows[0] as Record<string, unknown>).source_fields;

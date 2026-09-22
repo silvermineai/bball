@@ -107,6 +107,14 @@ describe("women's lower-division stats API", () => {
     await expect(response.json()).resolves.toMatchObject({ code: "release_integrity_failed" });
   });
 
+  it("fails closed when a division envelope points at another NCAA division", async () => {
+    const malformed = edition();
+    malformed.divisions.d2.source_url = d3Receipt.url;
+    const response = await womensLowerStats.request("/?division=2", {}, env(malformed));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "release_integrity_failed" });
+  });
+
   it("fails closed when an individual table is ledgered under the team path", async () => {
     const malformed = edition();
     const teamUrl = receipt.url.replace("/individual/", "/team/");

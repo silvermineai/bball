@@ -56,6 +56,19 @@ const isNCAAWomenStatsUrl = (value: unknown): value is string => {
   }
 };
 
+/** Keep every retained URL inside the exact division and table namespace. */
+const isExactNCAAWomenStatsUrl = (
+  value: unknown,
+  division: WomensLowerDivision,
+  kind?: "individual" | "team",
+): value is string => {
+  if (!isNCAAWomenStatsUrl(value)) return false;
+  const pathname = new URL(value).pathname;
+  const divisionPath = `/stats/basketball-women/d${division}`;
+  return (pathname === divisionPath || pathname.startsWith(`${divisionPath}/`))
+    && (kind == null || pathname.includes(`/${kind}/`));
+};
+
 const fail = (reason: string): never => {
   throw new Error(`Women’s lower-division release failed integrity validation: ${reason}`);
 };
@@ -71,7 +84,7 @@ function validateStatistic(
   if (typeof value.label !== "string" || typeof value.statistic !== "string") return fail(`D${division} ${kind} statistic has no label or key.`);
   if (!Array.isArray(value.headers) || value.headers.length === 0 || value.headers.some((header) => typeof header !== "string")) return fail(`D${division} ${kind} ${value.statistic} has invalid headers.`);
   if (!Array.isArray(value.rows) || value.rows.some((row) => !isRecord(row))) return fail(`D${division} ${kind} ${value.statistic} has malformed rows.`);
-  if (!isNCAAWomenStatsUrl(value.source_url)) return fail(`D${division} ${kind} ${value.statistic} has no NCAA.com source URL.`);
+  if (!isExactNCAAWomenStatsUrl(value.source_url, division, kind)) return fail(`D${division} ${kind} ${value.statistic} source path is not an exact NCAA.com source URL.`);
   const sourcePath = new URL(value.source_url).pathname;
   if (!availablePaths.has(sourcePath) || !sourcePath.includes(`/${kind}/`)) return fail(`D${division} ${kind} ${value.statistic} source path is absent from the exact-kind available-statistics ledger.`);
   if (!receiptUrls.has(value.source_url)) return fail(`D${division} ${kind} ${value.statistic} has no matching source receipt.`);
@@ -109,7 +122,7 @@ export function parseWomensLowerDivisionEdition(value: unknown): WomensLowerDivi
     if (!isRecord(current)) return fail(`D${division} division is missing.`);
     const scope = current.source_scope;
     if (!isRecord(scope) || scope.sport !== "basketball" || scope.gender !== "women" || scope.division !== Number(division)) return fail(`D${division} source scope is not exact.`);
-    if (!isNCAAWomenStatsUrl(current.source_url) || !receiptUrls.has(current.source_url)) return fail(`D${division} source URL has no NCAA.com receipt.`);
+    if (!isExactNCAAWomenStatsUrl(current.source_url, division) || !receiptUrls.has(current.source_url)) return fail(`D${division} source URL has no exact NCAA.com receipt.`);
     if (!Number.isInteger(current.season) || typeof current.identity_status !== "string" || typeof current.identity_note !== "string") return fail(`D${division} metadata is incomplete.`);
     if (!isRecord(current.available_statistics) || !Array.isArray(current.available_statistics.individual) || !Array.isArray(current.available_statistics.team)) return fail(`D${division} available-statistics ledger is missing.`);
     const availableStatistics = current.available_statistics as { individual: unknown[]; team: unknown[] };

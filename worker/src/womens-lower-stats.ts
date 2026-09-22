@@ -44,6 +44,14 @@ function isNCAAWomenStatsUrl(value: unknown): value is string {
   } catch { return false; }
 }
 
+function isExactNCAAWomenStatsUrl(value: unknown, division: "2" | "3", kind?: "individual" | "team"): value is string {
+  if (!isNCAAWomenStatsUrl(value)) return false;
+  const pathname = new URL(value).pathname;
+  const divisionPath = `/stats/basketball-women/d${division}`;
+  return (pathname === divisionPath || pathname.startsWith(`${divisionPath}/`))
+    && (kind == null || pathname.includes(`/${kind}/`));
+}
+
 function validReceipt(value: unknown): value is RecordValue {
   return isRecord(value)
     && isHttps(value.url)
@@ -55,7 +63,7 @@ function validReceipt(value: unknown): value is RecordValue {
     && value.bytes > 0;
 }
 
-function validStatistic(value: unknown, sourceUrls: Set<string>, availablePaths: Set<string>, kind: "individual" | "team"): value is RecordValue & {
+function validStatistic(value: unknown, sourceUrls: Set<string>, availablePaths: Set<string>, division: "2" | "3", kind: "individual" | "team"): value is RecordValue & {
   statistic: string;
   label: string;
   headers: string[];
@@ -70,7 +78,7 @@ function validStatistic(value: unknown, sourceUrls: Set<string>, availablePaths:
     || value.headers.some((header) => typeof header !== "string")
     || !Array.isArray(value.rows)
     || value.rows.some((row) => !isRecord(row))
-    || !isNCAAWomenStatsUrl(value.source_url)
+    || !isExactNCAAWomenStatsUrl(value.source_url, division, kind)
     || !sourceUrls.has(value.source_url)) return false;
   const sourcePath = new URL(value.source_url).pathname;
   if (!availablePaths.has(sourcePath) || !sourcePath.includes(`/${kind}/`)) return false;
@@ -103,13 +111,13 @@ function validateEdition(value: unknown): RecordValue | null {
       || current.source_scope.sport !== "basketball"
       || current.source_scope.gender !== "women"
       || current.source_scope.division !== Number(division)
-      || !isNCAAWomenStatsUrl(current.source_url)
+      || !isExactNCAAWomenStatsUrl(current.source_url, division)
       || !sourceUrls.has(current.source_url)
       || !Array.isArray(current.individual)
       || !Array.isArray(current.team)
       || !available
-      || current.individual.some((stat) => !validStatistic(stat, sourceUrls, availablePaths.individual, "individual"))
-      || current.team.some((stat) => !validStatistic(stat, sourceUrls, availablePaths.team, "team"))) return null;
+      || current.individual.some((stat) => !validStatistic(stat, sourceUrls, availablePaths.individual, division, "individual"))
+      || current.team.some((stat) => !validStatistic(stat, sourceUrls, availablePaths.team, division, "team"))) return null;
   }
   return value;
 }
