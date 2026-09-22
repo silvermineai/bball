@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { prospectRankTrajectory } from "./rank-trajectory";
+import { prospectDimensionRankTrajectories, prospectDimensionRankTrajectory, prospectRankTrajectory } from "./rank-trajectory";
 import type { RecruitingHistoryEntry } from "./commitment-history";
 
 const capture = (rank: number | null, index: number): RecruitingHistoryEntry => ({
@@ -11,6 +11,11 @@ const capture = (rank: number | null, index: number): RecruitingHistoryEntry => 
   committed_team_id: null,
   committed_team_name: null,
   source_url: "",
+});
+
+const dimensionalCapture = (index: number, patch: Partial<RecruitingHistoryEntry> = {}): RecruitingHistoryEntry => ({
+  ...capture(null, index),
+  ...patch,
 });
 
 describe("prospectRankTrajectory", () => {
@@ -54,5 +59,39 @@ describe("prospectRankTrajectory", () => {
   it("withholds a trajectory when no positive rank is recorded", () => {
     expect(prospectRankTrajectory([capture(null, 0), capture(null, 1)])).toBeNull();
     expect(prospectRankTrajectory([capture(0, 0), capture(-2, 1)])).toBeNull();
+  });
+
+  it("summarizes dimensional ranks independently and preserves missing captures", () => {
+    expect(prospectDimensionRankTrajectory([
+      dimensionalCapture(0, { position_rank: 12, state_rank: 7 }),
+      dimensionalCapture(1, { position_rank: null, state_rank: 4 }),
+      dimensionalCapture(2, { position_rank: 8, state_rank: null }),
+    ], "position_rank")).toMatchObject({
+      key: "position_rank",
+      label: "Position",
+      rankedCaptures: 2,
+      totalCaptures: 3,
+      rankCoverage: 2 / 3,
+      latestCaptureRanked: true,
+      firstRank: 12,
+      latestRank: 8,
+      bestRank: 8,
+      worstRank: 12,
+      netChange: 4,
+      direction: "improved",
+    });
+    expect(prospectDimensionRankTrajectory([
+      dimensionalCapture(0, { state_rank: 7 }),
+      dimensionalCapture(1, { state_rank: 4 }),
+    ], "state_rank")?.direction).toBe("improved");
+  });
+
+  it("returns available dimensional boards in stable position, state, region order", () => {
+    const trajectories = prospectDimensionRankTrajectories([
+      dimensionalCapture(0, { region_rank: 20, state_rank: 9 }),
+      dimensionalCapture(1, { region_rank: 18, state_rank: null }),
+    ]);
+    expect(trajectories.map((trajectory) => trajectory.key)).toEqual(["state_rank", "region_rank"]);
+    expect(prospectDimensionRankTrajectories([capture(null, 0)])).toEqual([]);
   });
 });

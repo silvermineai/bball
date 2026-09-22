@@ -18,7 +18,7 @@ import { prospectLearningChecks } from "./learning-questions";
 import { recordedProspectFields } from "./recorded-fields";
 import ProspectProductionBridge from "./ProspectProductionBridge";
 import ProspectRosterBridge from "./ProspectRosterBridge";
-import { prospectRankTrajectory } from "./rank-trajectory";
+import { prospectDimensionRankTrajectories, prospectRankTrajectory } from "./rank-trajectory";
 import { prospectGradeTrajectory } from "./grade-trajectory";
 import { parseRecruitingRosterBridge, type RecruitingRosterBridge } from "../../../_lib/recruiting-roster-bridge";
 import { parseProspectDossierPayload, type ProspectDossierProspect as Prospect, type ProspectDossierResponse as Response } from "./payload";
@@ -144,6 +144,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const firstRecordedDestination = history.find((entry) => entry.committed_team_id?.trim());
   const latestHistory = history.at(-1);
   const rankTrajectory = prospectRankTrajectory(history);
+  const dimensionRankTrajectories = prospectDimensionRankTrajectories(history);
   const gradeTrajectory = prospectGradeTrajectory(history);
   const classContext = prospectClassContext(classContextPayload, prospect?.rank ?? null);
   const peerContext = prospect ? prospectPeerContext(peerContextPayload, {
@@ -304,6 +305,19 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
                 <div><dt>Average recorded grade</dt><dd>{gradeTrajectory.averageGrade.toFixed(1)}<small>graded captures only</small></dd></div>
               </div>
               <p className="note" style={{ marginTop: 12 }}>Grade movement uses positive finite values from this exact athlete ID and source edition history. Higher or lower describes the recorded source scale; it is not a Silvermine grade or a projection of role or production.</p>
+            </>}
+            {dimensionRankTrajectories.length > 0 && <>
+              <div className="section-heading" style={{ marginTop: 20, marginBottom: 10 }}>
+                <div><div className="eyebrow">Dimensional rank context</div><h3>Where the prospect sits within the source boards.</h3></div>
+                <span className="note">Source-published ranks</span>
+              </div>
+              <div className="raw-stat-grid">
+                {dimensionRankTrajectories.map((trajectory) => <div key={trajectory.key}>
+                  <dt>{trajectory.label} rank</dt>
+                  <dd>#{trajectory.latestRank}<small>{trajectory.rankedCaptures < 2 ? `${trajectory.rankedCaptures} ranked capture` : trajectory.direction === "improved" ? `▲ ${trajectory.netChange} places` : trajectory.direction === "declined" ? `▼ ${Math.abs(trajectory.netChange)} places` : "= 0 places"} · {Math.round(trajectory.rankCoverage * 100)}% coverage</small></dd>
+                </div>)}
+              </div>
+              <p className="note" style={{ marginTop: 12 }}>Position, state, and region ranks use only positive values retained for this exact athlete ID. Missing dimensions remain unavailable and never count as a zero or a demotion; the endpoint movement compares the first and latest ranked captures for each board.</p>
             </>}
             {(() => {
               const ranked = history.map((entry) => entry.rank).filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
