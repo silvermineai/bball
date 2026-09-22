@@ -31,6 +31,60 @@ CATEGORIES = (
 )
 CAREER_CHUNK_SIZE = 5000
 
+# ``production.metrics`` contains both additive source totals and fields that
+# were derived by ``football.box_category_production``.  A career total must
+# preserve the operation used by the source summary: longest-play fields are
+# maxima, while percentage/per-attempt fields are recomputed from the summed
+# numerator and denominator.  Summing either kind would create a statistic
+# that no season or game reported.
+MAX_METRICS = frozenset(
+    {
+        "long_rushing",
+        "long_reception",
+        "long_punt",
+        "long_kick_return",
+        "long_punt_return",
+    }
+)
+DERIVED_RATE_METRICS = frozenset(
+    {
+        "field_goal_pct",
+        "extra_point_pct",
+        "gross_punt_yards_per_punt",
+        "kick_return_yards_per_return",
+        "punt_return_yards_per_return",
+    }
+)
+
+
+def _career_metric_value(metrics: dict[str, float], key: str, value: float) -> None:
+    """Merge one retained box metric using its source-field semantics."""
+    if key in DERIVED_RATE_METRICS:
+        # A weighted career rate can be calculated from its source
+        # numerator/denominator below.  The per-season rate itself is not a
+        # valid additive observation, so do not retain it here.
+        return
+    if key in MAX_METRICS:
+        metrics[key] = max(metrics.get(key, value), value)
+        return
+    metrics[key] = metrics.get(key, 0.0) + value
+
+
+def _derive_career_rates(metrics: dict[str, float]) -> None:
+    """Add weighted rates only when their retained denominator is positive."""
+    rate_inputs = (
+        ("field_goal_pct", "field_goals_made", "field_goals_attempted"),
+        ("extra_point_pct", "extra_points_made", "extra_points_attempted"),
+        ("gross_punt_yards_per_punt", "punt_yards", "punts"),
+        ("kick_return_yards_per_return", "kick_return_yards", "kick_returns"),
+        ("punt_return_yards_per_return", "punt_return_yards", "punt_returns"),
+    )
+    for output, numerator, denominator in rate_inputs:
+        den = metrics.get(denominator)
+        num = metrics.get(numerator)
+        if num is not None and den is not None and den > 0:
+            metrics[output] = num / den
+
 
 def _number(value):
     if isinstance(value, bool):
@@ -150,7 +204,7 @@ def build(
                     target[key] += value
                     target["legacy_seen"].add(key)
             for key, value in metric_values.items():
-                target["metrics"][key] = target["metrics"].get(key, 0.0) + value
+                _career_metric_value(target["metrics"], key, value)
             target["seasons"].add(season)
             if rank is not None and rank > 0:
                 target["best_rank"] = min(
@@ -164,6 +218,7 @@ def build(
         for category in sorted(career["production"]):
             item = career["production"][category]
             plays = item["plays"]
+            _derive_career_rates(item["metrics"])
             entry = {
                 key: (
                     int(item[key]) if item[key].is_integer() else item[key]

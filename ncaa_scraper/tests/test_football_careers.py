@@ -111,3 +111,56 @@ class FootballCareerTests(unittest.TestCase):
         self.assertEqual(player["production"]["kicking"]["metrics"]["field_goals_made"], 4)
         self.assertIsNone(player["production"]["defensive"]["epa"])
         self.assertEqual(result["coverage"]["production_records"], 3)
+
+    def test_box_metric_operations_preserve_maxima_and_weighted_rates(self):
+        result = build(
+            [
+                {
+                    "id": "7",
+                    "name": "Specialist",
+                    "season": 2024,
+                    "team_id": "1",
+                    "team": "Alpha",
+                    "box_games": 4,
+                    "production": {
+                        "rushing": {"records": 1, "games": 1, "metrics": {"long_rushing": 40}},
+                        "kicking": {
+                            "records": 1,
+                            "games": 1,
+                            "metrics": {
+                                "field_goals_made": 1,
+                                "field_goals_attempted": 2,
+                                "field_goal_pct": 0.5,
+                            },
+                        },
+                    },
+                },
+                {
+                    "id": "7",
+                    "name": "Specialist",
+                    "season": 2025,
+                    "team_id": "2",
+                    "team": "Beta",
+                    "box_games": 5,
+                    "production": {
+                        "rushing": {"records": 1, "games": 1, "metrics": {"long_rushing": 75}},
+                        "kicking": {
+                            "records": 1,
+                            "games": 1,
+                            "metrics": {
+                                "field_goals_made": 3,
+                                "field_goals_attempted": 4,
+                                "field_goal_pct": 0.75,
+                            },
+                        },
+                    },
+                },
+            ],
+            [2024, 2025],
+            generated_at="2026-01-01T00:00:00Z",
+        )
+        production = result["players"][0]["production"]
+        self.assertEqual(production["rushing"]["metrics"]["long_rushing"], 75)
+        self.assertEqual(production["kicking"]["metrics"]["field_goals_made"], 4)
+        self.assertEqual(production["kicking"]["metrics"]["field_goals_attempted"], 6)
+        self.assertAlmostEqual(production["kicking"]["metrics"]["field_goal_pct"], 4 / 6)
