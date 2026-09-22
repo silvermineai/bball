@@ -147,11 +147,19 @@ describe("lower football player aggregation", () => {
       row({ division: "d3", game_id: "g3", keys: ["passingYards"], stats: ["999"] }),
       row({ game_id: "g1", date: "2026-09-01T00:00:00Z", labels: ["C/ATT", "YDS", "TD"], stats: ["10/20", "200", "2"] }),
     ], "d2");
-    expect(exported.headers).toEqual(["Season", "Division", "Date", "Game ID", "Category", "Athlete", "Athlete ID", "Position", "Team", "Team ID", "Provider labels", "completions/passingAttempts", "passingTouchdowns", "passingYards"]);
+    expect(exported.headers).toEqual(["Season", "Division", "Date", "Game ID", "Category", "Athlete", "Athlete ID", "Jersey", "Position", "Team", "Team ID", "Provider labels", "completions/passingAttempts", "passingTouchdowns", "passingYards"]);
     expect(exported.rows).toEqual([
-      [2026, "D2", "2026-09-01T00:00:00Z", "g1", "passing", "A Player", "a1", "QB", "Example State", "t1", JSON.stringify(["C/ATT", "YDS", "TD"]), "10/20", "2", "200"],
-      [2026, "D2", "2026-09-02T00:00:00Z", "g2", "passing", "A Player", "a1", "QB", "Example State", "t1", JSON.stringify(["C/ATT", "YDS", "TD"]), "5/10", "1", "100"],
+      [2026, "D2", "2026-09-01T00:00:00Z", "g1", "passing", "A Player", "a1", null, "QB", "Example State", "t1", JSON.stringify(["C/ATT", "YDS", "TD"]), "10/20", "2", "200"],
+      [2026, "D2", "2026-09-02T00:00:00Z", "g2", "passing", "A Player", "a1", null, "QB", "Example State", "t1", JSON.stringify(["C/ATT", "YDS", "TD"]), "5/10", "1", "100"],
     ]);
+  });
+
+  it("retains the provider jersey in exact source validation and export", () => {
+    const archive = validArchive();
+    archive.rows = [row({ jersey: "12" })];
+    expect(validateLowerFootballPlayerArchive(archive).rows[0].jersey).toBe("12");
+    const exported = lowerFootballRawExport(archive.rows, "d2");
+    expect(exported.rows[0][7]).toBe("12");
   });
 
   it("parses only complete exact-ID player selections", () => {

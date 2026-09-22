@@ -7,6 +7,8 @@ export type LowerFootballRawRow = {
   team?: string | null;
   athlete_id: string;
   athlete?: string | null;
+  /** Provider-reported jersey value; retained as context, never used for identity. */
+  jersey?: string | null;
   position?: string | null;
   category: string;
   keys: string[];
@@ -69,6 +71,7 @@ function validLowerPlayerRow(value: unknown, season: number, gameIds: ReadonlySe
     && (row.division === "d2" || row.division === "d3")
     && text(row.game_id) && gameIds.has(row.game_id)
     && text(row.team_id) && text(row.athlete_id) && text(row.athlete)
+    && (row.jersey == null || typeof row.jersey === "string")
     && text(row.category) && Array.isArray(row.keys) && row.keys.length > 0
     && row.keys.every(text) && new Set(row.keys).size === row.keys.length
     && Array.isArray(row.stats) && row.stats.length === row.keys.length
@@ -456,7 +459,7 @@ export function lowerFootballRawExport(
       || left.athlete_id.localeCompare(right.athlete_id)
       || left.category.localeCompare(right.category));
   const fields = [...new Set(scoped.flatMap((row) => row.keys))].sort();
-  const headers = ["Season", "Division", "Date", "Game ID", "Category", "Athlete", "Athlete ID", "Position", "Team", "Team ID", "Provider labels", ...fields];
+  const headers = ["Season", "Division", "Date", "Game ID", "Category", "Athlete", "Athlete ID", "Jersey", "Position", "Team", "Team ID", "Provider labels", ...fields];
   return {
     headers,
     rows: scoped.map((row) => {
@@ -469,6 +472,7 @@ export function lowerFootballRawExport(
         row.category,
         row.athlete || null,
         row.athlete_id,
+        row.jersey || null,
         row.position || null,
         row.team || null,
         row.team_id,
