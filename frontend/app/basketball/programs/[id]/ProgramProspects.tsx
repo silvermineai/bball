@@ -30,6 +30,14 @@ export type RecruitingClass = {
   cohort?: { committed: number };
   edition: string | null;
   captured_at: string | null;
+  source_receipt?: {
+    dataset: string;
+    captured_at: string;
+    source_rows: number;
+    sha256: string | null;
+    sha256_scope: "release_edition" | "unavailable";
+    integrity: "verified" | "unavailable";
+  } | null;
   rows: ProgramProspect[];
   unavailable_reason?: string;
 };
@@ -37,6 +45,29 @@ export type RecruitingClass = {
 type ProgramProspectFetcher = <T>(url: string, options?: { signal?: AbortSignal }) => Promise<T>;
 
 const MAX_CLASS_PAGES = 1001;
+
+/**
+ * A program page is a filtered view of the national release, so the source
+ * receipt must identify the complete release, not just the returned rows.
+ * Keep a class off the page when that receipt cannot prove its edition.
+ */
+export function validProgramProspectReceipt(release: RecruitingClass) {
+  const receipt = release.source_receipt;
+  return Boolean(
+    receipt
+    && receipt.dataset === "recruiting_rankings"
+    && receipt.integrity === "verified"
+    && receipt.sha256_scope === "release_edition"
+    && typeof receipt.sha256 === "string"
+    && /^[a-f0-9]{64}$/i.test(receipt.sha256)
+    && receipt.sha256 === release.edition
+    && typeof receipt.captured_at === "string"
+    && receipt.captured_at.trim().length > 0
+    && receipt.captured_at === release.captured_at
+    && Number.isSafeInteger(receipt.source_rows)
+    && receipt.source_rows >= Math.max(1, Number(release.total || 0)),
+  );
+}
 
 function validPage(release: RecruitingClass, season: number, page: number, expected: RecruitingClass) {
   const pageSize = Number(release.page_size || expected.page_size || 50);
@@ -47,14 +78,16 @@ function validPage(release: RecruitingClass, season: number, page: number, expec
     && pageSize > 0
     && (release.edition ?? null) === (expected.edition ?? null)
     && (release.captured_at ?? null) === (expected.captured_at ?? null)
+    && validProgramProspectReceipt(release)
     && Array.isArray(release.rows)
     && release.rows.length <= pageSize;
 }
 
 /**
  * Load a complete exact-program class while keeping the release immutable.
- * A changed edition, malformed page, duplicate athlete ID or oversized export
- * invalidates the class rather than exposing a partial or mixed board.
+ * A changed edition, missing release receipt, malformed page, duplicate
+ * athlete ID or oversized export invalidates the class rather than exposing
+ * a partial or mixed board.
  */
 export async function loadProgramProspectClass(
   season: number,
@@ -325,6 +358,7 @@ export default function ProgramProspects({
 }) {
   const [releases, setReleases] = useState<RecruitingClass[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [unavailableClasses, setUnavailableClasses] = useState<number[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -338,7 +372,11 @@ export default function ProgramProspects({
           ? [result.value]
           : [],
       );
+      const unavailable = results.flatMap((result, index) =>
+        result.status === "fulfilled" && result.value ? [] : [PROGRAM_PROSPECT_CLASSES[index]],
+      );
       setReleases(available);
+      setUnavailableClasses(unavailable);
       setStatus(available.length ? "ready" : "unavailable");
     });
     return () => controller.abort();
@@ -369,6 +407,7 @@ export default function ProgramProspects({
         <p className="empty" role="status">No 2025–30 prospect row in the retained classes includes this exact program ID. Missing evidence does not mean the program is inactive.</p>
       ) : (
         <>
+          {unavailableClasses.length > 0 && <p className="career-coverage-warning" role="status">{unavailableClasses.join(", ")} recruiting class{unavailableClasses.length === 1 ? " is" : "es are"} withheld because the exact release receipt could not be verified. The displayed rows only use the remaining verified class editions.</p>}
           <div className="strip recruiting-strip">
             <div><strong>{summary.matched.toLocaleString()}</strong><span>Matched prospect rows</span></div>
             <div><strong>{summary.committed.toLocaleString()}</strong><span>Committed here</span></div>
@@ -394,7 +433,7 @@ export default function ProgramProspects({
                   {roleContext.classes.map((season) => { const cell = role.commitments[season]; return <td className="numeric" key={season}>{cell.total ? <><strong>{cell.total}</strong><small>{cell.bestRank == null ? "Rank unavailable" : `Best #${cell.bestRank} · ${cell.ranked}/${cell.total} ranked`}</small></> : "—"}</td>; })}
                 </tr>)}</tbody>
               </table></div>
-              <p className="note" style={{ marginTop: 10 }}>Roster receipt <span className="source-hash">{roleContext.rosterReceipt.sha256}</span>{roleContext.rosterReceipt.fetched_at ? ` · captured ${new Date(roleContext.rosterReceipt.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. Recruiting editions: {releases.map((release) => `${release.season} ${release.edition || "unavailable"}`).join(" · ")}.</p>
+              <p className="note" style={{ marginTop: 10 }}>Roster receipt <span className="source-hash">{roleContext.rosterReceipt.sha256}</span>{roleContext.rosterReceipt.fetched_at ? ` · captured ${new Date(roleContext.rosterReceipt.fetched_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. Verified recruiting editions: {releases.map((release) => `${release.season} ${release.source_receipt?.sha256 || "unavailable"}`).join(" · ")}.</p>
             </> : <p className="empty">The roster role context or its release receipt did not pass validation, so the program-level join is withheld.</p>}
           </section>
           {summary.byClass.length > 0 && <div className="table-scroll" style={{ marginTop: 20 }}>

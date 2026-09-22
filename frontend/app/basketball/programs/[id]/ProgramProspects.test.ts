@@ -4,6 +4,7 @@ import {
   combineProgramProspectClasses,
   isExactProgramProspect,
   loadProgramProspectClass,
+  validProgramProspectReceipt,
   programProspectRankChange,
   programProspectRankChangeLabel,
   topProgramProspects,
@@ -28,6 +29,15 @@ const prospect = (overrides: Partial<ProgramProspect> = {}): ProgramProspect => 
   high_school: "Example Prep",
   hometown: "Example, CA",
   ...overrides,
+});
+
+const verifiedReceipt = (edition: string, capturedAt = "2026-09-01", sourceRows = 3) => ({
+  dataset: "recruiting_rankings",
+  captured_at: capturedAt,
+  source_rows: sourceRows,
+  sha256: edition,
+  sha256_scope: "release_edition" as const,
+  integrity: "verified" as const,
 });
 
 describe("program prospect evidence", () => {
@@ -66,9 +76,10 @@ describe("program prospect evidence", () => {
 
   it("loads every page from one immutable class edition", async () => {
     const calls: string[] = [];
+    const edition = "a".repeat(64);
     const pages: Record<number, RecruitingClass> = {
-      0: { season: 2027, page: 0, page_size: 2, total: 3, edition: "release-a", captured_at: "2026-09-01", rows: [prospect({ athlete_id: "10" }), prospect({ athlete_id: "11" })] },
-      1: { season: 2027, page: 1, page_size: 2, total: 3, edition: "release-a", captured_at: "2026-09-01", rows: [prospect({ athlete_id: "12" })] },
+      0: { season: 2027, page: 0, page_size: 2, total: 3, edition, captured_at: "2026-09-01", source_receipt: verifiedReceipt(edition), rows: [prospect({ athlete_id: "10" }), prospect({ athlete_id: "11" })] },
+      1: { season: 2027, page: 1, page_size: 2, total: 3, edition, captured_at: "2026-09-01", source_receipt: verifiedReceipt(edition), rows: [prospect({ athlete_id: "12" })] },
     };
     const fetcher = async <T,>(url: string): Promise<T> => {
       const page = Number(new URL(`https://example.test${url}`).searchParams.get("page"));
@@ -81,18 +92,42 @@ describe("program prospect evidence", () => {
   });
 
   it("fails closed when a later page changes edition or repeats an athlete", async () => {
-    const first: RecruitingClass = { season: 2027, page: 0, page_size: 1, total: 2, edition: "release-a", captured_at: "2026-09-01", rows: [prospect({ athlete_id: "10" })] };
-    const changed: RecruitingClass = { season: 2027, page: 1, page_size: 1, total: 2, edition: "release-b", captured_at: "2026-09-02", rows: [prospect({ athlete_id: "11" })] };
+    const firstEdition = "a".repeat(64);
+    const changedEdition = "b".repeat(64);
+    const first: RecruitingClass = { season: 2027, page: 0, page_size: 1, total: 2, edition: firstEdition, captured_at: "2026-09-01", source_receipt: verifiedReceipt(firstEdition, "2026-09-01", 2), rows: [prospect({ athlete_id: "10" })] };
+    const changed: RecruitingClass = { season: 2027, page: 1, page_size: 1, total: 2, edition: changedEdition, captured_at: "2026-09-02", source_receipt: verifiedReceipt(changedEdition, "2026-09-02", 2), rows: [prospect({ athlete_id: "11" })] };
     const fetcher = async <T,>(url: string): Promise<T> => (url.includes("page=0") ? first : changed) as T;
     await expect(loadProgramProspectClass(2027, "2755", undefined, fetcher)).resolves.toBeNull();
   });
 
   it("rejects duplicate exact athlete IDs across pages", async () => {
+    const edition = "a".repeat(64);
     const pages: RecruitingClass[] = [
-      { season: 2027, page: 0, page_size: 1, total: 2, edition: "release-a", captured_at: "2026-09-01", rows: [prospect({ athlete_id: "10" })] },
-      { season: 2027, page: 1, page_size: 1, total: 2, edition: "release-a", captured_at: "2026-09-01", rows: [prospect({ athlete_id: "10" })] },
+      { season: 2027, page: 0, page_size: 1, total: 2, edition, captured_at: "2026-09-01", source_receipt: verifiedReceipt(edition, "2026-09-01", 2), rows: [prospect({ athlete_id: "10" })] },
+      { season: 2027, page: 1, page_size: 1, total: 2, edition, captured_at: "2026-09-01", source_receipt: verifiedReceipt(edition, "2026-09-01", 2), rows: [prospect({ athlete_id: "10" })] },
     ];
     const fetcher = async <T,>(url: string): Promise<T> => pages[Number(new URL(`https://example.test${url}`).searchParams.get("page"))] as T;
+    await expect(loadProgramProspectClass(2027, "2755", undefined, fetcher)).resolves.toBeNull();
+  });
+
+  it("admits only a verified release receipt that identifies the displayed edition", async () => {
+    const edition = "c".repeat(64);
+    const release: RecruitingClass = {
+      season: 2027,
+      page: 0,
+      page_size: 50,
+      total: 1,
+      edition,
+      captured_at: "2026-09-01",
+      source_receipt: verifiedReceipt(edition, "2026-09-01", 10),
+      rows: [prospect({ athlete_id: "10" })],
+    };
+    expect(validProgramProspectReceipt(release)).toBe(true);
+    expect(validProgramProspectReceipt({ ...release, source_receipt: null })).toBe(false);
+    expect(validProgramProspectReceipt({ ...release, source_receipt: verifiedReceipt("d".repeat(64), "2026-09-01", 10) })).toBe(false);
+    expect(validProgramProspectReceipt({ ...release, source_receipt: { ...verifiedReceipt(edition, "2026-09-01", 10), integrity: "unavailable", sha256: null, sha256_scope: "unavailable" } })).toBe(false);
+
+    const fetcher = async <T,>(): Promise<T> => ({ ...release, source_receipt: null }) as T;
     await expect(loadProgramProspectClass(2027, "2755", undefined, fetcher)).resolves.toBeNull();
   });
 
