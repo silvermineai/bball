@@ -291,7 +291,8 @@ export default function FootballDashboard() {
       <div className="dashboard-model-card">
         <span className="model-tag primary">SILVERMINE MODEL</span>
         <strong>{overview.coverage.forecast_games.toLocaleString()}</strong>
-        <span>game forecasts</span>
+        <span>D1 game forecasts</span>
+        <small>D2 and D3 forecasts are published on the exact-division matchup desk.</small>
         <div className="dashboard-model-rule" />
         <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
         <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>
