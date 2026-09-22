@@ -115,7 +115,7 @@ describe("sport navigation", () => {
       Players: "wbb-lower-player-stats",
       Recruiting: "wbb-lower-recruiting",
       Matches: "wbb-lower-schedule",
-      Predictions: "wbb-lower-ratings",
+      Predictions: "wbb-division-readiness-title",
       Learn: "wbb-division-readiness-title",
       Rankings: "wbb-lower-ranking",
     };
