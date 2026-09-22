@@ -2,6 +2,27 @@ import { describe, expect, it, vi } from "vitest";
 import { recruitingRankings } from "../src/recruiting-rankings";
 
 describe("ESPN recruiting rankings", () => {
+  it("orders the national page by recorded grade only when explicitly requested", async () => {
+    const sqlCalls: string[] = [];
+    const prepare = vi.fn((sql: string) => {
+      sqlCalls.push(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("WITH cohort_rows") ? { tied_rank_values: 0, tied_rows: 0, withheld_placeholder_rows: 0 } : sql.includes("count(*)") ? { total: 0, committed_total: 0, ranked_total: 0, grade_total: 0 } : { edition: "edition-1", captured_at: "2026-09-18T00:00:00Z" }),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      };
+    });
+    await recruitingRankings.request("/?season=2027&page=0&sort=grade", {}, { RESEARCH_DB: { prepare } });
+    const rowQuery = sqlCalls.find((sql) => sql.includes("LIMIT 50 OFFSET"));
+    expect(rowQuery).toContain("r.grade DESC");
+    expect(rowQuery).toContain("r.grade IS NULL OR r.grade <= 0");
+    sqlCalls.length = 0;
+    await recruitingRankings.request("/?season=2027&page=0", {}, { RESEARCH_DB: { prepare } });
+    const defaultRowQuery = sqlCalls.find((sql) => sql.includes("LIMIT 50 OFFSET"));
+    expect(defaultRowQuery).not.toContain("r.grade DESC");
+    expect(defaultRowQuery).toContain("CASE WHEN r.rank IS NULL");
+  });
   it("publishes a reconciled position opportunity aggregate for the active cohort", async () => {
     const sqlCalls: string[] = [];
     const prepare = vi.fn((sql: string) => {

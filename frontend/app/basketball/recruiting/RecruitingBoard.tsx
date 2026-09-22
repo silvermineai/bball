@@ -125,6 +125,7 @@ export function validRecruitingRankDistribution(result: RecruitingBoardResult): 
   return result.rank_distribution;
 }
 type Result = RecruitingBoardResult;
+export type RecruitingSort = "rank" | "grade";
 type CommitmentDestination = NonNullable<Result["commitment_destinations"]>[number];
 type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "destination_coverage" | "edition" | "source_receipt" | "rank_movement" | "rank_distribution"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
@@ -671,6 +672,7 @@ export function recruitingBoardRequestSearch(filters: {
   query: string;
   position: string;
   rankMax: string;
+  sort?: RecruitingSort;
   destinationLimit?: string;
 }) {
   const params = new URLSearchParams({
@@ -682,6 +684,7 @@ export function recruitingBoardRequestSearch(filters: {
   if (filters.query.trim()) params.set("q", filters.query.trim());
   if (filters.position) params.set("position", filters.position);
   if (filters.rankMax) params.set("rank_max", filters.rankMax);
+  if (filters.sort && filters.sort !== "rank") params.set("sort", filters.sort);
   if (filters.destinationLimit && filters.destinationLimit !== "12") params.set("destination_limit", filters.destinationLimit);
   return params.toString();
 }
@@ -770,6 +773,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const [rankMax, setRankMax] = useState("");
   const [committed, setCommitted] = useState("all");
   const [movement, setMovement] = useState("all");
+  const [sort, setSort] = useState<RecruitingSort>("rank");
   const [destinationLimit, setDestinationLimit] = useState("12");
   const [page, setPage] = useState(0);
   const [loadedResult, setLoadedResult] = useState<RecruitingBoardLoad | null>(null);
@@ -783,7 +787,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const [shortlistHydrated, setShortlistHydrated] = useState(false);
   const [productionIndex, setProductionIndex] = useState<RecruitingProductionIndex | null>(null);
   const [productionStatus, setProductionStatus] = useState<"checking" | "live" | "unavailable">("checking");
-  const boardRequest = recruitingBoardRequestSearch({ season, page, committed, movement, query, position, rankMax, destinationLimit });
+  const boardRequest = recruitingBoardRequestSearch({ season, page, committed, movement, query, position, rankMax, sort, destinationLimit });
   const result = currentRecruitingBoardResult(loadedResult, boardRequest);
   const schoolPrograms = recordedSchoolPrograms(result?.recorded_school_programs, result?.edition, programs);
   const evidenceGuide = result ? recruitingEvidenceGuide(result, schoolPrograms) : [];
@@ -805,6 +809,8 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     if (requestedCommitted === "yes" || requestedCommitted === "no") setCommitted(requestedCommitted);
     const requestedMovement = params.get("movement");
     if (requestedMovement && ["up", "down", "unchanged", "new", "unavailable"].includes(requestedMovement)) setMovement(requestedMovement);
+    const requestedSort = params.get("sort");
+    if (requestedSort === "grade") setSort(requestedSort);
     const requestedDestinationLimit = params.get("destination_limit");
     if (requestedDestinationLimit && ["12", "50", "200"].includes(requestedDestinationLimit)) setDestinationLimit(requestedDestinationLimit);
     const requestedPage = Number(params.get("page"));
@@ -832,12 +838,13 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     if (rankMax) params.set("rank", rankMax);
     if (committed !== "all") params.set("committed", committed);
     if (movement !== "all") params.set("movement", movement);
+    if (sort !== "rank") params.set("sort", sort);
     if (destinationLimit !== "12") params.set("destination_limit", destinationLimit);
     if (page > 0) params.set("page", String(page));
     const search = params.toString();
     window.history.replaceState(window.history.state, "", search ? `${window.location.pathname}?${search}` : window.location.pathname);
     setCopied("");
-  }, [committed, destinationLimit, hydrated, movement, page, position, query, rankMax, season]);
+  }, [committed, destinationLimit, hydrated, movement, page, position, query, rankMax, season, sort]);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -878,6 +885,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
         if (query.trim()) params.set("q", query.trim());
         if (position) params.set("position", position);
         if (rankMax) params.set("rank_max", rankMax);
+        if (sort !== "rank") params.set("sort", sort);
         const response = await fetchWithTransientRetry(`/api/basketball/research/recruiting-rankings?${params.toString()}`);
         if (!response.ok) throw new Error("The complete recruiting export could not be loaded.");
         const payload = await response.json() as RecruitingBoardResult;
@@ -1030,6 +1038,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
         <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Prospect, school or hometown" /></label>
         <label className="control"><span>POSITION</span><select value={position} onChange={(event) => { setPosition(event.target.value); setPage(0); }}><option value="">All positions</option><option value="PG">PG</option><option value="SG">SG</option><option value="SF">SF</option><option value="PF">PF</option><option value="C">C</option></select></label>
         <label className="control"><span>RANK</span><select value={rankMax} onChange={(event) => { setRankMax(event.target.value); setPage(0); }}><option value="">All recorded ranks</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select></label>
+        <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => { setSort(event.target.value as RecruitingSort); setPage(0); }}><option value="rank">Recorded rank</option><option value="grade">Recorded grade · high to low</option></select></label>
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
         <label className="control"><span>RANK MOVEMENT</span><select value={movement} onChange={(event) => { setMovement(event.target.value); setPage(0); }}><option value="all">All movement</option><option value="up">Moved up</option><option value="down">Moved down</option><option value="unchanged">Unchanged</option><option value="new">New to archive</option><option value="unavailable">Rank unavailable</option></select></label>
         <label className="control"><span>DESTINATIONS</span><select value={destinationLimit} onChange={(event) => { setDestinationLimit(event.target.value); setPage(0); }}><option value="12">Top 12</option><option value="50">Top 50</option><option value="200">All (up to 200)</option></select></label>

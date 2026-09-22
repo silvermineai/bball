@@ -99,6 +99,22 @@ describe("recruiting board export pagination", () => {
   });
 });
 
+describe("recruiting board ordering", () => {
+  it("keeps source rank as the default and serializes grade ordering", () => {
+    const base = {
+      season: "2027",
+      page: 0,
+      committed: "all",
+      movement: "all",
+      query: "",
+      position: "",
+      rankMax: "",
+    };
+    expect(recruitingBoardRequestSearch(base)).toBe("season=2027&page=0&committed=all&movement=all");
+    expect(recruitingBoardRequestSearch({ ...base, sort: "grade" })).toBe("season=2027&page=0&committed=all&movement=all&sort=grade");
+  });
+});
+
 describe("recruiting rank landscape", () => {
   const bands = [
     { key: "top_10" as const, label: "Top 10", min_rank: 1, max_rank: 10, total: 1 },

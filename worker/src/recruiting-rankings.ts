@@ -16,6 +16,9 @@ const querySchema = z.object({
   rank_max: z.coerce.number().int().min(1).max(1000).optional(),
   committed: z.enum(["all", "yes", "no"]).default("all"),
   movement: z.enum(["all", "up", "down", "unchanged", "new", "unavailable"]).default("all"),
+  // Keep source rank as the default, while allowing staff to surface the
+  // publisher's recorded grade without doing a client-side page-only sort.
+  sort: z.enum(["rank", "grade"]).default("rank"),
   // The default keeps the national board compact. Staff can request the
   // complete retained destination rollup (up to 200 groups) explicitly;
   // this makes the response bound visible instead of silently dropping the
@@ -59,7 +62,7 @@ const withheldPlaceholderRank = (alias: string) =>
   `${alias}.rank IS NOT NULL AND ${alias}.grade = 0 AND ${alias}.position_rank IS NULL AND ${alias}.state_rank IS NULL AND ${alias}.region_rank IS NULL`;
 
 recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, athlete_id, team_id, q, position, rank_max, committed, movement, destination_limit: destinationLimit, history: includeHistory, page } = c.req.valid("query");
+  const { season, athlete_id, team_id, q, position, rank_max, committed, movement, sort, destination_limit: destinationLimit, history: includeHistory, page } = c.req.valid("query");
   const search = q ? `%${escapeLike(q)}%` : null;
   const positionValue = position ? position.toUpperCase() : null;
   const committedClause = committed === "yes"
@@ -81,6 +84,9 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
           : movement === "unavailable"
             ? `${previousCapture} IS NOT NULL AND (${previousRank} IS NULL OR ${currentRank} IS NULL)`
             : "1=1";
+  const orderClause = sort === "grade"
+    ? `ORDER BY CASE WHEN r.grade IS NULL OR r.grade <= 0 THEN 1 ELSE 0 END,r.grade DESC,CASE WHEN ${currentRank} IS NULL THEN 1 ELSE 0 END,${currentRank},r.name`
+    : `ORDER BY CASE WHEN ${currentRank} IS NULL THEN 1 ELSE 0 END,${currentRank},r.name`;
   const filters = [
     "r.season=?",
     "r.edition=c.edition",
@@ -219,7 +225,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
                 ORDER BY p.captured_at DESC, p.edition DESC LIMIT 1) AS previous_captured_at
          FROM bb_espn_recruiting r JOIN bb_espn_recruiting_current c ON c.season=r.season
         WHERE ${filters}
-        ORDER BY CASE WHEN ${currentRank} IS NULL THEN 1 ELSE 0 END,${currentRank},r.name
+        ${orderClause}
         LIMIT 50 OFFSET ?`,
     ).bind(...binds, page * 50).all(), DB_TIMEOUT_MS);
     const movement = await withTimeout(db.prepare(
