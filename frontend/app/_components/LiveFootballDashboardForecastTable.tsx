@@ -22,8 +22,10 @@ import {
   type FootballMatchupSignal,
 } from "../_lib/football-matchup-view";
 import { hasQualifiedMarketComparison, summarizeMarketLines } from "../_lib/market-display";
+import { gameMarketReadinessLabel } from "../_lib/game-market-readiness";
 import { loadLiveFootballMarketComparisons } from "../_lib/live-football-forecasts";
 import type { Comparison } from "../_lib/research-types";
+import type { LedgerGame } from "../_lib/research-types";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 
 const sortLabels: Record<FootballMatchupSort, string> = {
@@ -138,6 +140,7 @@ export default function LiveFootballDashboardForecastTable({
   const [signal, setSignal] = useState<FootballMatchupSignal>("all");
   const [rowLimit, setRowLimit] = useState<12 | 24 | 48>(12);
   const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]> | null>(null);
+  const [marketReadiness, setMarketReadiness] = useState<Record<string, NonNullable<LedgerGame["market_readiness"]>>>({});
   const [liveModelId, setLiveModelId] = useState<string | null>(null);
   const [liveReliability, setLiveReliability] = useState<FootballReliabilityBand[] | null>(null);
 
@@ -164,6 +167,10 @@ export default function LiveFootballDashboardForecastTable({
     }
     const controller = new AbortController();
     setLiveReliability(null);
+    // Do not leave the previous model edition's quote or readiness state
+    // beside a newly hydrated forecast while the scorecard is loading.
+    setMarketComparisons({});
+    setMarketReadiness({});
     Promise.allSettled([
       loadLiveFootballMarketComparisons(controller.signal, liveModelId),
       loadLiveFootballModelReliability(controller.signal, liveModelId),
@@ -173,6 +180,11 @@ export default function LiveFootballDashboardForecastTable({
         setMarketComparisons(Object.fromEntries(
           Object.entries(marketResult.value).map(([gameId, entry]) => [gameId, entry.model_id === liveModelId ? entry.comparisons : []]),
         ));
+        setMarketReadiness(Object.fromEntries(
+          Object.entries(marketResult.value)
+            .filter(([, entry]) => entry.model_id === liveModelId && entry.market_readiness)
+            .map(([gameId, entry]) => [gameId, entry.market_readiness]),
+        ) as Record<string, NonNullable<LedgerGame["market_readiness"]>>);
       }
       if (reliabilityResult.status === "fulfilled" && reliabilityResult.value.modelId === liveModelId) {
         setLiveReliability(reliabilityResult.value.reliability);
@@ -234,6 +246,7 @@ export default function LiveFootballDashboardForecastTable({
           {rows.map((game) => {
             const prediction = game.prediction!;
             const market = summarizeMarketLines(dashboardFootballMarketComparisons(game, marketComparisons));
+            const readiness = marketReadiness[game.id];
             const factors = dashboardForecastModelFactors(game, model, expectedModelId);
             const calibration = dashboardForecastCalibration(
               game,
@@ -267,7 +280,7 @@ export default function LiveFootballDashboardForecastTable({
                   </> : <span className="note">Unavailable for this edition or division</span>}
                 </td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
-                <td className="numeric">{!hasQualifiedMarketComparison(market) ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.homeProbability == null ? null : <small>ML {fmt(market.homeProbability * 100, 1)}% home</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
+                <td className="numeric">{!hasQualifiedMarketComparison(market) ? readiness ? <><strong className="note">{gameMarketReadinessLabel(readiness)}</strong><small title={readiness.message}>{readiness.message}</small></> : "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.homeProbability == null ? null : <small>ML {fmt(market.homeProbability * 100, 1)}% home</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
                 <td className="numeric">{market.spreadGap == null && market.totalGap == null && market.winProbabilityGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}{market.winProbabilityGap == null ? null : <small>{market.winProbabilityGap >= 0 ? "+" : ""}{fmt(market.winProbabilityGap * 100, 1)} pp ML</small>}</>}</td>
                 <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
                 <td className="numeric">{fmt(prediction.total)}</td>

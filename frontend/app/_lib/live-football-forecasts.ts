@@ -1,5 +1,5 @@
 import type { Forecast, Game } from "./data";
-import type { Comparison } from "./research-types";
+import type { Comparison, LedgerGame } from "./research-types";
 import type { FootballReliabilityBand } from "./football-model-factors";
 import { validFootballPredictionArithmetic } from "./football-prediction-integrity";
 
@@ -108,12 +108,13 @@ type LiveFootballScorecardResponse = {
   model?: string | null;
   total?: number;
   page_size?: number;
-  games?: Array<{ game_id: string; model_id?: string; comparisons?: Comparison[] }>;
+  games?: Array<{ game_id: string; model_id?: string; comparisons?: Comparison[]; market_readiness?: LedgerGame["market_readiness"] }>;
 };
 
 export type LiveFootballMarketComparisonSet = {
   model_id?: string;
   comparisons: Comparison[];
+  market_readiness?: LedgerGame["market_readiness"];
 };
 
 export type LiveFootballGameMarketComparison = {
@@ -121,6 +122,7 @@ export type LiveFootballGameMarketComparison = {
   forecastCreatedAt: string | null;
   forecastStartsAt: string | null;
   comparisons: Comparison[];
+  marketReadiness?: LedgerGame["market_readiness"];
 };
 
 /**
@@ -154,7 +156,7 @@ export async function loadLiveFootballGameMarketComparison(
     live?: boolean;
     season?: number | null;
     model?: string | null;
-    games?: Array<{ game_id: string; model_id?: string; comparisons?: Comparison[] }>;
+    games?: Array<{ game_id: string; model_id?: string; comparisons?: Comparison[]; market_readiness?: LedgerGame["market_readiness"] }>;
   };
   if (scorecard.live !== true || scorecard.season !== 2026 || scorecard.model !== forecast.model_id) {
     throw new Error("Live football market comparisons returned an inconsistent edition.");
@@ -167,6 +169,7 @@ export async function loadLiveFootballGameMarketComparison(
     forecastCreatedAt: forecast.created_at || null,
     forecastStartsAt: forecast.kickoff || null,
     comparisons: game?.comparisons || [],
+    marketReadiness: game?.market_readiness,
   };
 }
 
@@ -293,6 +296,7 @@ export async function loadLiveFootballMarketComparisons(signal: AbortSignal | un
     games.map((game) => [game.game_id, {
       model_id: game.model_id,
       comparisons: game.comparisons || [],
+      market_readiness: game.market_readiness,
     }]),
   ) as Record<string, LiveFootballMarketComparisonSet>;
 }

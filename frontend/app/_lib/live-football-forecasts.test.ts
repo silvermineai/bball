@@ -154,11 +154,11 @@ describe("live football forecast merge", () => {
         model: "football-v1",
         total: 1,
         page_size: 5000,
-        games: [{ game_id: "game-1", model_id: "football-v1", comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
+        games: [{ game_id: "game-1", model_id: "football-v1", market_readiness: { status: "available", message: "One quote passed.", retained_observations: 1, eligible_observations: 1, comparable_observations: 1, selected_comparisons: 1, rejection_counts: {} }, comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
       }), { status: 200 });
     }) as typeof fetch;
     await expect(loadLiveFootballMarketComparisons(undefined, "football-v1")).resolves.toMatchObject({
-      "game-1": { model_id: "football-v1", comparisons: [{ provider: "licensed", market: "spreads", line: -3.5 }] },
+      "game-1": { model_id: "football-v1", market_readiness: { status: "available", selected_comparisons: 1 }, comparisons: [{ provider: "licensed", market: "spreads", line: -3.5 }] },
     });
     expect(requested).toContain("sport=football&season=2026&model=football-v1&limit=5000");
     globalThis.fetch = originalFetch;
@@ -181,13 +181,14 @@ describe("live football forecast merge", () => {
         model: "football-v1",
         total: 1,
         page_size: 5000,
-        games: [{ game_id: "game-1", model_id: "football-v1", comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
+        games: [{ game_id: "game-1", model_id: "football-v1", market_readiness: { status: "no_qualified_line", message: "No retained pregame line is available for this game.", retained_observations: 0, eligible_observations: 0, comparable_observations: 0, selected_comparisons: 0, rejection_counts: {} }, comparisons: [{ provider: "licensed", bookmaker: "book", market: "spreads", captured_at: "2026-09-10T12:00:00Z", updated_at: "2026-09-10T12:00:00Z", line: -3.5, model_difference: 2, market_home_probability: null }] }],
       }), { status: 200 });
     }) as typeof fetch;
     await expect(loadLiveFootballGameMarketComparison(undefined, "game-1")).resolves.toMatchObject({
       modelId: "football-v1",
       forecastCreatedAt: "2026-09-10T12:00:00Z",
       forecastStartsAt: "2026-09-12T16:00:00Z",
+      marketReadiness: { status: "no_qualified_line", message: "No retained pregame line is available for this game.", retained_observations: 0, eligible_observations: 0, comparable_observations: 0, selected_comparisons: 0, rejection_counts: {} },
       comparisons: [{ market: "spreads", line: -3.5 }],
     });
     expect(urls[0]).toContain("gameId=game-1");
