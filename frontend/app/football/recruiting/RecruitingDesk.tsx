@@ -39,6 +39,20 @@ type Result = {
       star_counts: { five: number; four: number; three: number; two_or_less: number; unavailable: number };
     }>;
   };
+  program_summary?: {
+    total: number;
+    reconciles: boolean;
+    rows: Array<{
+      team_id: string | null;
+      team: string | null;
+      division: string | null;
+      conference: string | null;
+      total: number;
+      graded: number;
+      average_grade: number | null;
+      star_counts: { five: number; four: number; three: number; two_or_less: number; unavailable: number };
+    }>;
+  };
   rows: Row[];
 };
 
@@ -179,6 +193,28 @@ export default function RecruitingDesk() {
           </tr>)}
         </tbody></table></div> : <p className="empty" role="status">Position groups are withheld because their row count does not reconcile to this class edition.</p>}
         <p className="note" style={{ marginTop: 12 }}>This is a source distribution, not a depth chart or positional need score. “Position unavailable” means only that the release did not supply a usable label.</p>
+      </section>}
+      {view === "recruits" && result.program_summary && <section className="paper-panel" aria-label="Recruiting class program summary" style={{ marginBottom: 22 }}>
+        <div className="section-heading" style={{ marginBottom: 12 }}>
+          <div><div className="eyebrow">Program class board / active filters</div><h2>Compare the recorded classes.</h2></div>
+          <span className="note">{result.program_summary.total.toLocaleString()} source rows grouped</span>
+        </div>
+        <p className="note">Programs are grouped by the exact team ID and team label retained on each recruiting row. Grade averages and star bands use only supplied source values; a missing team ID, division, grade or star value remains unavailable. This is a source summary, not a composite class ranking or a forecast of roster strength.</p>
+        {result.program_summary.reconciles ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Program</th><th>Division</th><th>Conference</th><th className="numeric">Recruits</th><th className="numeric">Grade coverage</th><th className="numeric">Average grade</th><th className="numeric">5★</th><th className="numeric">4★</th><th className="numeric">3★</th><th className="numeric">Stars unavailable</th></tr></thead><tbody>
+          {result.program_summary.rows.map((row, index) => <tr key={`${row.team_id || "team-unavailable"}-${row.team || "label-unavailable"}-${index}`}>
+            <th scope="row">{row.team_id ? <Link href={`/football/matchups/?team=${encodeURIComponent(row.team_id)}`}>{row.team || row.team_id} →</Link> : row.team || "Team unavailable"}<small>{row.team_id ? `Team ${row.team_id}` : "No stable team ID"}</small></th>
+            <td>{row.division || "—"}</td>
+            <td>{row.conference || "—"}</td>
+            <td className="numeric"><strong>{row.total.toLocaleString()}</strong></td>
+            <td className="numeric">{row.total > 0 ? `${((row.graded / row.total) * 100).toFixed(1)}%` : "—"}</td>
+            <td className="numeric">{row.average_grade == null ? "—" : fmt(row.average_grade, 1)}</td>
+            <td className="numeric">{row.star_counts.five.toLocaleString()}</td>
+            <td className="numeric">{row.star_counts.four.toLocaleString()}</td>
+            <td className="numeric">{row.star_counts.three.toLocaleString()}</td>
+            <td className="numeric">{row.star_counts.unavailable.toLocaleString()}</td>
+          </tr>)}
+        </tbody></table></div> : <p className="empty" role="status">Program groups are withheld because their row count does not reconcile to this class edition.</p>}
+        <p className="note" style={{ marginTop: 12 }}>Rows are ordered by recorded recruit count. Read grade coverage beside every average; a high average built from a small or partially graded class is not treated as a ranking.</p>
       </section>}
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching rows · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><div className="button-row"><button className="button secondary" type="button" onClick={downloadCurrentPage}>Download page CSV ↓</button><Link className="hero-link" href={`/football/source-stats/?dataset=${encodeURIComponent(result.dataset)}&season=${result.season}`}>Open raw dataset browser →</Link></div></div>
       <p className="note">{result.division_scope?.note || "Division is shown only when the source row or exact season/team directory supplies it."}</p>

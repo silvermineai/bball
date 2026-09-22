@@ -17,6 +17,11 @@ describe("football recruiting desk", () => {
               { position: "QB", total: 3, graded: 3, average_grade: 90, five_star: 1, four_star: 1, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 },
               { position: null, total: 2, graded: 1, average_grade: 79, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 1 },
             ] }
+          : sql.includes("GROUP BY s.team_id")
+            ? { results: [
+              { team_id: "10", team: "Alpha", total: 3, graded: 3, average_grade: 90, five_star: 1, four_star: 1, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 },
+              { team_id: "11", team: "Beta", total: 2, graded: 1, average_grade: 79, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 1 },
+            ] }
           : { results: [] },
       }),
     }));
@@ -38,6 +43,14 @@ describe("football recruiting desk", () => {
           { position: null, total: 2, graded: 1, average_grade: 79, star_counts: { five: 0, four: 0, three: 1, two_or_less: 0, unavailable: 1 } },
         ],
       },
+      program_summary: {
+        total: 5,
+        reconciles: true,
+        rows: [
+          { team_id: "10", team: "Alpha", total: 3, graded: 3, average_grade: 90, star_counts: { five: 1, four: 1, three: 1, two_or_less: 0, unavailable: 0 } },
+          { team_id: "11", team: "Beta", total: 2, graded: 1, average_grade: 79, star_counts: { five: 0, four: 0, three: 1, two_or_less: 0, unavailable: 1 } },
+        ],
+      },
     });
     const summarySql = prepare.mock.calls.find(([sql]) => sql.includes("json_extract") && !sql.includes("GROUP BY position"))?.[0] || "";
     expect(summarySql).toContain("s.dataset=? AND s.season=?");
@@ -45,6 +58,9 @@ describe("football recruiting desk", () => {
     const positionSql = prepare.mock.calls.find(([sql]) => sql.includes("GROUP BY position"))?.[0] || "";
     expect(positionSql).toContain("s.dataset=? AND s.season=?");
     expect(positionSql).toContain("ELSE NULL");
+    const programSql = prepare.mock.calls.find(([sql]) => String(sql).includes("GROUP BY s.team_id"))?.[0] || "";
+    expect(programSql).toContain("s.dataset=? AND s.season=?");
+    expect(programSql).toContain("json_extract(s.stats_json,'$.team')");
   });
 
   it("marks a position summary unavailable when it does not reconcile to the filtered class", async () => {
@@ -83,6 +99,9 @@ describe("football recruiting desk", () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("GROUP BY position")) {
         return { bind: () => ({ all: async () => ({ results: [{ position: "QB", total: 1, graded: 1, average_grade: 84, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 }] }) }) };
+      }
+      if (sql.includes("GROUP BY s.team_id")) {
+        return { bind: () => ({ all: async () => ({ results: [{ team_id: "5", team: "Example State", total: 1, graded: 1, average_grade: 84, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 }] }) }) };
       }
       if (sql.includes("json_extract(s.stats_json,'$.grade')")) {
         return { bind: () => ({ first: async () => ({ total: 1, programs: 1, graded: 1, average_grade: 84, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 }) }) };
