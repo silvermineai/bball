@@ -249,6 +249,15 @@ export function getFootballEfficiencyModel(): FootballEfficiencyModel {
   );
 }
 
+export function getFootballEfficiencyIndex() {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), "public/data/football/efficiency.json"),
+      "utf8",
+    ),
+  ) as import("./football-efficiency").EfficiencyIndex;
+}
+
 export function getFootballPersonnelReadiness(season = 2026): FootballPersonnelReadiness {
   return JSON.parse(
     fs.readFileSync(
