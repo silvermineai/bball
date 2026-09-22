@@ -1,5 +1,6 @@
 import StatsDashboard from "../_components/StatsDashboard";
 import ScopedDashboard from "../_components/ScopedDashboard";
+import WomensBasketballSnapshot from "../_components/WomensBasketballSnapshot";
 
 export const metadata = {
   title: "College basketball stats, ratings and predictions",
@@ -7,5 +8,5 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <ScopedDashboard sport="basketball"><StatsDashboard /></ScopedDashboard>;
+  return <ScopedDashboard sport="basketball" womenChildren={<WomensBasketballSnapshot />}><StatsDashboard /></ScopedDashboard>;
 }
