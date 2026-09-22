@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeLiveRow } from "./DivisionPlayerRankings";
 import { divisionRankingMetricGuide } from "../_lib/division-player-rankings";
+import { divisionPlayerCsvHeaders, divisionPlayerCsvRows, validateDivisionPlayerExportPage } from "../_lib/division-player-export";
 
 describe("live lower-division ranking rows", () => {
   it("keeps exact source identity, selected value, payload fields, and publisher rank", () => {
@@ -44,5 +45,21 @@ describe("live lower-division ranking rows", () => {
       definition: expect.stringContaining("recorded source total"),
       interpretation: expect.stringContaining("games played"),
     });
+  });
+
+  it("exports every retained measure while preserving missing cells", () => {
+    const row = normalizeLiveRow({ player_id: 7, division: 2, name: "Test Player", ppg: 12.5, payload: { games: 20, pts: 250 } }, "ppg");
+    const ranked = { ...row, value: 12.5, rank: 1, source_rank: null };
+    const values = divisionPlayerCsvRows([ranked], "ppg")[0];
+    expect(divisionPlayerCsvHeaders).toContain("Points per game [ppg]");
+    expect(values[0]).toBe(1);
+    expect(values[10]).toBe(12.5);
+    expect(values[divisionPlayerCsvHeaders.indexOf("Rebounds per game [rpg]")]).toBeNull();
+  });
+
+  it("rejects a changing or incomplete multi-page export", () => {
+    expect(() => validateDivisionPlayerExportPage({ total: 2, limit: 40, rows: [{ player_id: 1 }] }, 2, 40, 0, 1)).not.toThrow();
+    expect(() => validateDivisionPlayerExportPage({ total: 3, limit: 40, rows: [] }, 2, 40, 0, 1)).toThrow(/changed/);
+    expect(() => validateDivisionPlayerExportPage({ total: 2, limit: 40, rows: [] }, 2, 40, 0, 2)).toThrow(/incomplete/);
   });
 });

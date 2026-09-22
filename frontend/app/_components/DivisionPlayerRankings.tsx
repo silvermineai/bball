@@ -17,6 +17,9 @@ import {
   retainedPlayerValue,
   type DivisionPlayerWithEvidence,
 } from "../_lib/division-player-detail";
+import { downloadCsv, toCsv } from "../_lib/csv";
+import { divisionPlayerCsvHeaders, divisionPlayerCsvRows, validateDivisionPlayerExportPage } from "../_lib/division-player-export";
+import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
 type Publication = { season: number; generated_at: string; players: DivisionPlayerWithEvidence[] };
 type LiveRankingRow = {
@@ -32,6 +35,7 @@ type LiveRankingResponse = {
   season?: number;
   total?: number;
   pages?: number;
+  limit?: number;
   rows?: LiveRankingRow[];
   provenance?: { kind?: string; dataset?: string; note?: string };
 };
@@ -83,9 +87,12 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
   const [liveRows, setLiveRows] = useState<DivisionPlayerWithEvidence[] | null>(null);
   const [liveTotal, setLiveTotal] = useState<number | null>(null);
   const [liveStatus, setLiveStatus] = useState<"checking" | "ready" | "unavailable" | "static">("checking");
+  const [livePageSize, setLivePageSize] = useState(40);
   const [query, setQuery] = useState("");
   const [metric, setMetric] = useState<DivisionRankingMetric>("ppg");
   const [minGames, setMinGames] = useState("5");
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -126,6 +133,7 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
       if (controller.signal.aborted) return;
       setLiveRows(rows);
       setLiveTotal(Number(first.total) || rows.length);
+      setLivePageSize(Number(first.limit) || 40);
       setLiveStatus("ready");
     };
     load().catch((reason: unknown) => {
@@ -155,6 +163,46 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
     query,
   }), [division, metric, minGames, publication, query]);
 
+  const downloadAll = async () => {
+    if (exporting || liveStatus !== "ready" || liveTotal == null) return;
+    const total = Number(liveTotal);
+    const pageSize = Number(livePageSize);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (!Number.isInteger(total) || total < 0 || !Number.isInteger(pageSize) || pageSize < 1 || totalPages > 101) {
+      setExportMessage("This live cohort is outside the bounded export window. Search for a player, team, or conference first.");
+      return;
+    }
+    setExporting(true);
+    setExportMessage(`Preparing 0 of ${total.toLocaleString()} rows…`);
+    try {
+      const rawRows: LiveRankingRow[] = [];
+      for (let page = 0; page < totalPages; page += 1) {
+        const params = new URLSearchParams({ division, stat: metric, min_games: minGames, page: String(page) });
+        if (query.trim()) params.set("q", query.trim());
+        const response = await fetchWithTransientRetry(`/api/basketball/research/ncaa-leaders?${params.toString()}`);
+        if (!response.ok) throw new Error("The complete lower-division player export could not be loaded.");
+        const payload = await response.json() as LiveRankingResponse;
+        const rows = validateDivisionPlayerExportPage(payload, total, pageSize, page, totalPages);
+        for (const row of rows) {
+          if (!row || typeof row !== "object" || !("player_id" in row) || !("division" in row)) throw new Error("The lower-division player archive returned an incomplete source identity.");
+          rawRows.push(row as LiveRankingRow);
+        }
+        setExportMessage(`Preparing ${rawRows.length.toLocaleString()} of ${total.toLocaleString()} rows…`);
+      }
+      if (rawRows.length !== total) throw new Error("The lower-division player archive returned an incomplete export.");
+      const normalized = rawRows.map((row) => normalizeLiveRow(row, metric));
+      const identities = new Set(normalized.map((row) => `${row.division}::${row.player_id}`));
+      if (identities.size !== normalized.length) throw new Error("The lower-division player archive returned duplicate player rows.");
+      const ranked = rankDivisionPlayers(normalized, { division, metric, minGames: 0, query: "", limit: normalized.length });
+      downloadCsv(`ncaa-division-${division}-player-production-${metric}-all.csv`, toCsv(divisionPlayerCsvHeaders, divisionPlayerCsvRows(ranked.rows, metric)));
+      setExportMessage(`Downloaded ${ranked.rows.length.toLocaleString()} recorded player rows.`);
+    } catch (reason) {
+      setExportMessage(reason instanceof Error ? reason.message : "The complete lower-division player export could not be loaded.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return <section className="field-card division-player-rankings" aria-labelledby="division-ranking-title">
     <div className="eyebrow">MEN&apos;S BASKETBALL · D{division} PLAYER RANKINGS</div>
     <h2 id="division-ranking-title">Rank the retained production</h2>
@@ -182,6 +230,8 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
         </div>
       </details>
       <p className="note">{liveStatus === "ready" ? `${(liveTotal ?? activeResult.total).toLocaleString()} live qualifying players` : `${activeResult.total.toLocaleString()} qualifying players`} · showing {activeResult.rows.length} · {divisionMetricLabel(metric)} · season {publication.season} · {liveStatus === "ready" ? "current source API" : `captured ${captured(publication.generated_at)}`}{liveStatus === "unavailable" ? " · live refresh unavailable; using the retained archive" : ""}.</p>
+      <div className="button-row" style={{ marginBottom: 14 }}><button className="button secondary" type="button" onClick={downloadAll} disabled={liveStatus !== "ready" || !liveTotal || exporting}>{exporting ? "Preparing full CSV…" : "Download full CSV ↓"}</button><span className="note">Exports every matching live row with all recorded measures and source evidence.</span></div>
+      {exportMessage ? <p className="note" role="status">{exportMessage}</p> : null}
       <p className="note" role="status">{liveStatus === "ready" ? "Live publisher rows are filtered by exact division, selected metric, and minimum games. Missing source fields remain absent; the table falls back to the retained archive only when the live request is unavailable." : `Metric coverage: ${coverage.valueRows.toLocaleString()} of ${coverage.gameQualifiedRows.toLocaleString()} search and game-qualified ${division === "2" ? "Division II" : "Division III"} rows have a recorded ${divisionMetricLabel(metric).toLowerCase()} value${coverage.missingValueRows ? `; ${coverage.missingValueRows.toLocaleString()} remain unavailable` : "."} The ${coverage.divisionRows.toLocaleString()}-row division denominator is retained for context.`}</p>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Conf.</th><th>Class</th><th className="numeric">GP</th><th className="numeric">{divisionMetricLabel(metric)}</th><th className="numeric">Source rank</th><th>Recorded stats</th></tr></thead><tbody>{activeResult.rows.map((player) => <tr key={`${division}-${player.player_id}`}><td className="numeric"><strong>#{player.rank}</strong></td><th scope="row"><Link href={lowerDivisionPlayerHref(division, player.player_id)}>{player.name} →</Link><small>Player ID {player.player_id}</small></th><td>{player.team_name || "—"}</td><td>{player.conference || "—"}</td><td>{player.class_year || "—"}</td><td className="numeric">{value(player.games, 0)}</td><td className="numeric"><strong>{value(player.value)}</strong></td><td className="numeric">{player.source_rank == null ? "—" : `#${player.source_rank}`}</td><td><details className="ranking-recorded-details"><summary>Open retained fields</summary><p className="note">Source values retained for this player row. A dash means the release did not contain a finite numeric value; no value is inferred.</p>{divisionPlayerDetailGroups.map((group) => <div key={group.label}><strong>{group.label}</strong><div className="note">{group.fields.map(([key, label, kind]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{label}: <strong>{detailValue(player, key, kind)}</strong></span>)}</div></div>)}{player.source_stats && Object.keys(player.source_stats).length ? <p className="note">Publisher evidence: {Object.entries(player.source_stats).map(([key, evidence]) => `${key}${evidence.rank == null ? "" : ` (#${evidence.rank})`}${evidence.value == null ? "" : ` = ${evidence.value}`}`).join(" · ")}</p> : null}</details></td></tr>)}</tbody></table></div>
       {!activeResult.rows.length ? <p className="empty">No retained players match this ranking filter.</p> : null}
