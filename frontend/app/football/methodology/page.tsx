@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getFootballEfficiencyModel, getFootballPersonnelReadiness, getOverview } from "../../_lib/data";
 import { date, fmt } from "../../_lib/format";
+import { footballChallengerStability } from "../../_lib/football-challenger";
 export const metadata = {
   title: "Model methodology, data coverage and provenance",
 };
@@ -10,6 +11,7 @@ export default function Page() {
     c = d.model.calibration,
     efficiency = getFootballEfficiencyModel(),
     personnel = getFootballPersonnelReadiness(d.season);
+  const challengerStability = footballChallengerStability(efficiency.transition_evaluations);
   return (
     <>
       <div className="page-title">
@@ -188,6 +190,12 @@ export default function Page() {
           a research comparison: the primary forecast, probability, interval
           and ledger are unchanged.
         </p>
+        <div className="strip" style={{ marginBottom: 18 }} aria-label="Football challenger stability summary">
+          <div><strong>{challengerStability.transitions || "—"}</strong><span>Finite transitions</span></div>
+          <div><strong>{challengerStability.positive_lift}/{challengerStability.negative_lift}</strong><span>Positive / negative lift</span></div>
+          <div><strong>{challengerStability.median_improvement == null ? "—" : `${challengerStability.median_improvement >= 0 ? "+" : ""}${fmt(challengerStability.median_improvement, 2)} pts`}</strong><span>Median lift</span></div>
+          <div><strong>{challengerStability.positive_share == null ? "—" : `${fmt(challengerStability.positive_share * 100, 0)}%`}</strong><span>Transitions with lift</span></div>
+        </div>
         <div className="table-scroll">
           <table className="data-table">
             <caption className="note">
@@ -226,7 +234,10 @@ export default function Page() {
           The current production scenario uses all eligible historical
           transition rows through {efficiency.target_season - 1}. Sparse or
           unknown teams shrink toward the league prior; no injuries, roster
-          moves, weather or market prices enter this challenger.
+          moves, weather or market prices enter this challenger. The stability
+          strip counts only transitions with a finite published lift; mixed
+          signs are evidence against treating the challenger as a production
+          upgrade.
         </p>
       </section>
       <section className="section paper-panel" aria-labelledby="personnel-readiness-title">
