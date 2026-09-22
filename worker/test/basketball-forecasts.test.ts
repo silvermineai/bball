@@ -155,6 +155,32 @@ describe("basketball forecast availability", () => {
     });
   });
 
+  it("keeps a calibrated total interval only when it contains the projected total", () => {
+    const valid = parseForecastPrediction({
+      home_score: 80,
+      away_score: 65,
+      home_margin: 15,
+      total: 145,
+      total_low: 126,
+      total_high: 164,
+      total_half_width: 19,
+    });
+    expect(valid.integrity).toBe("valid");
+    expect(parseForecastPrediction({
+      home_margin: 15,
+      total: 145,
+      total_low: 150,
+      total_high: 164,
+    })).toMatchObject({ integrity: "invalid", prediction: null });
+    expect(parseForecastPrediction({
+      home_margin: 15,
+      total: 145,
+      total_low: 126,
+      total_high: 164,
+      total_half_width: -1,
+    })).toMatchObject({ integrity: "invalid", prediction: null });
+  });
+
   it("adds published four-factor context to a live D1 forecast row", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("SELECT count(*) AS total FROM bb_forecasts")) {

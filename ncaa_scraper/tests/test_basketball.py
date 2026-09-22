@@ -27,6 +27,7 @@ from ncaa_scraper.basketball import (
 )
 from ncaa_scraper.basketball_model import (
     MODEL_SETTINGS,
+    apply_calibration,
     fallback_forecast,
     fit,
     forecast,
@@ -98,6 +99,27 @@ class BasketballModelTests(unittest.TestCase):
             prediction["away_efficiency"],
             100 * prediction["away_score"] / prediction["pace"],
             delta=0.02,
+        )
+
+    def test_calibrated_prediction_reports_independent_total_interval(self):
+        model = fit([sample(i, 2024) for i in range(160)])
+        model["calibration"] = {
+            "logistic_coefficients": [0.0, 0.1],
+            "margin_half_width": 10.0,
+            "total_half_width": 18.0,
+        }
+        prediction = forecast(model, {**sample(1, 2024), "home_id": "0", "away_id": "1"})
+        self.assertEqual(prediction["total_half_width"], 18.0)
+        self.assertAlmostEqual(prediction["total_low"], prediction["total"] - 18.0, delta=0.01)
+        self.assertAlmostEqual(prediction["total_high"], prediction["total"] + 18.0, delta=0.01)
+
+    def test_cold_start_total_interval_is_wider_than_primary_interval(self):
+        games = [sample(i, y) for y in [2024, 2025, 2026] for i in range(180)]
+        model = train(games, "2026-09-05T00:00:00Z")
+        estimate = fallback_forecast(model, {**sample(1, 2027), "home_id": "unseen"})
+        self.assertGreater(
+            estimate["total_high"] - estimate["total"],
+            model["calibration"]["total_half_width"],
         )
 
     def test_incremental_refresh_reuses_historical_source_releases(self):

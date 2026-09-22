@@ -295,11 +295,15 @@ def calibrate_predictions(pairs):
     absolute_errors = [
         abs(p["home_margin"] - (g["home_score"] - g["away_score"])) for g, p in pairs
     ]
+    absolute_total_errors = [
+        abs(p["total"] - (g["home_score"] + g["away_score"])) for g, p in pairs
+    ]
     return {
         "games": len(pairs),
         "season": min(g["season"] for g, _ in pairs),
         "logistic_coefficients": coef.tolist(),
         "margin_half_width": float(np.quantile(absolute_errors, 0.8)),
+        "total_half_width": float(np.quantile(absolute_total_errors, 0.8)),
     }
 
 
@@ -313,6 +317,28 @@ def calibrate_fallback_width(games, model, default):
         if predicted is not None:
             errors.append(
                 abs(predicted["home_margin"] - (game["home_score"] - game["away_score"]))
+            )
+    return (
+        float(np.quantile(errors, 0.8)) if len(errors) >= 30 else float(default * 1.5),
+        len(errors),
+    )
+
+
+def calibrate_fallback_total_width(games, model, default):
+    """Estimate a cold-start total interval from held-out games only.
+
+    A cold-start row has at least one program outside the trained field.  Its
+    total therefore needs its own wider interval; reusing the primary range
+    would imply precision that the model has not earned.
+    """
+    errors = []
+    for game in games:
+        if raw_predict(model, game) is not None:
+            continue
+        predicted = fallback_raw_predict(model, game)
+        if predicted is not None:
+            errors.append(
+                abs(predicted["total"] - (game["home_score"] + game["away_score"]))
             )
     return (
         float(np.quantile(errors, 0.8)) if len(errors) >= 30 else float(default * 1.5),
@@ -339,6 +365,14 @@ def fallback_forecast(model, game):
     )
     result["margin_low"] = round(p["home_margin"] - width, 2)
     result["margin_high"] = round(p["home_margin"] + width, 2)
+    total_width = model["calibration"].get(
+        "fallback_total_half_width",
+        model["calibration"].get("total_half_width", 0) * 1.5,
+    )
+    if total_width > 0:
+        result["total_low"] = round(p["total"] - total_width, 2)
+        result["total_high"] = round(p["total"] + total_width, 2)
+        result["total_half_width"] = round(total_width, 2)
     result["estimate_type"] = "cold_start"
     result["unknown_teams"] = p["unknown_teams"]
     result["margin_half_width"] = round(width, 2)
@@ -362,6 +396,15 @@ def apply_calibration(p, calibration):
         "margin_low": round(p["home_margin"] - calibration["margin_half_width"], 2),
         "margin_high": round(p["home_margin"] + calibration["margin_half_width"], 2),
     }
+    # Totals are a separate forecast target.  A margin interval cannot be
+    # reused for a total because the two errors have different variance and
+    # correlation with pace.  Older editions may not carry this field, so
+    # preserve their score forecast while withholding an unsupported range.
+    total_width = calibration.get("total_half_width")
+    if isinstance(total_width, (int, float)) and math.isfinite(total_width) and total_width > 0:
+        result["total_low"] = round(p["total"] - total_width, 2)
+        result["total_high"] = round(p["total"] + total_width, 2)
+        result["total_half_width"] = round(total_width, 2)
     if home_efficiency is not None and away_efficiency is not None:
         result["home_efficiency"] = round(home_efficiency, 2)
         result["away_efficiency"] = round(away_efficiency, 2)
@@ -381,8 +424,15 @@ def train(games, cutoff, target_season=2027):
     fallback_width, fallback_games = calibrate_fallback_width(
         calibration_games, initial, calibration["margin_half_width"]
     )
+    fallback_total_width, fallback_total_games = calibrate_fallback_total_width(
+        calibration_games,
+        initial,
+        calibration.get("total_half_width", calibration["margin_half_width"]),
+    )
     calibration["fallback_margin_half_width"] = fallback_width
     calibration["fallback_games"] = fallback_games
+    calibration["fallback_total_half_width"] = fallback_total_width
+    calibration["fallback_total_games"] = fallback_total_games
     evaluation_model = fit([g for g in valid if g["season"] < test_year])
     evaluation_model["calibration"] = calibration
     test = [g for g in valid if g["season"] == test_year]
@@ -426,6 +476,15 @@ def train(games, cutoff, target_season=2027):
                 ),
                 "interval_coverage": float(
                     np.mean(np.abs(errors) <= calibration["margin_half_width"])
+                ),
+                "total_interval_coverage": float(
+                    np.mean(
+                        [
+                            abs(p["total"] - g["home_score"] - g["away_score"])
+                            <= calibration["total_half_width"]
+                            for g, p in scored
+                        ]
+                    )
                 ),
                 "baseline_margin_mae": float(
                     np.mean(

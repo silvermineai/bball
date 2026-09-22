@@ -303,6 +303,9 @@ const predictionNumericFields = [
   "margin_low",
   "margin_high",
   "margin_half_width",
+  "total_low",
+  "total_high",
+  "total_half_width",
 ] as const;
 
 /**
@@ -339,7 +342,20 @@ export function parseForecastPrediction(value: unknown): { prediction: Record<st
     return { prediction: null, integrity: "invalid" };
   }
   const margin = row.home_margin;
+  const total = row.total;
   if (typeof margin === "number" && typeof low === "number" && typeof high === "number" && (margin < low || margin > high)) {
+    return { prediction: null, integrity: "invalid" };
+  }
+  const totalLow = row.total_low;
+  const totalHigh = row.total_high;
+  const totalHalfWidth = row.total_half_width;
+  if (typeof totalLow === "number" && typeof totalHigh === "number" && totalLow > totalHigh) {
+    return { prediction: null, integrity: "invalid" };
+  }
+  if (typeof total === "number" && typeof totalLow === "number" && typeof totalHigh === "number" && (total < totalLow || total > totalHigh)) {
+    return { prediction: null, integrity: "invalid" };
+  }
+  if (typeof totalHalfWidth === "number" && totalHalfWidth < 0) {
     return { prediction: null, integrity: "invalid" };
   }
   // Published score fields are rounded for display, so use a small tolerance
@@ -348,7 +364,6 @@ export function parseForecastPrediction(value: unknown): { prediction: Record<st
   // score, margin, total, or efficiency values.
   const homeScore = row.home_score;
   const awayScore = row.away_score;
-  const total = row.total;
   const pace = row.pace;
   const homeEfficiency = row.home_efficiency;
   const awayEfficiency = row.away_efficiency;

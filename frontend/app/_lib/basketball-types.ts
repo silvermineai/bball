@@ -6,6 +6,10 @@ export type BBPrediction = {
   away_efficiency?: number;
   home_margin: number;
   total: number;
+  /** Held-out total interval; unavailable on editions published before total calibration. */
+  total_low?: number;
+  total_high?: number;
+  total_half_width?: number;
   pace: number;
   home_win_probability: number;
   margin_low: number;
