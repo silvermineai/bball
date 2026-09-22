@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { date, fmt, signed } from "../../_lib/format";
+import { comparisonTimingLabel } from "../../_lib/market-display";
 import {
   loadLiveBasketballGameMarketComparison,
   type LiveGameMarketComparison,
@@ -45,7 +46,7 @@ export default function LiveBriefMarketTrail({ gameId }: { gameId: string }) {
       {status === "ready" && result ? (
         result.comparisons.length ? (
           <>
-            <p className="note">Current model edition <code>{result.modelId}</code>{result.forecastCreatedAt ? ` · forecast captured ${clock(result.forecastCreatedAt)}` : ""}. Only quotes matched to this game, model edition, participants and pre-tip clocks are shown.</p>
+            <p className="note">Current model edition <code>{result.modelId}</code>{result.forecastCreatedAt ? ` · forecast captured ${clock(result.forecastCreatedAt)}` : ""}{result.forecastStartsAt ? ` · scheduled ${clock(result.forecastStartsAt)}` : ""}. Only quotes matched to this game, model edition, participants and pre-tip clocks are shown.</p>
             <div className="table-scroll">
               <table className="data-table" aria-label="Live market comparisons">
                 <thead><tr><th>Market</th><th>Observed value</th><th>Model difference</th><th>Captured / updated</th></tr></thead>
@@ -54,7 +55,7 @@ export default function LiveBriefMarketTrail({ gameId }: { gameId: string }) {
                     <th scope="row">{quote.market}</th>
                     <td>{quote.market === "h2h" ? quote.market_home_probability == null ? "—" : `${fmt(quote.market_home_probability * 100)}% home` : quote.line == null ? "—" : quote.market === "totals" ? `O/U ${fmt(quote.line)}` : `Home ${signed(quote.line)}`}</td>
                     <td>{quote.market === "h2h" ? `${signed(quote.model_difference * 100)} pp` : `${signed(quote.model_difference)} pts`}</td>
-                    <td>{clock(quote.captured_at)}<small>Updated {clock(quote.updated_at)}</small></td>
+                    <td>{clock(quote.captured_at)}<small>Updated {clock(quote.updated_at)}</small><small>{result.forecastStartsAt ? comparisonTimingLabel(quote, result.forecastStartsAt) : "Tip clock unavailable"}</small></td>
                   </tr>
                 ))}</tbody>
               </table>

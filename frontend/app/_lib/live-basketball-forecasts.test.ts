@@ -241,7 +241,7 @@ describe("live basketball forecast merge", () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ rows: [{ game_id: "g1", model_id: "model-live", created_at: "2026-09-20T12:00:00Z" }] }),
+        json: async () => ({ rows: [{ game_id: "g1", model_id: "model-live", created_at: "2026-09-20T12:00:00Z", starts_at: "2026-09-20T16:00:00Z" }] }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -254,6 +254,7 @@ describe("live basketball forecast merge", () => {
     await expect(loadLiveBasketballGameMarketComparison(undefined, "g1")).resolves.toEqual({
       modelId: "model-live",
       forecastCreatedAt: "2026-09-20T12:00:00Z",
+      forecastStartsAt: "2026-09-20T16:00:00Z",
       comparisons: [{ provider: "feed", bookmaker: "book", market: "spreads", captured_at: "2026-09-20T13:00:00Z", updated_at: "2026-09-20T13:00:00Z", line: -2.5, model_difference: 1.2, market_home_probability: null }],
     });
     expect(fetcher).toHaveBeenNthCalledWith(1, "/api/basketball/research/forecasts?season=2027&gameId=g1&model=latest&status=all&limit=1", { signal: undefined });

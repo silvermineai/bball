@@ -38,6 +38,7 @@ type LiveScorecardResponse = {
 export type LiveGameMarketComparison = {
   modelId: string;
   forecastCreatedAt: string | null;
+  forecastStartsAt: string | null;
   comparisons: Comparison[];
 };
 
@@ -247,6 +248,7 @@ export async function loadLiveBasketballGameMarketComparison(
   return {
     modelId: forecast.model_id,
     forecastCreatedAt: forecast.created_at || null,
+    forecastStartsAt: forecast.starts_at || null,
     comparisons: game?.comparisons || [],
   };
 }
