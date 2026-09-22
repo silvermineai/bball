@@ -176,6 +176,38 @@ class NCAAIndividualTests(unittest.TestCase):
 
         self.assertTrue(release_is_degraded(previous, {"season": 2026, "coverage": {"divisions": {}}}))
 
+    def test_sparse_same_season_release_does_not_erase_lower_division_snapshot(self):
+        previous = {
+            "season": 2026,
+            "coverage": {
+                "divisions": {
+                    "2": {"players": 1020, "ppg": 251, "rpg": 250, "mpg": 150},
+                    "3": {"players": 1031, "ppg": 200, "rpg": 200, "mpg": 200},
+                }
+            },
+        }
+        candidate = {
+            "season": 2026,
+            "coverage": {
+                "divisions": {
+                    "2": {"players": 1018, "ppg": 250, "rpg": 249, "mpg": 149},
+                    "3": {"players": 1030, "ppg": 199, "rpg": 198, "mpg": 198},
+                }
+            },
+        }
+        self.assertFalse(release_is_degraded(previous, candidate))
+
+        sparse = {
+            "season": 2026,
+            "coverage": {
+                "divisions": {
+                    "2": {"players": 1020, "ppg": 251, "rpg": 250, "mpg": 150},
+                    "3": {"players": 1031, "ppg": 20, "rpg": 20, "mpg": 20},
+                }
+            },
+        }
+        self.assertTrue(release_is_degraded(previous, sparse))
+
     def test_different_season_is_not_compared_to_previous_snapshot(self):
         previous = {
             "season": 2025,

@@ -33,6 +33,7 @@ from ncaa_scraper.mens_lower_schedule import (
     parse_schedule_calendar,
     schedule_query_url,
 )
+from ncaa_scraper.fetcher import NCAAFetchError, verify_robots_policy
 
 DEFAULT_OUTPUT = ROOT / "frontend/public/data/basketball/mens-lower-division-schedules.json"
 USER_AGENT = "SilvermineResearch/1.0 (service@silvermineai.com)"
@@ -54,16 +55,19 @@ def fetch(session: requests.Session, url: str, receipts: list[dict], delay: floa
 def capture(season_year: int, divisions: list[int], months: list[int], delay: float = 0.25) -> dict:
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json", "Origin": "https://www.ncaa.com", "Referer": "https://www.ncaa.com/"})
+    first_url = schedule_query_url(season_year, divisions[0], months[0])
+    robots = verify_robots_policy(session, first_url, USER_AGENT)
+    effective_delay = max(delay, float(robots.get("crawl_delay_seconds") or 0))
     receipts: list[dict] = []
     calendar: list[dict] = []
     contests: list[dict] = []
     for division in divisions:
         for month in months:
-            payload = fetch(session, schedule_query_url(season_year, division, month), receipts, delay)
+            payload = fetch(session, schedule_query_url(season_year, division, month), receipts, effective_delay)
             days = parse_schedule_calendar(payload, division)
             calendar.extend(days)
             for day in days:
-                payload = fetch(session, contest_query_url(season_year, division, day["contest_date"]), receipts, delay)
+                payload = fetch(session, contest_query_url(season_year, division, day["contest_date"]), receipts, effective_delay)
                 contests.extend(parse_contests(payload, division, season_year, day["contest_date"]))
     contests.sort(key=lambda row: (row["contest_date"], row["division"], row["contest_id"]))
     calendar.sort(key=lambda row: (row["contest_date"], row["division"]))
@@ -77,6 +81,7 @@ def capture(season_year: int, divisions: list[int], months: list[int], delay: fl
             "method": "Persisted NCAA scoreboard queries with sportCode=MBB and explicit division=2 or 3; response SHA-256 receipts are retained.",
             "season_year": season_year,
             "query_contract": {"schedule": {"meta": SCHEDULE_META, "sha256": SCHEDULE_HASH}, "contests": {"meta": CONTEST_META, "sha256": CONTEST_HASH}},
+            "robots_policy": robots,
             "identity_limit": "Contest IDs and publisher team slugs are retained; no name-only join to another provider is performed.",
         },
         "calendar": calendar,
@@ -93,7 +98,10 @@ def main() -> None:
     parser.add_argument("--delay", type=float, default=0.25)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
-    artifact = capture(args.season_year, args.divisions or [2, 3], args.months or list(range(1, 13)), max(0.0, args.delay))
+    try:
+        artifact = capture(args.season_year, args.divisions or [2, 3], args.months or list(range(1, 13)), max(0.0, args.delay))
+    except NCAAFetchError as exc:
+        raise SystemExit(str(exc)) from exc
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(artifact, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     print(f"Published {args.output} ({len(artifact['contests']):,} contest rows, {len(artifact['receipts']):,} receipts)")

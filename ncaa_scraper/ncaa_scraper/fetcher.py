@@ -18,6 +18,41 @@ class NCAAFetchError(RuntimeError):
     pass
 
 
+def verify_robots_policy(
+    session: requests.Session,
+    url: str,
+    user_agent: str,
+    timeout: int = 45,
+) -> dict[str, object]:
+    """Require a readable, permissive robots policy for an exact URL.
+
+    The NCAA scoreboard API is a different origin from ``stats.ncaa.org``.
+    Schedule capture therefore needs the same fail-closed policy as the HTML
+    fetcher instead of assuming that an API response is permissible to crawl.
+    """
+    parts = urlsplit(url)
+    if parts.scheme != "https" or not parts.netloc:
+        raise NCAAFetchError("Only HTTPS NCAA URLs are accepted")
+    robots_url = f"{parts.scheme}://{parts.netloc}/robots.txt"
+    try:
+        response = session.get(robots_url, headers={"User-Agent": user_agent}, timeout=timeout)
+    except requests.RequestException as exc:
+        raise NCAAFetchError("Cannot verify NCAA robots policy; no page requested") from exc
+    if response.status_code != 200:
+        raise NCAAFetchError("Cannot verify NCAA robots policy; no page requested")
+    policy = RobotFileParser()
+    policy.parse(response.text.splitlines())
+    if not policy.can_fetch(user_agent, url):
+        raise NCAAFetchError("NCAA robots.txt disallows this request; use an authorized data release")
+    crawl_delay = policy.crawl_delay(user_agent) or policy.crawl_delay("*")
+    return {
+        "robots_url": robots_url,
+        "robots_status": response.status_code,
+        "robots_sha256": hashlib.sha256(response.content).hexdigest(),
+        "crawl_delay_seconds": float(crawl_delay) if crawl_delay is not None else None,
+    }
+
+
 class ScraplingNCAAFetcher:
     """Read cached NCAA pages; require robots permission for every live fetch."""
 
@@ -76,15 +111,8 @@ class ScraplingNCAAFetcher:
         if parts.scheme != "https" or parts.netloc != "stats.ncaa.org":
             raise NCAAFetchError("Only HTTPS stats.ncaa.org URLs are accepted")
         agent = "SilvermineResearch/1.0 (service@silvermineai.com)"
-        robots = requests.get(f"{parts.scheme}://{parts.netloc}/robots.txt",
-                              headers={"User-Agent": agent}, timeout=self.timeout)
-        if robots.status_code != 200:
-            raise NCAAFetchError("Cannot verify NCAA robots policy; no page requested")
-        policy = RobotFileParser()
-        policy.parse(robots.text.splitlines())
-        if not policy.can_fetch(agent, url):
-            raise NCAAFetchError("NCAA robots.txt disallows this request; use an authorized data release")
-        delay = policy.crawl_delay(agent) or policy.crawl_delay("*")
+        robots = verify_robots_policy(requests, url, agent, self.timeout)
+        delay = robots["crawl_delay_seconds"]
         if delay:
             time.sleep(max(float(delay), self.delay_seconds))
         response = requests.get(url, headers={"User-Agent": agent}, timeout=self.timeout)

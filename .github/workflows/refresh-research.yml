@@ -196,6 +196,52 @@ jobs:
           fi
           python scripts/build-womens-basketball-division-readiness.py
 
+      - name: Refresh robots-permitted lower-division basketball schedules
+        # The NCAA scoreboard API is a separate origin from stats.ncaa.org.
+        # Each schedule scraper verifies that origin's robots policy before
+        # requesting a page, stages the release, and replaces the retained
+        # archive only when the response contains a complete scoped edition.
+        # A robots outage or an empty target-season slate keeps the last valid
+        # archive in place instead of publishing an empty schedule.
+        if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'basketball' || inputs.sport == '' }}
+        run: |
+          refresh_schedule() {
+            label="$1"
+            script="$2"
+            destination="$3"
+            staged="$(mktemp)"
+            log="/tmp/ncaa-${label}-schedule.log"
+            set +e
+            python "$script" --season-year 2026 --output "$staged" >"$log" 2>&1
+            status=$?
+            set -e
+            cat "$log"
+            if [ "$status" -ne 0 ]; then
+              rm -f "$staged"
+              if grep -Eqi "robots(\.txt| policy)|cannot verify|disallow|no page requested" "$log"; then
+                echo "::warning::NCAA ${label} lower-division schedule policy could not be verified; retaining the cached archive."
+                return 0
+              fi
+              return "$status"
+            fi
+            python - "$staged" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          payload = json.loads(Path(sys.argv[1]).read_text())
+          source = payload.get("source")
+          if not isinstance(source, dict) or not isinstance(source.get("robots_policy"), dict):
+              raise SystemExit("schedule release has no robots policy receipt")
+          if not payload.get("calendar") or not payload.get("contests"):
+              raise SystemExit("schedule release is empty; retaining the prior archive")
+          PY
+            mkdir -p "$(dirname "$destination")"
+            mv "$staged" "$destination"
+          }
+          refresh_schedule men scripts/scrape-mens-lower-division-schedules.py frontend/public/data/basketball/mens-lower-division-schedules.json
+          refresh_schedule women scripts/scrape-womens-lower-division-schedules.py frontend/public/data/basketball/womens-lower-division-schedules.json
+
       - name: Refresh ESPN lower-division football player boxes
         # ESPN's group-35 feed is a combined D2/D3 discovery surface. The
         # capture performs an exact API-origin robots check before any request,
