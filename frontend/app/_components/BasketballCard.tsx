@@ -245,7 +245,7 @@ export default function BasketballCard({
           </div>
           <div className="match-detail muted">
             <span>80% total range</span>
-            <span>{p.total_low == null || p.total_high == null ? "—" : `${fmt(p.total_low, 1)} to ${fmt(p.total_high, 1)}`}</span>
+            <span>{p.total_low == null || p.total_high == null ? "Unavailable for this edition" : `${fmt(p.total_low, 1)} to ${fmt(p.total_high, 1)}`}</span>
           </div>
           <div className="match-detail muted">
             <span>80% home-margin range</span>
