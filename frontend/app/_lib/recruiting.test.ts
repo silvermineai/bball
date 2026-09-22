@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   recruitingRows,
   recruitingProductionEvidenceCoverage,
+  recruitingProductionDifference,
   parseRecruitingRelease,
   recruitingRosterProductionComparisons,
   publicationDate,
@@ -150,6 +151,13 @@ describe("school announcement histories", () => {
 });
 
 describe("recruiting program summaries", () => {
+  it("compares recorded production without imputing missing values", () => {
+    expect(recruitingProductionDifference(18.5, 12)).toBe(6.5);
+    expect(recruitingProductionDifference(null, 12)).toBeNull();
+    expect(recruitingProductionDifference(18, undefined)).toBeNull();
+    expect(recruitingProductionDifference(Number.NaN, 12)).toBeNull();
+  });
+
   it("keeps partial production visible instead of treating one missing field as no production", () => {
     expect(recruitingProductionEvidenceCoverage({ mpg: null, ppg: 12, rpg: 4, apg: null, ts: 0.58 })).toEqual({
       available: 3,

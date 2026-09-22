@@ -12,6 +12,7 @@ import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspe
 import {
   eventLabels,
   recruitingProductionEvidenceCoverage,
+  recruitingProductionDifference,
   recruitingRosterProductionComparisons,
   type RecruitingRelease,
   type RecruitingRosterProductionPlayer,
@@ -184,11 +185,10 @@ export default function Page() {
         <p className="note">For every reviewed program, this pairs the highest-workload addition with the highest-workload same-program returner. Players are joined only through recorded program and player IDs. An unavailable ID or stat stays unavailable; the pair is a study starting point, not a depth-chart or eligibility judgment.</p>
         <div className="table-scroll">
           <table className="data-table">
-            <thead><tr><th>Program</th><th>Incoming workload leader</th><th>Returning workload leader</th><th className="numeric">MPG difference</th><th>Player files</th></tr></thead>
+            <thead><tr><th>Program</th><th>Incoming workload leader</th><th>Returning workload leader</th><th className="numeric">MPG difference</th><th className="numeric">PPG difference</th><th>Player files</th></tr></thead>
             <tbody>{productionComparisons.map((row) => {
-              const difference = row.incoming?.mpg != null && row.returning?.mpg != null
-                ? row.incoming.mpg - row.returning.mpg
-                : null;
+              const minutesDifference = recruitingProductionDifference(row.incoming?.mpg, row.returning?.mpg);
+              const scoringDifference = recruitingProductionDifference(row.incoming?.ppg, row.returning?.ppg);
               const comparison = row.incoming?.player_id && row.incoming.prior_team_id && row.incoming.season && row.returning?.player_id && row.returning.prior_team_id && row.returning.season
                 ? `/basketball/compare-players/?${comparisonParams([
                     { season: row.incoming.season, id: row.incoming.player_id, team_id: row.incoming.prior_team_id },
@@ -199,7 +199,8 @@ export default function Page() {
                 <th scope="row"><Link href={`/basketball/programs/${encodeURIComponent(row.team_id)}/`}>{row.team_name}</Link><small>{row.incoming_players} reviewed additions · {row.incoming_linked} with prior production</small><small>{row.returning_players} same-program players · {row.returning_linked} with prior production</small></th>
                 <td><ProductionEvidence player={row.incoming} /><small>{row.incoming ? eventLabels[row.incoming.availability as keyof typeof eventLabels] : "Addition unavailable"}</small></td>
                 <td><ProductionEvidence player={row.returning} /><small>{row.returning ? "Exact same-program player ID" : "Returning evidence unavailable"}</small></td>
-                <td className="numeric"><strong>{difference == null ? "—" : `${difference > 0 ? "+" : ""}${fmt(difference)} min`}</strong><small>{difference == null ? "Requires both MPG values" : "incoming minus returning"}</small></td>
+                <td className="numeric"><strong>{minutesDifference == null ? "—" : `${minutesDifference > 0 ? "+" : ""}${fmt(minutesDifference)} min`}</strong><small>{minutesDifference == null ? "Requires both MPG values" : "incoming minus returning"}</small></td>
+                <td className="numeric"><strong>{scoringDifference == null ? "—" : `${scoringDifference > 0 ? "+" : ""}${fmt(scoringDifference)} PPG`}</strong><small>{scoringDifference == null ? "Requires both PPG values" : "incoming minus returning"}</small></td>
                 <td>{comparison ? <Link href={comparison}>Compare exact player files →</Link> : <span className="note">Comparison unavailable</span>}</td>
               </tr>;
             })}</tbody>

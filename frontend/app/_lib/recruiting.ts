@@ -382,6 +382,17 @@ export function recruitingProductionEvidenceCoverage(
   return { available, total: recruitingProductionEvidenceFields.length };
 }
 
+/** Compare two recorded production values without imputing missing evidence. */
+export function recruitingProductionDifference(
+  incoming: number | null | undefined,
+  returning: number | null | undefined,
+) {
+  return typeof incoming === "number" && Number.isFinite(incoming)
+    && typeof returning === "number" && Number.isFinite(returning)
+    ? incoming - returning
+    : null;
+}
+
 const recruitingKinds = new Set([
   "all",
   ...Object.keys(categoryLabels),
