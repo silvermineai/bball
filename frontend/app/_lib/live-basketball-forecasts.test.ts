@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { exactBasketballMarketComparisons, forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballGameMarketComparison, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, mergeLiveForecast, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
+import { exactBasketballMarketComparisons, forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballGameMarketComparison, loadLiveBasketballMarketComparisons, loadLiveBasketballMarketEvidence, matchingRosterScenario, mergeLiveBasketballForecasts, mergeLiveForecast, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -234,6 +234,20 @@ describe("live basketball forecast merge", () => {
     );
     await expect(loadLiveBasketballMarketComparisons(undefined, null)).resolves.toEqual({});
     expect(fetcher).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  it("retains per-game market readiness beside exact-edition quotes", async () => {
+    const readiness = { status: "no_qualified_line" as const, message: "No retained pregame line is available for this game.", retained_observations: 0, eligible_observations: 0, comparable_observations: 0, selected_comparisons: 0, rejection_counts: {} };
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ games: [
+        { game_id: "g1", model_id: "model-a", comparisons: [], market_readiness: readiness },
+        { game_id: "g2", model_id: "other", comparisons: [{ provider: "wrong", bookmaker: "wrong", market: "h2h" }], market_readiness: readiness },
+      ] }),
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await expect(loadLiveBasketballMarketEvidence(undefined, "model-a")).resolves.toEqual({ comparisons: { g1: [] }, readiness: { g1: readiness } });
     vi.unstubAllGlobals();
   });
 

@@ -37,6 +37,11 @@ type LiveScorecardResponse = {
   games: Array<{ game_id: string; model_id?: string | null; comparisons?: Comparison[]; market_readiness?: LedgerGame["market_readiness"] }>;
 };
 
+export type LiveMarketEvidence = {
+  comparisons: Record<string, Comparison[]>;
+  readiness: Record<string, NonNullable<LedgerGame["market_readiness"]>>;
+};
+
 export type LiveGameMarketComparison = {
   modelId: string;
   forecastCreatedAt: string | null;
@@ -220,20 +225,32 @@ export async function loadLiveBasketballMarketComparisons(
   signal: AbortSignal | undefined,
   modelId: string | null | undefined,
 ) {
+  return (await loadLiveBasketballMarketEvidence(signal, modelId)).comparisons;
+}
+
+/** Load exact-edition comparisons and the per-game reason a quote is absent. */
+export async function loadLiveBasketballMarketEvidence(
+  signal: AbortSignal | undefined,
+  modelId: string | null | undefined,
+): Promise<LiveMarketEvidence> {
   // Market lines are only useful beside the exact forecast edition that
   // produced the prediction. An absent edition is an honest empty result.
-  if (!modelId) return {} as Record<string, Comparison[]>;
+  if (!modelId) return { comparisons: {}, readiness: {} };
   const response = await fetchWithTransientRetry(
     `/api/research/scorecard?sport=basketball&model=${encodeURIComponent(modelId)}&limit=5000`,
     signal,
   );
   if (!response.ok) throw new Error("Live market comparisons unavailable.");
   const payload = await response.json() as LiveScorecardResponse;
-  return Object.fromEntries(
-    (payload.games || [])
-      .filter((game) => game.model_id === modelId)
-      .map((game) => [game.game_id, game.comparisons || []]),
-  ) as Record<string, Comparison[]>;
+  const games = (payload.games || []).filter((game) => game.model_id === modelId);
+  const readinessEntries: Array<[string, NonNullable<LedgerGame["market_readiness"]>]> = [];
+  games.forEach((game) => {
+    if (game.market_readiness) readinessEntries.push([game.game_id, game.market_readiness]);
+  });
+  return {
+    comparisons: Object.fromEntries(games.map((game) => [game.game_id, game.comparisons || []])) as Record<string, Comparison[]>,
+    readiness: Object.fromEntries(readinessEntries) as Record<string, NonNullable<LedgerGame["market_readiness"]>>,
+  };
 }
 
 /**

@@ -6,6 +6,7 @@ import type { BBFactorKey, BBGame, BBRosterScenario, BBTeam } from "../_lib/bask
 import { fmt, kick, date } from "../_lib/format";
 import {
   forecastModelId,
+  loadLiveBasketballMarketEvidence,
   loadLiveBasketballForecasts,
   matchingRosterScenario,
   mergeLiveBasketballForecasts,
@@ -16,8 +17,9 @@ import {
   type MatchupSignal,
 } from "../_lib/basketball-matchups";
 import { hasQualifiedMarketComparison, marketTimingLabel, summarizeMarketLines } from "../_lib/market-display";
-import { loadLiveBasketballMarketComparisons } from "../_lib/live-basketball-forecasts";
+import { gameMarketReadinessLabel } from "../_lib/game-market-readiness";
 import type { Comparison } from "../_lib/research-types";
+import type { LedgerGame } from "../_lib/research-types";
 import { downloadCsv, toCsv, type CsvCell } from "../_lib/csv";
 import { forecastEvidenceCoverage, forecastEvidenceLabel } from "../_lib/forecast-lab-analysis";
 import { basketballCalibrationContext, type BasketballCalibrationBucket, type BasketballCalibrationContext } from "../_lib/basketball-calibration";
@@ -216,9 +218,14 @@ export default function LiveDashboardForecastTable({
   const [query, setQuery] = useState("");
   const [rowLimit, setRowLimit] = useState<12 | 24 | 48>(12);
   const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]>>({});
+  const [marketReadiness, setMarketReadiness] = useState<Record<string, NonNullable<LedgerGame["market_readiness"]>>>({});
 
   useEffect(() => {
     const controller = new AbortController();
+    // Clear the prior edition before resolving the next one. A refresh must
+    // never leave an older quote visible beside a newer model forecast.
+    setMarketComparisons({});
+    setMarketReadiness({});
     // Hydrate the forecast cohort first. Market evidence is requested only
     // after one model edition is known, so a game can never display a line
     // selected from a different ledger edition.
@@ -227,8 +234,11 @@ export default function LiveDashboardForecastTable({
         if (controller.signal.aborted) return;
         setGames(mergeLiveBasketballForecasts(initialGames, rows));
         try {
-          const markets = await loadLiveBasketballMarketComparisons(controller.signal, forecastModelId(rows));
-          if (!controller.signal.aborted) setMarketComparisons(markets);
+          const evidence = await loadLiveBasketballMarketEvidence(controller.signal, forecastModelId(rows));
+          if (!controller.signal.aborted) {
+            setMarketComparisons(evidence.comparisons);
+            setMarketReadiness(evidence.readiness);
+          }
         } catch {
           // Market evidence is optional; the forecast board remains useful.
         }
@@ -236,6 +246,7 @@ export default function LiveDashboardForecastTable({
       .catch(() => {
         // Keep the server-rendered board when the live forecast is unavailable.
         setMarketComparisons({});
+        setMarketReadiness({});
       });
     return () => controller.abort();
   }, [initialGames]);
@@ -318,6 +329,7 @@ export default function LiveDashboardForecastTable({
             const homeRating = ratingById.get(game.home_id);
             const awayRating = ratingById.get(game.away_id);
             const market = summarizeMarketLines(marketComparisons[game.id] || []);
+            const readiness = marketReadiness[game.id];
             const marketTiming = marketTimingLabel(marketComparisons[game.id] || [], game.starts_at);
             const factorEdges = matchupFactorEdges(game);
             const evidence = forecastBoardEvidence(game, rosterScenario, hasQualifiedMarketComparison(market));
@@ -340,7 +352,7 @@ export default function LiveDashboardForecastTable({
                 </td>
                 <td className="numeric">{homeRating || awayRating ? <details className="forecast-factor-details"><summary>Show ratings</summary>{homeRating ? <small>H {fmt(homeRating.adj_off)} off · {fmt(homeRating.adj_def)} def · {fmt(homeRating.adj_net)} net</small> : <small>H unavailable</small>}{awayRating ? <small>A {fmt(awayRating.adj_off)} off · {fmt(awayRating.adj_def)} def · {fmt(awayRating.adj_net)} net</small> : <small>A unavailable</small>}</details> : "—"}</td>
                 <td className="numeric">{rosterScenario ? <><strong>{rosterScenario.roster_margin >= 0 ? "+" : ""}{fmt(rosterScenario.roster_margin)}</strong><small>{rosterScenario.margin_delta >= 0 ? "+" : ""}{fmt(rosterScenario.margin_delta)} vs base</small></> : "—"}</td>
-                <td className="numeric">{!hasQualifiedMarketComparison(market) ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.homeProbability == null ? null : <small>ML {fmt(market.homeProbability * 100, 1)}% home</small>}{market.capturedAt && <small>Quote {date(market.capturedAt)}</small>}{marketTiming && <small>{marketTiming}</small>}</>}</td>
+                <td className="numeric">{!hasQualifiedMarketComparison(market) ? readiness ? <><strong className="note">{gameMarketReadinessLabel(readiness)}</strong><small title={readiness.message}>{readiness.message}</small></> : "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.homeProbability == null ? null : <small>ML {fmt(market.homeProbability * 100, 1)}% home</small>}{market.capturedAt && <small>Quote {date(market.capturedAt)}</small>}{marketTiming && <small>{marketTiming}</small>}</>}</td>
                 <td className="numeric">{market.spreadGap == null && market.totalGap == null && market.winProbabilityGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}{market.winProbabilityGap == null ? null : <small>{market.winProbabilityGap >= 0 ? "+" : ""}{fmt(market.winProbabilityGap * 100, 1)} pp ML</small>}</>}</td>
                 <td className="numeric">{prediction.margin_low >= 0 ? "+" : ""}{fmt(prediction.margin_low)} to {prediction.margin_high >= 0 ? "+" : ""}{fmt(prediction.margin_high)}<small>calibrated margin band</small></td>
                 <td className="numeric">{fmt(prediction.total)}</td>
