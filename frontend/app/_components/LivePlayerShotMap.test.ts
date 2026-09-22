@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eligibleShotMapLeaders, playerCardShotLocations, shotMapCoverageLabel } from "./LivePlayerShotMap";
+import { eligibleShotMapLeaders, playerCardShotLocations, shotMapCoverageLabel, summarizeShotMapTendency } from "./LivePlayerShotMap";
 import { recordedPlayerAttemptCount, unreturnedPlayerAttemptCount } from "../_lib/player-shot-locations";
 
 describe("homepage player shot map", () => {
@@ -66,5 +66,22 @@ describe("homepage player shot map", () => {
     const shots = playerCardShotLocations(card, 2026, "42", "100");
     expect(shots).toHaveLength(1);
     expect(shots[0]).toMatchObject({ id: "100-game-1-0", game: "game-1", x: -4, y: 8 });
+  });
+
+  it("summarizes the dominant geometric band and chart side from plotted attempts", () => {
+    const summary = summarizeShotMapTendency([
+      { id: "rim-left", x: -2, y: 2, made: true },
+      { id: "paint-left", x: -5, y: 7, made: false },
+      { id: "paint-middle", x: 2, y: 7, made: true },
+      { id: "three-right", x: 20, y: 12, made: true },
+      { id: "missing", x: null, y: null, made: true },
+    ]);
+
+    expect(summary.band).toMatchObject({ label: "Paint", attempts: 2, share: 0.5 });
+    expect(summary.side).toMatchObject({ label: "Middle", attempts: 3, share: 0.75 });
+  });
+
+  it("keeps the quick read empty when no coordinate is plottable", () => {
+    expect(summarizeShotMapTendency([{ id: "missing", x: null, y: null }])).toEqual({ band: null, side: null });
   });
 });

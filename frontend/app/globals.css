@@ -6205,6 +6205,12 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .dashboard-shot-select { display: grid; gap: 6px; color: #365777; font: 600 9px "IBM Plex Mono", monospace; letter-spacing: .12em; }
 .dashboard-shot-select select { width: 100%; min-height: 42px; padding: 9px 36px 9px 12px; border: 1px solid #9eb2c2; background-color: #fff; color: var(--dashboard-blue-dark); font: 600 12px "IBM Plex Mono", monospace; }
 .dashboard-shot-court { border-color: var(--dashboard-line); box-shadow: none; }
+.dashboard-shot-insight { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(220px, 1.6fr); gap: 0; margin: 0 0 16px; border: 1px solid var(--dashboard-line); background: #fff; }
+.dashboard-shot-insight > div { display: grid; gap: 4px; padding: 13px 16px; border-right: 1px solid var(--dashboard-line); }
+.dashboard-shot-insight span { color: #365777; font: 600 9px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+.dashboard-shot-insight strong { color: var(--dashboard-blue-dark); font: 700 20px/1 "Barlow Condensed", sans-serif; }
+.dashboard-shot-insight small, .dashboard-shot-insight p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.dashboard-shot-insight p { align-self: center; padding: 13px 16px; }
 @media (max-width: 900px) {
   .dashboard-hero { grid-template-columns: 1fr; padding: 30px; }
   .dashboard-model-card { max-width: 420px; }
@@ -6213,6 +6219,8 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   .dashboard-link-grid a:nth-child(2) { border-right: 0; }
   .dashboard-link-grid a:nth-child(-n+2) { border-bottom: 1px solid var(--dashboard-line); }
   .dashboard-shot-toolbar { grid-template-columns: 1fr; gap: 12px; }
+  .dashboard-shot-insight { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-shot-insight p { grid-column: 1 / -1; border-top: 1px solid var(--dashboard-line); }
 }
 @media (max-width: 600px) {
   .dashboard-kicker { font-size: 9px; }
@@ -6227,6 +6235,9 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
   .dashboard-link-grid { grid-template-columns: 1fr; }
   .dashboard-link-grid a, .dashboard-link-grid a:nth-child(2) { border-right: 0; border-bottom: 1px solid var(--dashboard-line); }
   .dashboard-link-grid a:last-child { border-bottom: 0; }
+  .dashboard-shot-insight { grid-template-columns: 1fr; }
+  .dashboard-shot-insight > div { border-right: 0; border-bottom: 1px solid var(--dashboard-line); }
+  .dashboard-shot-insight p { grid-column: auto; border-top: 0; }
 }
 
 /* Player-card ranking profile: compact, percentile-first scouting evidence. */

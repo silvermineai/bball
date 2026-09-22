@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { PlayerShotLocation } from "../_lib/player-shot-locations";
+import {
+  summarizePlayerShotBands,
+  summarizePlayerShotSides,
+  type PlayerShotLocation,
+} from "../_lib/player-shot-locations";
 import PlayerShotLocationCourt from "./PlayerShotLocationCourt";
 
 type ShootingLeader = {
@@ -118,6 +122,24 @@ export function playerCardShotLocations(
     }));
 }
 
+/**
+ * Give the reader a fast, descriptive read of the selected map. These are
+ * display bins over plotted coordinates, so they never imply handedness,
+ * shot quality, or a future role.
+ */
+export function summarizeShotMapTendency(shots: readonly PlayerShotLocation[]) {
+  const band = summarizePlayerShotBands(shots)
+    .filter((row) => row.attempts > 0)
+    .sort((a, b) => b.attempts - a.attempts || a.band.localeCompare(b.band))[0] || null;
+  const side = summarizePlayerShotSides(shots)
+    .filter((row) => row.attempts > 0)
+    .sort((a, b) => b.attempts - a.attempts || a.side.localeCompare(b.side))[0] || null;
+  return {
+    band: band ? { label: band.band, share: band.share, attempts: band.attempts } : null,
+    side: side ? { label: side.side, share: side.share, attempts: side.attempts } : null,
+  };
+}
+
 export default function LivePlayerShotMap({ season }: { season: number }) {
   const [leaders, setLeaders] = useState<ShootingLeader[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -182,6 +204,7 @@ export default function LivePlayerShotMap({ season }: { season: number }) {
     () => card && selected ? playerCardShotLocations(card, season, selected.player_id, selected.team_id) : [],
     [card, season, selected],
   );
+  const tendency = useMemo(() => summarizeShotMapTendency(shots), [shots]);
   const retry = () => setRetryNonce((value) => value + 1);
 
   return (
@@ -210,6 +233,21 @@ export default function LivePlayerShotMap({ season }: { season: number }) {
         </label>
       </div>
       {selected ? <p className="note" role="status">Source profile: {shotMapCoverageLabel(selected.stats)}. The map plots only validated x/y coordinates; its all-attempt total retains unlocated attempts.</p> : null}
+      {tendency.band || tendency.side ? (
+        <div className="dashboard-shot-insight" aria-label="Selected player shot tendency summary">
+          <div>
+            <span>Most common distance band</span>
+            <strong>{tendency.band?.label || "—"}</strong>
+            <small>{tendency.band ? `${tendency.band.attempts.toLocaleString()} attempts · ${(tendency.band.share * 100).toFixed(1)}% of plotted` : "No plotted attempts"}</small>
+          </div>
+          <div>
+            <span>Most common chart side</span>
+            <strong>{tendency.side?.label || "—"}</strong>
+            <small>{tendency.side ? `${tendency.side.attempts.toLocaleString()} attempts · ${(tendency.side.share * 100).toFixed(1)}% of plotted` : "No plotted attempts"}</small>
+          </div>
+          <p>Quick read from geometric coordinate bins. Chart side describes the drawing only; it does not establish handedness or shot quality.</p>
+        </div>
+      ) : null}
       {error ? (
         <div className="status-error" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={retry}>Retry shot map</button></div>
       ) : loadingLeaders || loadingCard ? (
