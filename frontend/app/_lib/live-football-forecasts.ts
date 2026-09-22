@@ -1,6 +1,7 @@
 import type { Forecast, Game } from "./data";
 import type { Comparison } from "./research-types";
 import type { FootballReliabilityBand } from "./football-model-factors";
+import { validFootballPredictionArithmetic } from "./football-prediction-integrity";
 
 export type LiveFootballForecastRow = {
   game_id: string;
@@ -61,6 +62,7 @@ export function validLiveFootballForecast(row: LiveFootballForecastRow) {
   if (!numeric.every(finiteOrNull)) return false;
   if (row.home_win_probability != null && (row.home_win_probability < 0 || row.home_win_probability > 1)) return false;
   if (row.total != null && row.total < 0) return false;
+  if (!validFootballPredictionArithmetic(row)) return false;
   if (row.margin_low != null && row.margin_high != null && row.margin_low > row.margin_high) return false;
   if (row.home_margin != null && row.margin_low != null && row.margin_high != null
     && (row.home_margin < row.margin_low || row.home_margin > row.margin_high)) return false;

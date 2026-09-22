@@ -61,4 +61,20 @@ describe("football forecast readiness", () => {
     expect(result.mixed_division_games).toBe(1);
     expect(result.rows.find((row) => row.division === "d3")).toMatchObject({ forecasted: 1, unlabeled_forecast: 1 });
   });
+
+  it("withholds a forecast whose projected score arithmetic is contradictory", () => {
+    const result = footballForecastReadiness([
+      game({
+        home_division: "D1",
+        away_division: "D1",
+        prediction: { ...prediction("model-1"), home_margin: 12 },
+      }),
+    ]);
+    expect(result.rows.find((row) => row.division === "d1")).toMatchObject({
+      scheduled: 1,
+      forecasted: 0,
+      missing_forecast: 1,
+    });
+    expect(result.invalid_forecasts).toBe(1);
+  });
 });

@@ -131,6 +131,18 @@ describe("live football forecast merge", () => {
     globalThis.fetch = originalFetch;
   });
 
+  it("rejects live rows whose projected scores contradict the margin", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(JSON.stringify({
+      total: 1,
+      page_size: 100,
+      rows: [{ ...liveRow(0), home_margin: 9 }],
+    }), { status: 200 })) as typeof fetch;
+    await expect(loadLiveFootballForecasts(undefined, { maxPages: 1, cacheBust: "invalid-arithmetic" }))
+      .rejects.toThrow("invalid prediction values");
+    globalThis.fetch = originalFetch;
+  });
+
   it("indexes exact ledger market comparisons by game", async () => {
     const originalFetch = globalThis.fetch;
     let requested = "";

@@ -1,4 +1,5 @@
 import type { Game } from "./data";
+import { validFootballPredictionArithmetic } from "./football-prediction-integrity";
 
 export type FootballForecastDivision = "d1" | "d2" | "d3";
 
@@ -32,6 +33,7 @@ function division(value: unknown): FootballForecastDivision | null {
 
 function validForecast(value: Game["prediction"]): boolean {
   if (!value) return false;
+  if (!validFootballPredictionArithmetic(value)) return false;
   const numbers = [value.home_margin, value.total, value.home_win_probability, value.margin_low, value.margin_high];
   return numbers.every((item) => typeof item === "number" && Number.isFinite(item))
     && value.home_win_probability >= 0
