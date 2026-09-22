@@ -61,6 +61,20 @@ describe("sport navigation", () => {
     expect(divisionAwareNavHref("mens-basketball", "3", teams)).toBe(teams.href);
   });
 
+  it("lands men's lower-division tabs on the matching archive evidence section", () => {
+    const config = SPORT_NAVIGATION["mens-basketball"];
+    for (const [label, section] of Object.entries({
+      Matches: "schedule",
+      Predictions: "predictions",
+      Recruiting: "recruiting",
+      Learn: "coverage",
+    })) {
+      const item = config.items.find((candidate) => candidate.label === label)!;
+      expect(divisionAwareNavHref("mens-basketball", "2", item)).toBe(`/basketball/matchups/#mens-lower-${section}-2`);
+      expect(divisionAwareNavHref("mens-basketball", "3", item)).toBe(`/basketball/matchups/#mens-lower-${section}-3`);
+    }
+  });
+
   it("routes every women's lower-division tab to published evidence", () => {
     const config = SPORT_NAVIGATION["womens-basketball"];
     const expectedSections: Record<string, string> = {

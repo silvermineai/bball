@@ -128,6 +128,19 @@ export function divisionAwareNavHref(sport: Sport, division: Division, item: Spo
   if (sport === "football" && division !== "1" && ["Teams", "Predictions", "Rankings"].includes(item.label)) {
     return "/football/matchups/#lower-division-results-title";
   }
+  // Keep the men's lower-division tabs on the exact archive desk. The
+  // archive contains a schedule, historical ratings, and explicit gates for
+  // unsupported recruiting and forecast surfaces; linking to those sections
+  // makes every shared tab useful without presenting D1 rows as D2/D3 data.
+  if (sport === "mens-basketball" && division !== "1" && ["Recruiting", "Matches", "Predictions", "Learn"].includes(item.label)) {
+    const sectionByLabel: Record<string, string> = {
+      Recruiting: "recruiting",
+      Matches: "schedule",
+      Predictions: "predictions",
+      Learn: "coverage",
+    };
+    return `/basketball/matchups/#mens-lower-${sectionByLabel[item.label]}-${division}`;
+  }
   // The men’s NCAA ranking explorer is the only ranking surface that keeps
   // D1, D2 and D3 in their own cohorts. The general rankings landing page is
   // useful as a D1 directory, but its team board would hide the exact

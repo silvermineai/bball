@@ -44,14 +44,39 @@ export default function DivisionArchiveSummary({ division }: { division: LowerBa
     <h2 id="division-archive-summary-title">Published rows for Division {division}</h2>
     <p className="note">This scope has a retained final-season player and team directory. Counts below come from the checked-in release; missing source fields remain unavailable.</p>
     {error ? <p className="status-error" role="alert">{error}</p> : !summary ? <p className="muted" role="status">Loading division archive summary…</p> : <>
-      <DivisionCoverageMatrix sport="basketball" gender="men" division={division} />
-      <MensLowerDivisionScheduleArchive division={division} />
-      <MensLowerDivisionRatings division={division} />
+      <nav className="division-archive-jump" aria-label={`Men's basketball Division ${division} archive sections`}>
+        <span className="division-archive-jump-label">D{division} archive</span>
+        <a href={`/basketball/ratings/?gender=men&division=${division}`}>Teams</a>
+        <a href={`/basketball/players/?gender=men&division=${division}`}>Players</a>
+        <a href={`#mens-lower-schedule-${division}`}>Matches</a>
+        <a href={`#mens-lower-predictions-${division}`}>Predictions</a>
+        <a href={`#mens-lower-recruiting-${division}`}>Recruiting</a>
+        <a href={`#mens-lower-coverage-${division}`}>Learn &amp; coverage</a>
+      </nav>
+      <div id={`mens-lower-coverage-${division}`}>
+        <DivisionCoverageMatrix sport="basketball" gender="men" division={division} />
+      </div>
+      <div id={`mens-lower-schedule-${division}`}>
+        <MensLowerDivisionScheduleArchive division={division} />
+      </div>
+      <div id={`mens-lower-ratings-${division}`}>
+        <MensLowerDivisionRatings division={division} />
+      </div>
+      <section id={`mens-lower-predictions-${division}`} className="paper-panel division-archive-gate" aria-labelledby={`mens-lower-predictions-title-${division}`}>
+        <div className="eyebrow">PREDICTIONS · MEN&apos;S D{division}</div>
+        <h3 id={`mens-lower-predictions-title-${division}`}>Forecasts stay gated until the target schedule is present</h3>
+        <p className="note">The historical D{division} ratings above are descriptive evidence from retained finals. No 2026–27 forecast is published while the exact-division target schedule probe is empty; a D1 model row is never substituted.</p>
+      </section>
+      <section id={`mens-lower-recruiting-${division}`} className="paper-panel division-archive-gate" aria-labelledby={`mens-lower-recruiting-title-${division}`}>
+        <div className="eyebrow">RECRUITING · MEN&apos;S D{division}</div>
+        <h3 id={`mens-lower-recruiting-title-${division}`}>Recruiting joins are unavailable for this scope</h3>
+        <p className="note">The retained lower-division release contains descriptive player and team rows, but no validated recruiting identity crosswalk. This page keeps that gap visible instead of attaching prospects to the wrong player or division.</p>
+      </section>
       <div className="scope-snapshot-counts" aria-label={`Division ${division} archive counts`}>
         <strong>{summary.players.toLocaleString()}</strong><span>player rows</span>
         <strong>{summary.teams.toLocaleString()}</strong><span>team rows</span>
       </div>
-      <section className="paper-panel" aria-labelledby="division-player-evidence-title" style={{ marginTop: 18 }}>
+      <section id={`mens-lower-player-stats-${division}`} className="paper-panel" aria-labelledby="division-player-evidence-title" style={{ marginTop: 18 }}>
         <div className="eyebrow">PLAYER IDENTITY &amp; STAT COVERAGE</div>
         <h3 id="division-player-evidence-title">What the player release actually contains</h3>
         <p className="note">Each row below is keyed by the exact NCAA player ID retained in this Division {division} archive. Identity coverage can be complete even when a publisher exposes only a bounded leaderboard for a selected statistic; missing values remain missing.</p>

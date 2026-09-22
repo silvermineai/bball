@@ -5870,6 +5870,42 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .division-archive-summary { margin-top: 28px; }
 .division-archive-summary h2 { margin: 8px 0 10px; font-size: clamp(1.35rem, 2.8vw, 2rem); }
 .division-archive-summary .scope-snapshot-counts { margin: 18px 0; }
+.division-archive-jump {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 18px 0 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: #f7fafc;
+}
+.division-archive-jump-label {
+  margin-right: 4px;
+  color: var(--muted);
+  font: 600 10px/1 "IBM Plex Mono", monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.division-archive-jump a {
+  padding: 6px 9px;
+  border: 1px solid #aabdd3;
+  background: #fff;
+  color: var(--blue);
+  font: 600 10px/1 "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+.division-archive-jump a:hover,
+.division-archive-jump a:focus-visible {
+  background: #e7eef7;
+  color: var(--ink);
+}
+.division-archive-gate {
+  margin-top: 18px;
+}
+.division-archive-gate h3 {
+  margin: 8px 0 10px;
+}
 .division-coverage-matrix { margin-top: 18px; }
 .division-coverage-matrix h3 { margin: 8px 0 10px; }
 .division-coverage-matrix .data-table { margin-top: 12px; }
