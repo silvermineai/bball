@@ -117,17 +117,45 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
       ? kind === "ratings" ? [season, search, search] : [season, search, search, search]
       : [season];
   try {
-    const count = await withTimeout(db.prepare(
-      `SELECT count(*) AS total, count(json_extract(p.stats_json, ?)) AS non_null FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where}`,
-    ).bind(path, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
+    const count: { total: number; non_null: number; ranked_count?: number } | null = kind === "ratings"
+      ? await withTimeout(db.prepare(
+        `SELECT count(*) AS total,
+                count(json_extract(p.stats_json, ?)) AS non_null,
+                (SELECT count(json_extract(cohort.stats_json, ?)) FROM bb_publisher_ratings cohort WHERE cohort.season=?) AS ranked_count
+           FROM ${table} p
+           LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id
+          WHERE ${where}`,
+      ).bind(path, path, season, ...binds).first<{ total: number; non_null: number; ranked_count: number }>(), DB_TIMEOUT_MS)
+      : await withTimeout(db.prepare(
+        `SELECT count(*) AS total, count(json_extract(p.stats_json, ?)) AS non_null FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where}`,
+      ).bind(path, ...binds).first<{ total: number; non_null: number }>(), DB_TIMEOUT_MS);
     const valueOrder = `json_extract(p.stats_json, '${path}') ${sortDirection === "asc" ? "ASC" : "DESC"}`;
     const order = `json_extract(p.stats_json, '${path}') IS NULL, ${valueOrder}, ${kind === "ratings" ? "COALESCE(t.team_name,p.team_id),p.team_id" : "p.player_name,p.player_id"}`;
-    const select = kind === "ratings"
-      ? `p.team_id AS id, COALESCE(t.team_name,p.team_id) AS team, t.team_abbreviation AS abbreviation, json_extract(p.stats_json, '${path}') AS value`
-      : `p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value, CASE WHEN json_extract(p.stats_json, '${path}') IS NULL THEN NULL ELSE RANK() OVER (ORDER BY json_extract(p.stats_json, '${path}') IS NULL, ${valueOrder}) END AS rank, COUNT(json_extract(p.stats_json, '${path}')) OVER () AS ranked_count`;
-    const rows = await withTimeout(db.prepare(
-      `SELECT ${select} FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
-    ).bind(...binds, limit, page * limit).all(), DB_TIMEOUT_MS);
+    const rows = kind === "ratings"
+      ? await withTimeout(db.prepare(
+        `WITH metric_values AS (
+           SELECT p.team_id AS id,
+                  COALESCE(t.team_name,p.team_id) AS team,
+                  t.team_abbreviation AS abbreviation,
+                  json_extract(p.stats_json, '${path}') AS value,
+                  json_extract(p.stats_json, '$.rank') AS publisher_rank
+             FROM bb_publisher_ratings p
+             LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id
+            WHERE p.season=?
+         ), ranked AS (
+           SELECT *,
+                  CASE WHEN value IS NULL THEN NULL ELSE RANK() OVER (ORDER BY value IS NULL, value ${sortDirection === "asc" ? "ASC" : "DESC"}) END AS metric_rank,
+                  COUNT(value) OVER () AS ranked_count
+             FROM metric_values
+         )
+         SELECT * FROM ranked
+          ${teamIds.length ? `WHERE id IN (${teamIds.map(() => "?").join(",")})` : search ? "WHERE team LIKE ? OR id LIKE ?" : ""}
+          ORDER BY value IS NULL, value ${sortDirection === "asc" ? "ASC" : "DESC"}, team, id
+          LIMIT ? OFFSET ?`,
+      ).bind(...(teamIds.length ? [season, ...teamIds] : search ? [season, search, search] : [season]), limit, page * limit).all(), DB_TIMEOUT_MS)
+      : await withTimeout(db.prepare(
+        `SELECT p.player_id AS id, p.player_name AS player, p.team_id, COALESCE(t.team_name,p.team_id) AS team, json_extract(p.stats_json, '$.box_bpm') AS bpm, json_extract(p.stats_json, '${path}') AS value, CASE WHEN json_extract(p.stats_json, '${path}') IS NULL THEN NULL ELSE RANK() OVER (ORDER BY json_extract(p.stats_json, '${path}') IS NULL, ${valueOrder}) END AS rank, COUNT(json_extract(p.stats_json, '${path}')) OVER () AS ranked_count FROM ${table} p LEFT JOIN bb_team_season t ON t.season=p.season AND t.team_id=p.team_id WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
+      ).bind(...binds, limit, page * limit).all(), DB_TIMEOUT_MS);
     const response = c.json({
       kind,
       season,
@@ -136,13 +164,15 @@ boutique.get("/", zValidator("query", querySchema), async (c) => {
       page_size: limit,
       total: count?.total ?? 0,
       non_null: count?.non_null ?? 0,
-      ...(kind === "players" ? {
-        ranking: {
-          direction: sortDirection,
-          population: "filtered rows with a recorded metric value",
-          ranked_count: count?.non_null ?? 0,
-        },
-      } : {}),
+      ranking: {
+        direction: sortDirection,
+        population: kind === "ratings"
+          ? "all team rows in the selected season with a recorded metric value"
+          : "filtered rows with a recorded metric value",
+        ranked_count: kind === "ratings"
+          ? Number(count?.ranked_count || 0)
+          : count?.non_null ?? 0,
+      },
       rows: rows.results,
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);

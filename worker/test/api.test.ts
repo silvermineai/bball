@@ -1831,14 +1831,14 @@ describe("bball api", () => {
   it("supports exact team-ID batches for matchup model comparisons", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("count(*) AS total")) {
-        return { bind: () => ({ first: vi.fn().mockResolvedValue({ total: 2, non_null: 2 }) }) };
+        return { bind: () => ({ first: vi.fn().mockResolvedValue({ total: 2, non_null: 2, ranked_count: 364 }) }) };
       }
       return {
         bind: (...args: unknown[]) => {
           expect(args).toEqual([2026, "150", "248", 40, 0]);
           return { all: vi.fn().mockResolvedValue({ results: [
-            { id: "150", team: "Duke Blue Devils", value: 28.4 },
-            { id: "248", team: "North Carolina Tar Heels", value: 22.1 },
+            { id: "150", team: "Duke Blue Devils", value: 28.4, publisher_rank: 2, metric_rank: 1, ranked_count: 364 },
+            { id: "248", team: "North Carolina Tar Heels", value: 22.1, publisher_rank: 11, metric_rank: 12, ranked_count: 364 },
           ] }) };
         },
       };
@@ -1851,8 +1851,18 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       total: 2,
-      rows: [{ id: "150" }, { id: "248" }],
+      ranking: {
+        direction: "desc",
+        population: "all team rows in the selected season with a recorded metric value",
+        ranked_count: 364,
+      },
+      rows: [
+        { id: "150", publisher_rank: 2, metric_rank: 1, ranked_count: 364 },
+        { id: "248", publisher_rank: 11, metric_rank: 12, ranked_count: 364 },
+      ],
     });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("json_extract(p.stats_json, '$.rank') AS publisher_rank"));
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("RANK() OVER"));
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("p.team_id IN (?,?)"));
   });
 
