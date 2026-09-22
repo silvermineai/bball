@@ -28,6 +28,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const stringValue = (value: unknown) =>
   typeof value === "string" && value.trim() ? value : null;
 
+const validTimestamp = (value: unknown): value is string =>
+  typeof value === "string" && value.trim() !== "" && Number.isFinite(Date.parse(value));
+
 function finiteNumber(value: unknown): number | undefined;
 function finiteNumber(value: unknown, nullable: true): number | null | undefined;
 function finiteNumber(value: unknown, nullable = false): number | null | undefined {
@@ -51,8 +54,7 @@ export function parseProspectProductionRelease(
     payload.season !== expectedSeason ||
     typeof payload.edition !== "string" ||
     !payload.edition.trim() ||
-    typeof payload.reviewed_at !== "string" ||
-    !payload.reviewed_at.trim() ||
+    !validTimestamp(payload.reviewed_at) ||
     !Array.isArray(payload.people) ||
     !/^\d{1,15}$/.test(athleteId)
   ) return null;
@@ -90,6 +92,7 @@ export function parseProspectProductionRelease(
     !identityBasis ||
     statSeason === undefined ||
     !Number.isInteger(statSeason) ||
+    statSeason >= expectedSeason ||
     games === undefined ||
     !Number.isInteger(games) ||
     games < 0 ||

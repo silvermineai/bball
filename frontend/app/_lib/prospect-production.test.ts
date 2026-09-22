@@ -81,6 +81,12 @@ describe("prospect production release", () => {
     expect(parseProspectProductionRelease(payload([{ stats: stats({ mpg: "17.9" }) }]), 2027, "5292602")).toBeNull();
   });
 
+  it("rejects an invalid review clock or non-prior production season", () => {
+    expect(parseProspectProductionRelease({ ...payload([{ stats: stats() }]), reviewed_at: "not-a-timestamp" }, 2027, "5292602")).toBeNull();
+    expect(parseProspectProductionRelease(payload([{ stats: stats({ season: 2027 }) }]), 2027, "5292602")).toBeNull();
+    expect(parseProspectProductionRelease(payload([{ stats: stats({ season: 2028 }) }]), 2027, "5292602")).toBeNull();
+  });
+
   it("withholds duplicate exact IDs instead of picking one", () => {
     const result = parseProspectProductionRelease(
       payload([{ stats: stats() }, { stats: stats() }]),
