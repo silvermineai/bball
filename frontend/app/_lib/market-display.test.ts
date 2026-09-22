@@ -89,4 +89,16 @@ describe("market comparison display", () => {
     expect(summary).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, homeProbability: null, winProbabilityGap: null, capturedAt: null });
     expect(hasQualifiedMarketComparison(summary)).toBe(false);
   });
+
+  it("withholds a compact-board line when both market clocks are invalid", () => {
+    const summary = summarizeMarketLines([
+      { ...comparison("spreads", 2.5), line: 4.5, captured_at: "not-a-clock", updated_at: "also-not-a-clock" },
+      { ...comparison("h2h", 0.04), market_home_probability: 0.52, captured_at: "not-a-clock", updated_at: "also-not-a-clock" },
+    ]);
+    expect(summary).toEqual({ spread: null, total: null, spreadGap: null, totalGap: null, homeProbability: null, winProbabilityGap: null, capturedAt: null });
+    expect(hasQualifiedMarketComparison(summary)).toBe(false);
+    expect(marketTimingLabel([
+      { ...comparison("spreads", 2.5), line: 4.5, captured_at: "not-a-clock", updated_at: "also-not-a-clock" },
+    ], "2026-09-12T16:00:00Z")).toBeNull();
+  });
 });

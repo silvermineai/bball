@@ -10,6 +10,20 @@ export type MarketLineSummary = {
   capturedAt: string | null;
 };
 
+function validClock(value: string | null | undefined): boolean {
+  return typeof value === "string" && Number.isFinite(Date.parse(value));
+}
+
+/**
+ * Compact forecast boards may receive bundled or legacy rows in addition to
+ * the live scorecard. Require both retained clocks before showing a line or
+ * model difference so a malformed row cannot look like current market
+ * evidence. The archive still keeps that row available for audit.
+ */
+function hasCompleteMarketClocks(comparison: Pick<Comparison, "captured_at" | "updated_at">): boolean {
+  return validClock(comparison.captured_at) && validClock(comparison.updated_at);
+}
+
 /**
  * Put a qualifying quote's update clock in context beside the scheduled tip.
  * The scorecard already applies the server timing gates; this display keeps
@@ -35,6 +49,7 @@ export function comparisonTimingLabel(comparison: Pick<Comparison, "updated_at">
 export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSummary {
   const valid = comparisons
     .filter((comparison) => comparison.market === "spreads" || comparison.market === "totals")
+    .filter(hasCompleteMarketClocks)
     .filter((comparison) => comparison.line != null && Number.isFinite(comparison.line))
     .filter((comparison) => Number.isFinite(comparison.model_difference))
     .filter((comparison) => comparison.market !== "totals" || (comparison.line as number) >= 0);
@@ -44,6 +59,7 @@ export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSumma
     .sort((left, right) => timestamp(right).localeCompare(timestamp(left)))[0] || null;
   const moneyline = comparisons
     .filter((comparison) => comparison.market === "h2h")
+    .filter(hasCompleteMarketClocks)
     .filter((comparison) => comparison.market_home_probability != null
       && Number.isFinite(comparison.market_home_probability)
       && comparison.market_home_probability >= 0
@@ -53,6 +69,7 @@ export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSumma
   const spread = newest("spreads");
   const total = newest("totals");
   const timestamps = comparisons
+    .filter(hasCompleteMarketClocks)
     .filter((comparison) => {
       if (comparison.market === "h2h") {
         return comparison.market_home_probability != null
@@ -85,6 +102,7 @@ export function summarizeMarketLines(comparisons: Comparison[]): MarketLineSumma
  */
 export function marketTimingLabel(comparisons: Comparison[], startsAt: string): string | null {
   const valid = comparisons
+    .filter(hasCompleteMarketClocks)
     .filter((comparison) => comparison.market === "spreads" || comparison.market === "totals"
       ? comparison.line != null
         && Number.isFinite(comparison.line)
