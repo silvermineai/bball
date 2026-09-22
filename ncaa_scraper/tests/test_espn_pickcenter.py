@@ -364,6 +364,41 @@ class EspnPickcenterTests(unittest.TestCase):
         self.assertEqual(payload["summary_fetch_failures"], 3)
         self.assertEqual(payload["market_status"], "capture_incomplete")
 
+    def test_ingest_keeps_truncated_capture_incomplete_with_validated_quotes(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.executescript("""
+            CREATE TABLE audit_markets (
+              id TEXT PRIMARY KEY, sport TEXT NOT NULL, game_id TEXT NOT NULL,
+              provider TEXT NOT NULL, bookmaker TEXT NOT NULL, market TEXT NOT NULL,
+              captured_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload_json TEXT NOT NULL
+            );
+            CREATE TABLE audit_receipts (
+              id TEXT PRIMARY KEY, captured_at TEXT NOT NULL, provider TEXT NOT NULL,
+              payload_json TEXT NOT NULL
+            );
+        """)
+        receipt = {
+            "captured_at": "2026-11-09T20:00:00Z",
+            "sha256": "fixture",
+            "candidate_games": 40,
+            "eligible_games": 20,
+            "capture_limit": 20,
+            "capture_truncated": True,
+            "summary_count": 20,
+            "summary_with_pickcenter": 1,
+        }
+        result = ingest(
+            self.conn,
+            [{"event_id": GAME["id"], "summary": summary()}],
+            receipt,
+            [GAME],
+            receipt["captured_at"],
+        )
+        self.assertEqual(result, {"accepted_markets": 3, "rejected_records": 0})
+        payload = json.loads(self.conn.execute("SELECT payload_json FROM audit_receipts").fetchone()[0])
+        self.assertEqual(payload["accepted_markets"], 3)
+        self.assertEqual(payload["market_status"], "capture_incomplete")
+
 
 if __name__ == "__main__":
     unittest.main()

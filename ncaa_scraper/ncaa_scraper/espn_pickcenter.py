@@ -226,6 +226,7 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
     # response that contained no published quote.
     eligible_games = receipt.get("eligible_games")
     fetch_failures = receipt.get("summary_fetch_failures", 0)
+    capture_truncated = receipt.get("capture_truncated") is True
     if not isinstance(eligible_games, int) or eligible_games < 0:
         eligible_games = len(summaries)
     if not isinstance(fetch_failures, int) or fetch_failures < 0:
@@ -239,6 +240,11 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
             "accepted_markets": accepted,
             "rejected_records": rejected,
             "market_status": (
+                # A bounded request is partial evidence even when every
+                # requested summary answered and some quotes validated. Keep
+                # the accepted rows, but do not publish slate-wide coverage
+                # from games that were never requested.
+                "capture_incomplete" if capture_truncated else
                 "validated_quotes" if accepted > 0 else
                 "quotes_failed_validation" if rejected > 0 else
                 "capture_incomplete" if fetch_failures > 0 and eligible_games > 0 else

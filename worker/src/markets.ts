@@ -127,6 +127,7 @@ function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captur
   const accepted = capture.accepted_markets ?? 0;
   const rejected = capture.rejected_records ?? 0;
   const eligibleGames = capture.eligible_games;
+  const captureTruncated = capture.capture_truncated === true;
   const fetchFailures = capture.summary_fetch_failures ?? 0;
   // A capture receipt is evidence about the connector's own counters, not a
   // license to infer that quotes existed.  If the counters contradict one
@@ -141,6 +142,12 @@ function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captur
   // conservative so consumers do not mistake the accepted subset for a
   // complete prospective slate.
   if (fetchFailures > 0 && eligibleGames !== undefined && eligibleGames > 0) return "capture_incomplete";
+  // A bounded capture is also partial evidence: the collector deliberately
+  // inspected only a subset of the candidate slate. Accepted rows remain in
+  // the ledger, but the receipt must not claim that the provider published no
+  // quotes (or that the entire slate was covered) when unrequested games were
+  // never observed.
+  if (captureTruncated) return "capture_incomplete";
   if (sourceRows === 0) return eligibleGames === 0 || eligibleGames === undefined ? "no_eligible_summaries" : "unknown";
   if (accepted > 0) return "validated_quotes";
   if (rejected > 0 && pricedRows !== 0) return "quotes_failed_validation";

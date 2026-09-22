@@ -28,7 +28,32 @@ describe("market archive metadata", () => {
       expect.objectContaining({ markets: ["h2h", "spreads", "totals"], provider_update_clock: true }),
     ]);
     expect(body.archive_receipts).toEqual([]);
-    expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, horizon_days: 90, summary_count: 20, summary_with_pickcenter: 0, candidate_games: 40, eligible_games: 20, capture_limit: 20, capture_truncated: true, selection_strategy: "nearest_two_thirds_plus_uniform_tail", near_term_games: 13, market_status: "no_quotes_published" });
+    expect(body.research_capture).toEqual({ captured_at: "2026-09-15T18:00:00Z", season: 2027, horizon_days: 90, summary_count: 20, summary_with_pickcenter: 0, candidate_games: 40, eligible_games: 20, capture_limit: 20, capture_truncated: true, selection_strategy: "nearest_two_thirds_plus_uniform_tail", near_term_games: 13, market_status: "capture_incomplete" });
+  });
+
+  it("keeps accepted quotes partial when the bounded slate was truncated", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 2, pregame: 2 }] },
+      { results: [{ receipts: 1, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [{ payload_json: JSON.stringify({
+        provider: "ESPN Summary",
+        sport: "basketball",
+        season: 2027,
+        candidate_games: 40,
+        eligible_games: 20,
+        capture_limit: 20,
+        capture_truncated: true,
+        summary_count: 20,
+        summary_with_pickcenter: 2,
+        accepted_markets: 6,
+        rejected_records: 0,
+      }), captured_at: "2026-09-15T18:00:00Z" }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    await expect(response.json()).resolves.toMatchObject({
+      research_capture: { accepted_markets: 6, capture_truncated: true, market_status: "capture_incomplete" },
+    });
   });
 
   it("counts only market connector receipts in capture metadata", async () => {
