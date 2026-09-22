@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { lowerDivisionSelection, lowerForecastCsvRows, lowerForecastExplanation, lowerForecastsForDivision, lowerForecastUncertainty, lowerResultsForDivision, validateLowerFootballResults } from "./football-lower-results";
 
@@ -15,7 +16,7 @@ const forecast = (division: "fcs" | "d2" | "d3", game_id: string, kickoff: strin
   away_id: `${division}-away`, away_name: `${division} Away`, neutral: false,
   model_id: `model-${division}`,
   prediction: {
-    home_margin: 3, total: 48, home_score: 26, away_score: 22,
+    home_margin: 4, total: 48, home_score: 26, away_score: 22,
     home_win_probability, margin_low, margin_high,
   },
 });
@@ -33,13 +34,29 @@ const model = (division: "fcs" | "d2" | "d3", ratings = [
 describe("lower-division football results", () => {
   it("keeps D2 and D3 cohorts separate and recomputes coverage", () => {
     const archive = validateLowerFootballResults({
-      schema_version: 1, sport: "football", season: 2026, generated_at: "now", rows: [row("d2"), row("d3"), row("d2", false), { bad: true }],
+      schema_version: 1, sport: "football", season: 2026, generated_at: "now", rows: [row("d2"), row("d3"), { ...row("d2", false), game_id: "d2-2" }],
       teams: { d2: [], d3: [] }, limitations: [],
     });
     expect(lowerResultsForDivision(archive, "d2")).toHaveLength(2);
     expect(lowerResultsForDivision(archive, "d3")).toHaveLength(1);
     expect(archive.coverage.d2).toEqual({ games: 2, score_complete: 1, scores_missing: 1, upcoming_games: 0, forecast_games: 0 });
     expect(archive.coverage.d3).toEqual({ games: 1, score_complete: 1, scores_missing: 0, upcoming_games: 0, forecast_games: 0 });
+  });
+
+  it("fails closed instead of dropping a malformed schedule row", () => {
+    expect(() => validateLowerFootballResults({
+      schema_version: 1, sport: "football", season: 2026, generated_at: "now",
+      rows: [row("d2"), { bad: true }], teams: { d2: [], d3: [] }, limitations: [],
+    })).toThrow("malformed schedule row at index 1");
+  });
+
+  it("accepts the checked-in exact-division 2026 release", () => {
+    const release = JSON.parse(readFileSync("public/data/football/lower-division-results-2026.json", "utf8")) as unknown;
+    const archive = validateLowerFootballResults(release);
+    expect(archive.coverage.d2.forecast_games).toBe(570);
+    expect(archive.coverage.d3.forecast_games).toBe(842);
+    expect(archive.forecasts.d2.every((item) => item.scope_division === "d2")).toBe(true);
+    expect(archive.forecasts.d3.every((item) => item.scope_division === "d3")).toBe(true);
   });
 
   it("fails closed for an unsupported archive edition", () => {
@@ -62,19 +79,15 @@ describe("lower-division football results", () => {
     expect(lowerForecastsForDivision(archive, "d3").map((item) => item.game_id)).toEqual(["d3-only"]);
   });
 
-  it("drops a forecast whose source scope disagrees with its keyed division", () => {
-    const archive = validateLowerFootballResults({
+  it("fails closed when a forecast crosses its keyed division", () => {
+    expect(() => validateLowerFootballResults({
       schema_version: 2, sport: "football", season: 2026, generated_at: "now", rows: [],
       teams: { d2: [], d3: [] }, limitations: [],
       forecasts: {
         d2: [forecast("d3", "miskeyed-d3", "2026-09-01T00:00:00Z", 0.5, -10, 10)],
         d3: [forecast("d3", "valid-d3", "2026-09-01T00:00:00Z", 0.5, -10, 10)],
       },
-    });
-    expect(archive.forecasts.d2).toEqual([]);
-    expect(archive.forecasts.d3.map((item) => item.game_id)).toEqual(["valid-d3"]);
-    expect(archive.coverage.d2.forecast_games).toBe(0);
-    expect(archive.coverage.d3.forecast_games).toBe(1);
+    })).toThrow("malformed d2 forecast row at index 0");
   });
 
   it("exports the published interval width alongside each forecast", () => {
@@ -82,7 +95,7 @@ describe("lower-division football results", () => {
     expect(lowerForecastUncertainty(item)).toBe(24);
     expect(lowerForecastCsvRows([item])[0]).toEqual([
       "d2", "d2-1", "2026-09-01T00:00:00Z", "d2 Away", "d2 Home", "home field", "model-d2",
-      22, 26, 48, 3, 0.6, -10, 14, 24,
+      22, 26, 48, 4, 0.6, -10, 14, 24,
     ]);
   });
 

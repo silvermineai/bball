@@ -103,6 +103,7 @@ function validRow(value: unknown): value is LowerFootballResult {
   const row = value as Record<string, unknown>;
   return typeof row.game_id === "string"
     && typeof row.kickoff === "string"
+    && !Number.isNaN(Date.parse(row.kickoff))
     && divisions.has(row.scope_division as LowerFootballDivision)
     && typeof row.home_id === "string"
     && typeof row.home_name === "string"
@@ -121,7 +122,12 @@ function validPrediction(value: unknown): value is LowerFootballPrediction {
     .every((key) => finite(row[key]) != null)
     && Number(row.home_win_probability) >= 0
     && Number(row.home_win_probability) <= 1
-    && Number(row.total) >= 0;
+    && Number(row.total) >= 0
+    && Number(row.margin_low) <= Number(row.margin_high)
+    // The publisher rounds scores and margins; this tolerance preserves valid
+    // release rounding while rejecting hand-edited or mixed-edition rows.
+    && Math.abs(Number(row.home_score) + Number(row.away_score) - Number(row.total)) <= 0.21
+    && Math.abs(Number(row.home_score) - Number(row.away_score) - Number(row.home_margin)) <= 0.21;
 }
 
 function validForecast(value: unknown): value is LowerFootballForecast {
@@ -134,6 +140,7 @@ function validForecast(value: unknown): value is LowerFootballForecast {
     && typeof row.home_name === "string"
     && typeof row.away_id === "string"
     && typeof row.away_name === "string"
+    && !Number.isNaN(Date.parse(row.kickoff))
     && typeof row.model_id === "string"
     && validPrediction(row.prediction);
 }
@@ -175,16 +182,34 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
   if (raw.sport !== "football" || (raw.schema_version !== 1 && raw.schema_version !== 2) || typeof raw.season !== "number") {
     throw new Error("Lower-division football archive has an unsupported edition.");
   }
-  const rows = Array.isArray(raw.rows) ? raw.rows.filter(validRow) : [];
+  const rawRows = Array.isArray(raw.rows) ? raw.rows : [];
+  const rows = rawRows.map((row, index) => {
+    if (!validRow(row)) throw new Error(`Lower-division football archive has a malformed schedule row at index ${index}.`);
+    return row;
+  });
+  const resultIds = new Set<string>();
+  for (const row of rows) {
+    const key = `${row.scope_division}:${row.game_id}`;
+    if (resultIds.has(key)) throw new Error(`Lower-division football archive has a duplicate schedule row: ${key}.`);
+    resultIds.add(key);
+  }
   const teams = { fcs: [], d2: [], d3: [] } as Record<LowerFootballDivision, LowerFootballTeam[]>;
   for (const division of archiveDivisions) {
     const source = raw.teams && typeof raw.teams === "object" ? (raw.teams as Record<string, unknown>)[division] : [];
-    teams[division] = Array.isArray(source) ? source.filter((team): team is LowerFootballTeam => {
-      if (!team || typeof team !== "object") return false;
+    const rawTeams = Array.isArray(source) ? source : [];
+    teams[division] = rawTeams.map((team, index) => {
+      if (!team || typeof team !== "object") {
+        throw new Error(`Lower-division football archive has a malformed ${division} team row at index ${index}.`);
+      }
       const row = team as Record<string, unknown>;
-      return typeof row.team_id === "string" && typeof row.team === "string" && row.division === division
-        && ["games", "wins", "losses", "points_for", "points_against"].every((key) => finite(row[key]) != null);
-    }) : [];
+      if (!(typeof row.team_id === "string" && typeof row.team === "string" && row.division === division
+        && ["games", "wins", "losses", "points_for", "points_against"].every((key) => finite(row[key]) != null))) {
+        throw new Error(`Lower-division football archive has a malformed ${division} team row at index ${index}.`);
+      }
+      return row as unknown as LowerFootballTeam;
+    });
+    const teamIds = new Set(teams[division].map((team) => team.team_id));
+    if (teamIds.size !== teams[division].length) throw new Error(`Lower-division football archive has duplicate ${division} team IDs.`);
   }
   const coverage = Object.fromEntries(archiveDivisions.map((division) => [division, {
     games: 0,
@@ -203,11 +228,34 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
     const sourceModel = raw.models && typeof raw.models === "object" ? (raw.models as Record<string, unknown>)[division] : null;
     if (validModel(sourceModel, division, raw.season)) models[division] = sourceModel;
     const sourceForecasts = raw.forecasts && typeof raw.forecasts === "object" ? (raw.forecasts as Record<string, unknown>)[division] : [];
-    forecasts[division] = Array.isArray(sourceForecasts)
-      ? sourceForecasts.filter((item): item is LowerFootballForecast => validForecast(item) && item.scope_division === division)
-      : [];
+    if (!Array.isArray(sourceForecasts)) {
+      forecasts[division] = [];
+    } else {
+      forecasts[division] = sourceForecasts.map((item, index) => {
+        if (!validForecast(item) || item.scope_division !== division) {
+          throw new Error(`Lower-division football archive has a malformed ${division} forecast row at index ${index}.`);
+        }
+        if (models[division] && item.model_id !== models[division]?.id) {
+          throw new Error(`Lower-division football archive has a ${division} forecast from the wrong model edition.`);
+        }
+        return item;
+      });
+      const forecastIds = new Set(forecasts[division].map((item) => item.game_id));
+      if (forecastIds.size !== forecasts[division].length) throw new Error(`Lower-division football archive has duplicate ${division} forecast game IDs.`);
+    }
     coverage[division].upcoming_games = Number(raw.coverage && typeof raw.coverage === "object" && (raw.coverage as Record<string, unknown>)[division] && typeof (raw.coverage as Record<string, unknown>)[division] === "object" ? ((raw.coverage as Record<string, unknown>)[division] as Record<string, unknown>).upcoming_games || 0 : 0);
     coverage[division].forecast_games = forecasts[division].length;
+    const rawCoverage = raw.coverage && typeof raw.coverage === "object" ? (raw.coverage as Record<string, unknown>)[division] : null;
+    if (rawCoverage && typeof rawCoverage === "object" && !Array.isArray(rawCoverage)) {
+      const expectedForecasts = (rawCoverage as Record<string, unknown>).forecast_games;
+      const expectedUpcoming = (rawCoverage as Record<string, unknown>).upcoming_games;
+      if (expectedForecasts != null && (typeof expectedForecasts !== "number" || !Number.isInteger(expectedForecasts) || expectedForecasts !== forecasts[division].length)) {
+        throw new Error(`Lower-division football archive ${division} forecast coverage does not match its rows.`);
+      }
+      if (expectedUpcoming != null && (typeof expectedUpcoming !== "number" || !Number.isInteger(expectedUpcoming) || expectedUpcoming < forecasts[division].length)) {
+        throw new Error(`Lower-division football archive ${division} upcoming coverage is below its forecast rows.`);
+      }
+    }
   }
   return {
     schema_version: typeof raw.schema_version === "number" ? raw.schema_version : 1,
