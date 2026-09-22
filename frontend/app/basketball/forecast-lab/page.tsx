@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { getBasketball, getBasketballMarketComparisons, getRosterModel } from "../../_lib/basketball-data";
 import { compactMatchupSignals } from "../../_lib/forecast-lab-analysis";
+import { readPublishedCalibration } from "../model/ForecastCalibrationTable";
 import ForecastLab from "./ForecastLab";
 
 export const metadata = {
@@ -50,6 +51,7 @@ export default function Page() {
         markets={getBasketballMarketComparisons()}
         factorSignals={compactMatchupSignals(overview.upcoming)}
         factorSignalModelId={overview.model.id}
+        calibrationBuckets={readPublishedCalibration()}
       />
     </Suspense>
   </>;

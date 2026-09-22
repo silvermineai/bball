@@ -13,6 +13,8 @@ type CalibrationGame = {
 };
 
 export type CalibrationBucket = {
+  lower: number;
+  upper: number;
   label: string;
   games: number;
   predicted: number;
@@ -51,6 +53,8 @@ export function buildCalibrationBuckets(
     const predicted = average("probability");
     const observed = average("winner");
     return {
+      lower: band.min,
+      upper: band.max,
       label: band.label,
       games: rows.length,
       predicted: predicted == null ? 0 : predicted,

@@ -38,6 +38,8 @@ import { completeForecastLabMarketQuotes, forecastLabMarketEvidence, forecastLab
 import { comparisonGapDirectionLabel } from "../../_lib/market-display";
 import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
 import { matchupTeamRatings } from "../../_lib/forecast-team-context";
+import { basketballCalibrationContext, type BasketballCalibrationContext } from "../../_lib/basketball-calibration";
+import type { CalibrationBucket } from "../model/ForecastCalibrationTable";
 
 type View = ForecastLabView;
 type Sort = ForecastLabSort;
@@ -52,6 +54,7 @@ type Row = {
   factorSignal: ForecastMatchupSignal | null;
   evidence: ForecastEvidenceCoverage;
   signal: ForecastSignalContext;
+  calibration: BasketballCalibrationContext | null;
 };
 
 type ModelDelta = {
@@ -139,6 +142,7 @@ function modelRow(
   modelDelta: ModelDelta | null,
   factorSignal: ForecastMatchupSignal | undefined,
   scheduled: boolean,
+  calibration: BasketballCalibrationContext | null,
 ): Row | null {
   const prediction = game.prediction || game.fallback_prediction;
   if (!prediction) return null;
@@ -159,6 +163,7 @@ function modelRow(
       roster: !!scenario,
       market: hasCompleteForecastLabMarket(marketComparisons),
     }),
+    calibration,
   };
 }
 
@@ -196,6 +201,7 @@ export default function ForecastLab({
   markets,
   factorSignals,
   factorSignalModelId,
+  calibrationBuckets,
 }: {
   overview: BBOverview;
   scenarios: BBRosterScenario[];
@@ -203,6 +209,7 @@ export default function ForecastLab({
   markets: Record<string, Comparison[]>;
   factorSignals: Record<string, ForecastMatchupSignal>;
   factorSignalModelId: string;
+  calibrationBuckets: CalibrationBucket[];
 }) {
   const params = useSearchParams();
   const initial = parseForecastLabFilters(params.toString());
@@ -364,6 +371,7 @@ export default function ForecastLab({
       : modelSelection;
     const factorEditionMatches = selectedModelId === factorSignalModelId;
     const rosterEditionMatches = selectedModelId === rosterPrimaryModelId;
+    const calibrationEditionMatches = modelSelection === "latest" && selectedModelId === overview.model.id;
     const latestById = new Map(
       (modelSelection === "latest" ? activeGames : latestGames || []).map((game) => [game.id, game]),
     );
@@ -390,6 +398,7 @@ export default function ForecastLab({
             })(),
         factorEditionMatches ? factorSignals[game.id] : undefined,
         hasConfirmedScheduleClock(scheduleClockByGame.get(game.id) || game),
+        calibrationEditionMatches ? basketballCalibrationContext(game.prediction?.home_win_probability ?? game.fallback_prediction?.home_win_probability ?? Number.NaN, calibrationBuckets) : null,
       ));
     return sortRows(
       candidates.filter((row): row is Row => !!row).filter((row) => {
@@ -403,7 +412,7 @@ export default function ForecastLab({
       }),
       sort,
     );
-  }, [activeGames, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, modelTeamIds, overview.model.id, overview.ratings, query, rosterPrimaryModelId, scenarioByGame, scheduleClockByGame, sort, view]);
+  }, [activeGames, calibrationBuckets, factorSignalModelId, factorSignals, latestGames, liveCatalog, liveMarkets, markets, modelSelection, modelTeamIds, overview.model.id, overview.ratings, query, rosterPrimaryModelId, scenarioByGame, scheduleClockByGame, sort, view]);
 
   const scenarioCount = rows.filter((row) => row.scenario).length;
   const disagreement = rows.reduce(
@@ -458,7 +467,7 @@ export default function ForecastLab({
   const exportRows = () => downloadCsv(
     "basketball-forecast-lab.csv",
     toCsv(
-      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Evidence present", "Evidence total", "Missing core evidence", "Market lineage", "Market evidence state", "Estimate type", "Signal context", "Range context", "Probability edge from even (pp)", "Prediction range width", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Spread provider", "Spread bookmaker", "Spread observation ID", "Spread source event ID", "Spread captured at", "Spread updated at", "Latest home spread", "Spread edge", "Total provider", "Total bookmaker", "Total observation ID", "Total source event ID", "Total captured at", "Total updated at", "Latest total", "Total edge", "Moneyline provider", "Moneyline bookmaker", "Moneyline observation ID", "Moneyline source event ID", "Moneyline captured at", "Moneyline updated at", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
+      ["Scheduled start", "Recorded source start", "Recorded time valid", "Away", "Home", "Evidence present", "Evidence total", "Missing core evidence", "Market lineage", "Market evidence state", "Estimate type", "Signal context", "Range context", "Probability edge from even (pp)", "Prediction range width", "Calibration side", "Calibration band low", "Calibration band high", "Calibration held-out games", "Calibration observed rate", "Calibration observed minus predicted (pp)", "Primary home margin", "Roster scenario home margin", "Roster delta", "Primary home win probability", "Roster scenario home win probability", "Primary margin range low", "Primary margin range high", "Roster scenario range low", "Roster scenario range high", "Roster primary model ID", "Strongest factor", "Factor side", "Factor rate gap percentage points", "Factor source season", "Factor model ID", "Verified market observations", "Spread provider", "Spread bookmaker", "Spread observation ID", "Spread source event ID", "Spread captured at", "Spread updated at", "Latest home spread", "Spread edge", "Total provider", "Total bookmaker", "Total observation ID", "Total source event ID", "Total captured at", "Total updated at", "Latest total", "Total edge", "Moneyline provider", "Moneyline bookmaker", "Moneyline observation ID", "Moneyline source event ID", "Moneyline captured at", "Moneyline updated at", "No-vig market home probability", "Moneyline probability edge", "Edition margin delta", "Edition total delta", "Edition win probability delta", "Compared latest model", "Brief"],
       rows.map((row) => [
         row.game.starts_at,
         scheduleClockByGame.get(row.game.id)?.source_start,
@@ -475,6 +484,12 @@ export default function ForecastLab({
         row.signal.range_context,
         row.signal.probability_edge_pp,
         row.signal.range_width,
+        row.calibration?.side,
+        row.calibration?.confidence_lower,
+        row.calibration?.confidence_upper,
+        row.calibration?.games,
+        row.calibration?.observed,
+        row.calibration?.observed_gap_pp,
         row.prediction.home_margin,
         row.scenario?.roster_margin,
         row.scenario?.margin_delta,
@@ -544,7 +559,7 @@ export default function ForecastLab({
         <button className="button secondary" type="button" onClick={share}>Copy forecast lab link</button>
         {copied && <span className="note" role="status">{copied}</span>}
       </div>
-      <p className="note">This board compares published model artifacts. Each row audits four core checks: a primary team model, confirmed tip time, same-edition Four Factors and an exact-ID roster continuity scenario. Missing market evidence is reported separately because no quote is not a zero edge or a failed forecast. The roster challenger is a research scenario whose probability mapping and range reuse the matching primary edition&apos;s held-out calibration; it does not replace the ledger forecast or market interpretation. Four Factor context appears only when its source edition matches the selected model{factorEditionMatches ? ` (${factorSignalModelId})` : ""}. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
+      <p className="note">This board compares published model artifacts. Each row audits four core checks: a primary team model, confirmed tip time, same-edition Four Factors and an exact-ID roster continuity scenario. Missing market evidence is reported separately because no quote is not a zero edge or a failed forecast. The roster challenger is a research scenario whose probability mapping and range reuse the matching primary edition&apos;s held-out calibration; it does not replace the ledger forecast or market interpretation. Four Factor context appears only when its source edition matches the selected model{factorEditionMatches ? ` (${factorSignalModelId})` : ""}. Held-out probability context appears only for the current edition with a matching published calibration artifact; historical editions remain unavailable rather than borrowing another model&apos;s bins. Choose <strong>Model edition delta</strong> with a historical edition to see that edition&apos;s margin, total and win-probability difference from the latest D1 model. Market comparisons are shown only for the latest registered edition because their model ID is part of the evidence boundary.</p>
       {!rosterEditionMatches && <p className="notice" role="status">Roster scenarios are withheld: challenger edition <span className="mono">{rosterPrimaryModelId}</span> was calibrated against a different primary model than <span className="mono">{selectedModelId}</span>. Rebuild the challenger before using continuity deltas.</p>}
       <div className="strip" style={{ borderTop: "1px solid var(--ink)" }}>
         <div><strong>{rows.length.toLocaleString()}</strong><span>Games in view</span></div>
@@ -652,7 +667,7 @@ export default function ForecastLab({
               <td className="numeric"><strong>{numeric(p.home_margin, 1)}</strong><small>{numeric(p.home_win_probability * 100)}% home · {numeric(p.total, 1)} total</small><small>{row.signal.label} · {row.signal.probability_edge_pp == null ? "probability unavailable" : `${numeric(row.signal.probability_edge_pp)} pp from even`}</small><small>{row.signal.range_context} · {numeric(p.margin_high - p.margin_low, 1)}-point range</small>{row.teamRatings.home && row.teamRatings.away ? <small>Prior profile: {row.teamRatings.away.name} {signed(row.teamRatings.away.adj_net, " net")} ({row.teamRatings.away.games} g) · {row.teamRatings.home.name} {signed(row.teamRatings.home.adj_net, " net")} ({row.teamRatings.home.games} g)</small> : <small>Prior team profile unavailable for one or both model IDs</small>}<small>{row.game.forecast_model_id || "edition unavailable"} · {row.game.forecast_created_at && Number.isFinite(Date.parse(row.game.forecast_created_at)) ? `generated ${marketClock(row.game.forecast_created_at)}` : "forecast clock unavailable"}</small></td>
               <td>{row.factorSignal ? <><strong>{row.factorSignal.edge > 0 ? row.game.home_name : row.factorSignal.edge < 0 ? row.game.away_name : "Even"}</strong><small>{row.factorSignal.label} · {numeric(Math.abs(row.factorSignal.edge) * 100)} pp gap</small><small>{row.factorSignal.season - 1}–{String(row.factorSignal.season).slice(-2)} descriptive rates</small></> : <span className="muted">No same-edition factor signal</span>}</td>
               <td className="numeric">{row.scenario ? <><strong>{numeric(row.scenario.roster_margin, 1)}</strong><small>{numeric(row.scenario.roster_home_win_probability * 100)}% home · {numeric(row.scenario.roster_margin_low)} to {numeric(row.scenario.roster_margin_high)}</small><small>{row.scenario.margin_delta >= 0 ? "+" : ""}{numeric(row.scenario.margin_delta, 1)} pts vs primary · exact-ID continuity</small></> : <span>—</span>}</td>
-                              <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small></td>
+                              <td className="numeric"><strong>{numeric(p.margin_low, 1)} to {numeric(p.margin_high, 1)}</strong><small>{numeric(confidence * 100)}% strongest-side win probability</small><small>{numeric(p.margin_high - p.margin_low, 1)}-point range width · {numeric(p.pace, 1)} possessions</small>{row.calibration ? <small>{row.calibration.side} {numeric(row.calibration.confidence_lower * 100, 0)}–{numeric(row.calibration.confidence_upper * 100, 0)}% band · {row.calibration.games.toLocaleString()} held-out games · {row.calibration.observed == null ? "observed rate unavailable" : `${numeric(row.calibration.observed * 100, 1)}% observed`}</small> : <small>Held-out probability band unavailable for this edition</small>}</td>
               <td>{marketEvidence.state === "verified" ? <><strong>{marketEvidence.complete} verified quote{marketEvidence.complete === 1 ? "" : "s"}</strong>{marketQuote(row.comparisons, "spreads") && <small>{marketQuote(row.comparisons, "spreads")!.bookmaker} · spread {numeric(marketQuote(row.comparisons, "spreads")!.line)} · edge {signed(marketQuote(row.comparisons, "spreads")!.model_difference)} · {comparisonGapDirectionLabel(marketQuote(row.comparisons, "spreads")!)}</small>}{marketQuote(row.comparisons, "totals") && <small>{marketQuote(row.comparisons, "totals")!.bookmaker} · total {numeric(marketQuote(row.comparisons, "totals")!.line)} · edge {signed(marketQuote(row.comparisons, "totals")!.model_difference)} · {comparisonGapDirectionLabel(marketQuote(row.comparisons, "totals")!)}</small>}{marketQuote(row.comparisons, "h2h") && <small>{marketQuote(row.comparisons, "h2h")!.bookmaker} · no-vig home {numeric(marketQuote(row.comparisons, "h2h")!.market_home_probability == null ? null : marketQuote(row.comparisons, "h2h")!.market_home_probability! * 100)}% · edge {signed(marketQuote(row.comparisons, "h2h")!.model_difference * 100, " pp")} · {comparisonGapDirectionLabel(marketQuote(row.comparisons, "h2h")!)}</small>}{(["spreads", "totals", "h2h"] as const).map((market) => { const q = marketQuote(row.comparisons, market); if (!q) return null; const identity = forecastLabQuoteIdentity(q); return <small key={`${market}-clock`}>{market.toUpperCase()} · {q.provider} · captured {marketClock(q.captured_at)} · updated {marketClock(q.updated_at)}<br />{identity.label} · observation <code>{identity.observationId || "—"}</code> · source event <code>{identity.marketGameId || "—"}</code></small>; })}</> : marketEvidence.state === "retained_incomplete" ? <><strong>Retained quote incomplete</strong><small>{marketEvidence.incomplete} retained row{marketEvidence.incomplete === 1 ? "" : "s"} lacks the value or clock required for comparison.</small><small>No line or model edge is inferred.</small></> : <span className="muted">No verified market quote captured</span>}</td>
               <td className="numeric">{row.modelDelta ? <><strong>{signed(row.modelDelta.margin)}</strong><small>margin vs latest</small><small>{signed(row.modelDelta.total)} total · {signed(row.modelDelta.winProbability * 100, " pp")} home probability</small></> : <span className="muted">—</span>}</td>
             </tr>;
