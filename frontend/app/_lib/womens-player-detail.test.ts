@@ -9,6 +9,7 @@ import {
   womensPlayerCsvHeaders,
   womensPlayerCsvRows,
   compareWomensPlayerRows,
+  womensPlayerSourceCoverage,
 } from "./womens-player-detail";
 
 describe("women's player retained detail", () => {
@@ -63,6 +64,20 @@ describe("women's player retained detail", () => {
     ];
     expect(rows.sort((left, right) => compareWomensPlayerRows(left, right, "avgBlocks")).map((row) => row.player_id))
       .toEqual(["leader", "zero", "missing"]);
+  });
+
+  it("counts source cohorts by exact player ID without deduplicating names", () => {
+    expect(womensPlayerSourceCoverage(
+      [{ player_id: "1" }, { player_id: "2" }, { player_id: "2" }, { player_id: "" }],
+      [{ player_id: "2" }, { player_id: "3" }, { player_id: 3 }],
+    )).toEqual({
+      seasonIds: 2,
+      boxIds: 2,
+      overlapIds: 1,
+      seasonOnlyIds: 1,
+      boxOnlyIds: 1,
+      uniqueIds: 3,
+    });
   });
 
   it("uses exact ID as a deterministic tie break and leaves non-finite values unavailable", () => {

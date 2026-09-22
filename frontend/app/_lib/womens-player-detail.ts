@@ -10,6 +10,42 @@ export type WomensPlayerCsvRecord = {
   dnp_rows?: number;
   stats: WomensPlayerStats;
 };
+
+export type WomensPlayerSourceCoverage = {
+  /** Unique exact IDs in the bounded player-season release. */
+  seasonIds: number;
+  /** Unique exact IDs in the retained game-box archive. */
+  boxIds: number;
+  /** IDs present in both releases; this is an exact-ID overlap, not a name join. */
+  overlapIds: number;
+  seasonOnlyIds: number;
+  boxOnlyIds: number;
+  uniqueIds: number;
+};
+
+/**
+ * Describe the player cohorts behind the women’s table without conflating
+ * source rows or joining on names. The two releases can overlap by exact
+ * publisher athlete ID, while each also contains IDs the other does not.
+ */
+export function womensPlayerSourceCoverage(
+  seasonPlayers: readonly { player_id: string | number | null | undefined }[],
+  boxPlayers: readonly { player_id: string | number | null | undefined }[],
+): WomensPlayerSourceCoverage {
+  const ids = (rows: readonly { player_id: string | number | null | undefined }[]) =>
+    new Set(rows.map((row) => String(row.player_id ?? "").trim()).filter(Boolean));
+  const seasonIds = ids(seasonPlayers);
+  const boxIds = ids(boxPlayers);
+  const overlapIds = [...seasonIds].filter((id) => boxIds.has(id)).length;
+  return {
+    seasonIds: seasonIds.size,
+    boxIds: boxIds.size,
+    overlapIds,
+    seasonOnlyIds: seasonIds.size - overlapIds,
+    boxOnlyIds: boxIds.size - overlapIds,
+    uniqueIds: new Set([...seasonIds, ...boxIds]).size,
+  };
+}
 export type WomensPlayerDetailKind = "count" | "rate" | "percentage";
 export type WomensPlayerDetailField = readonly [key: string, label: string, kind: WomensPlayerDetailKind];
 
