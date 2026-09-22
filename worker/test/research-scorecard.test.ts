@@ -525,8 +525,8 @@ describe("live research scorecard", () => {
       direction_result: "win",
     })]);
     expect(body.sports.basketball.market_metrics).toMatchObject([
-      { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8, line_results: { win: 1 }, model_results: { win: 1 } },
-      { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9, line_results: { loss: 1 }, model_results: { win: 1 } },
+      { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8, line_results: { win: 1 }, model_results: { win: 1 }, error_comparison: { compared: 1, model_better: 1, line_better: 0, ties: 0 } },
+      { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9, line_results: { loss: 1 }, model_results: { win: 1 }, error_comparison: { compared: 1, model_better: 1, line_better: 0, ties: 0 } },
     ]);
     expect(body.sports.basketball.pending_market_metrics).toEqual([]);
   });

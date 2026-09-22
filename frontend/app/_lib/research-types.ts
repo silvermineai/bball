@@ -185,6 +185,12 @@ export type SportSummary = {
     direction_results: Record<string, number>;
     line_results?: Record<string, number>;
     model_results?: Record<string, number>;
+    error_comparison?: {
+      compared: number;
+      model_better: number;
+      line_better: number;
+      ties: number;
+    };
   }[];
   /**
    * Upcoming and awaiting-result quote cohorts. These describe current model

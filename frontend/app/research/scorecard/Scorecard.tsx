@@ -46,6 +46,11 @@ function directionSummary(results: Record<string, number>) {
     .join(" · ") || "—";
 }
 
+function errorComparisonSummary(comparison?: { compared: number; model_better: number; line_better: number; ties: number }) {
+  if (!comparison || comparison.compared < 1) return "—";
+  return `${comparison.model_better} model · ${comparison.line_better} line · ${comparison.ties} tie (${comparison.compared} scored)`;
+}
+
 function quoteValue(c: Ledger["games"][number]["comparisons"][number]): string {
   const price = (value: number | null | undefined) => value == null ? "—" : value.toFixed(2);
   if (c.market === "totals") {
@@ -654,6 +659,7 @@ export default function Scorecard() {
                   <th>Matched games</th>
                   <th>Model MAE</th>
                   <th>Market MAE</th>
+                  <th>Error comparison</th>
                   <th>Model winner%</th>
                   <th>Market winner%</th>
                   <th>Model Brier</th>
@@ -671,6 +677,7 @@ export default function Scorecard() {
                     <td>{r.games}</td>
                     <td>{fmt(r.model_mae)}</td>
                     <td>{fmt(r.market_mae)}</td>
+                    <td>{errorComparisonSummary(r.error_comparison)}</td>
                     <td>{r.model_winner_accuracy == null ? "—" : `${fmt(r.model_winner_accuracy * 100)}%`}</td>
                     <td>{r.market_winner_accuracy == null ? "—" : `${fmt(r.market_winner_accuracy * 100)}%`}</td>
                     <td>{fmt(r.model_brier, 4)}</td>

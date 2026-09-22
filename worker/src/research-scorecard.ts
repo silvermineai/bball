@@ -531,9 +531,19 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
     const direction: Record<string, number> = {};
     const line: Record<string, number> = {};
     const model: Record<string, number> = {};
+    const errorComparison = { compared: 0, model_better: 0, line_better: 0, ties: 0 };
     for (const q of quotes) if (typeof q.direction_result === "string") direction[q.direction_result] = (direction[q.direction_result] || 0) + 1;
     for (const q of quotes) if (typeof q.line_result === "string") line[q.line_result] = (line[q.line_result] || 0) + 1;
     for (const q of quotes) if (typeof q.model_result === "string") model[q.model_result] = (model[q.model_result] || 0) + 1;
+    for (const q of quotes) {
+      const modelError = number(q.model_absolute_error);
+      const marketError = number(q.market_absolute_error);
+      if (modelError === null || marketError === null) continue;
+      errorComparison.compared += 1;
+      if (Math.abs(modelError - marketError) <= 1e-9) errorComparison.ties += 1;
+      else if (modelError < marketError) errorComparison.model_better += 1;
+      else errorComparison.line_better += 1;
+    }
     const base = {
       model_id: first.model_id, provider: first.provider, bookmaker: first.bookmaker, market: first.market, games: quotes.length,
       model_difference_mean: mean(quotes.flatMap((q) => number(q.model_difference) === null ? [] : [Number(q.model_difference)])),
@@ -545,6 +555,7 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
     if (!includeSettlementMetrics) return base;
     return {
       ...base,
+      error_comparison: errorComparison,
       model_mae: mean(quotes.flatMap((q) => number(q.model_absolute_error) === null ? [] : [Number(q.model_absolute_error)])),
       market_mae: mean(quotes.flatMap((q) => number(q.market_absolute_error) === null ? [] : [Number(q.market_absolute_error)])),
       model_brier: mean(quotes.flatMap((q) => number(q.model_brier) === null ? [] : [Number(q.model_brier)])),
