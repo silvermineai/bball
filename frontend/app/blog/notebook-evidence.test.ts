@@ -29,6 +29,13 @@ const shotEdition = {
 const base = {
   homeId: "10",
   awayId: "20",
+  schedule: {
+    starts_at: "2026-11-02T20:00:00Z",
+    time_tbd: 0,
+    source_start: "2026-11-02T20:00:00Z",
+    source_time_valid: true,
+    source_observed_at: "2026-09-20T12:00:00Z",
+  },
   forecastModelId: "forecast-1",
   forecastCapturedAt: "2026-09-20T12:00:00Z",
   recentForm,
@@ -46,7 +53,8 @@ const base = {
 describe("notebook evidence chain", () => {
   it("keeps model editions distinct from verified source receipts", () => {
     const rows = buildNotebookEvidenceRows(base);
-    expect(rows.map((row) => row.status)).toEqual(["edition", "edition", "verified", "verified", "verified"]);
+    expect(rows.map((row) => row.status)).toEqual(["verified", "edition", "edition", "verified", "verified", "verified"]);
+    expect(rows.find((row) => row.key === "schedule")?.receipt).toBe("2026-11-02T20:00:00Z");
     expect(rows.find((row) => row.key === "forecast")?.receipt).toBe("forecast-1");
     expect(rows.find((row) => row.key === "shots")?.receipt).toBe("c".repeat(64));
     expect(rows.find((row) => row.key === "recruiting")?.coverage).toContain("2/2 exact programs");
@@ -60,5 +68,25 @@ describe("notebook evidence chain", () => {
     const shots = rows.find((row) => row.key === "shots");
     expect(shots?.status).toBe("unavailable");
     expect(shots?.receipt).toBe("Unavailable");
+  });
+
+  it("keeps an unresolved schedule clock unavailable even when a canonical start exists", () => {
+    const rows = buildNotebookEvidenceRows({
+      ...base,
+      schedule: {
+        ...base.schedule,
+        source_start: null,
+        source_time_valid: false,
+        source_observed_at: "2026-09-20T12:00:00Z",
+        time_tbd: 0,
+      },
+    });
+    const schedule = rows.find((row) => row.key === "schedule");
+    expect(schedule).toMatchObject({
+      status: "unavailable",
+      receipt: "Unavailable",
+      captured: "2026-09-20T12:00:00Z",
+    });
+    expect(schedule?.coverage).toBe("Source clock unresolved");
   });
 });

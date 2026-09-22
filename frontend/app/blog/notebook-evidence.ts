@@ -2,6 +2,7 @@ import type { BBRosters } from "../_lib/basketball-types";
 import type { RecruitingRelease } from "../_lib/recruiting";
 import type { ShotSeason } from "../_lib/shooting";
 import type { NotebookRecentForm } from "./notebook-form";
+import { journalScheduleEvidence } from "./journal-game-evidence";
 
 export type NotebookEvidenceRow = {
   key: string;
@@ -16,6 +17,13 @@ export type NotebookEvidenceRow = {
 export type NotebookEvidenceInput = {
   homeId: string;
   awayId: string;
+  schedule: {
+    starts_at: string;
+    time_tbd: number;
+    source_start?: string | null;
+    source_time_valid?: boolean | null;
+    source_observed_at?: string | null;
+  };
   forecastModelId: string;
   forecastCapturedAt: string;
   recentForm: NotebookRecentForm | null;
@@ -76,8 +84,22 @@ export function buildNotebookEvidenceRows(input: NotebookEvidenceInput): Noteboo
     && input.recentForm.home.id === input.homeId
     && input.recentForm.away.id === input.awayId,
   );
+  const scheduleEvidence = journalScheduleEvidence(input.schedule);
+  const sourceStart = timestamp(input.schedule.source_start) ? input.schedule.source_start : null;
+  const scheduleObserved = timestamp(input.schedule.source_observed_at) ? input.schedule.source_observed_at : null;
 
   return [
+    {
+      key: "schedule",
+      label: "Published game schedule",
+      coverage: scheduleEvidence.label,
+      receipt: sourceStart || "Unavailable",
+      captured: scheduleObserved,
+      status: scheduleEvidence.confirmed ? "verified" : "unavailable",
+      learning: scheduleEvidence.confirmed
+        ? "Use the recorded source clock when deciding whether a pregame market comparison is eligible."
+        : `${scheduleEvidence.detail} Keep the canonical date separate from a confirmed source clock.`,
+    },
     {
       key: "forecast",
       label: "Forecast edition",

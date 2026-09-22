@@ -149,6 +149,7 @@ export default function BasketballNotebook({
   const evidenceRows = buildNotebookEvidenceRows({
     homeId: game.home_id,
     awayId: game.away_id,
+    schedule: game,
     forecastModelId: forecastIdentity.modelId,
     forecastCapturedAt: forecastIdentity.generatedAt,
     recentForm,
