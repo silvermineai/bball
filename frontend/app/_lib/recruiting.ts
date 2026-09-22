@@ -369,6 +369,19 @@ export type RecruitingRosterProductionComparison = {
   returning: RecruitingRosterProductionPlayer | null;
 };
 
+const recruitingProductionEvidenceFields = ["mpg", "ppg", "rpg", "apg", "ts"] as const;
+
+/** Count only finite recorded production fields; missing values stay missing. */
+export function recruitingProductionEvidenceCoverage(
+  player: Pick<RecruitingRosterProductionPlayer, "mpg" | "ppg" | "rpg" | "apg" | "ts">,
+) {
+  const available = recruitingProductionEvidenceFields.filter((field) => {
+    const value = player[field];
+    return typeof value === "number" && Number.isFinite(value);
+  }).length;
+  return { available, total: recruitingProductionEvidenceFields.length };
+}
+
 const recruitingKinds = new Set([
   "all",
   ...Object.keys(categoryLabels),

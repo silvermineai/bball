@@ -11,6 +11,7 @@ import LiveBasketballRecruitingStatus from "../../_components/LiveBasketballRecr
 import LiveBasketballProspectStatus from "../../_components/LiveBasketballProspectStatus";
 import {
   eventLabels,
+  recruitingProductionEvidenceCoverage,
   recruitingRosterProductionComparisons,
   type RecruitingRelease,
   type RecruitingRosterProductionPlayer,
@@ -29,10 +30,19 @@ function ProductionEvidence({ player }: { player: RecruitingRosterProductionPlay
   const name = player.player_id && player.season
     ? <Link href={`/basketball/player/?id=${encodeURIComponent(player.player_id)}&season=${player.season}`}>{player.name}</Link>
     : player.name;
+  const coverage = recruitingProductionEvidenceCoverage(player);
+  const values = [
+    player.mpg == null ? null : `${fmt(player.mpg)} MPG`,
+    player.ppg == null ? null : `${fmt(player.ppg)} PPG`,
+    player.rpg == null ? null : `${fmt(player.rpg)} RPG`,
+    player.apg == null ? null : `${fmt(player.apg)} APG`,
+    player.ts == null ? null : `${fmt(player.ts * 100)}% TS`,
+  ].filter((value): value is string => value != null);
   return <>
     <strong>{name}</strong>
     <small>{player.prior_team || "Prior program unavailable"} · {player.player_id ? `ID ${player.player_id}` : "Historical player ID unavailable"}</small>
-    {player.mpg == null ? <small>Prior production unavailable</small> : <small>{fmt(player.mpg)} MPG · {fmt(player.ppg)} PPG · {fmt(player.rpg)} RPG · {fmt(player.apg)} APG · {player.ts == null ? "TS unavailable" : `${fmt(player.ts * 100)}% TS`}</small>}
+    {values.length ? <small>{values.join(" · ")}</small> : <small>Prior production unavailable</small>}
+    <small>{coverage.available}/{coverage.total} production fields recorded{player.games == null ? " · games unavailable" : ` · ${player.games} games`}</small>
   </>;
 }
 export const metadata = {

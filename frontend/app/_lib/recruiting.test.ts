@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   recruitingRows,
+  recruitingProductionEvidenceCoverage,
   parseRecruitingRelease,
   recruitingRosterProductionComparisons,
   publicationDate,
@@ -149,6 +150,17 @@ describe("school announcement histories", () => {
 });
 
 describe("recruiting program summaries", () => {
+  it("keeps partial production visible instead of treating one missing field as no production", () => {
+    expect(recruitingProductionEvidenceCoverage({ mpg: null, ppg: 12, rpg: 4, apg: null, ts: 0.58 })).toEqual({
+      available: 3,
+      total: 5,
+    });
+    expect(recruitingProductionEvidenceCoverage({ mpg: null, ppg: null, rpg: null, apg: null, ts: null })).toEqual({
+      available: 0,
+      total: 5,
+    });
+  });
+
   it("aggregates linked prior production and identifies high-workload additions", () => {
     const rows = summarizeRecruitingPrograms([
       {
