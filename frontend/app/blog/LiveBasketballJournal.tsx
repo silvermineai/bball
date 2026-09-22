@@ -12,6 +12,7 @@ import { marketReadinessDetail, marketReadinessLabel, marketReadinessState, mark
 import { downloadCsv, toCsv } from "../_lib/csv";
 import { journalScheduleEvidence } from "./journal-game-evidence";
 import {
+  exactBasketballMarketComparisons,
   forecastModelId,
   loadLiveBasketballForecasts,
   loadLiveBasketballMarketComparisons,
@@ -37,6 +38,8 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
   const [savedGames, setSavedGames] = useState<Record<string, SavedGame>>({});
   const [savedMessage, setSavedMessage] = useState("");
   const ratingsById = new Map(ratings.map((team) => [team.id, team]));
+  const marketsForGame = (game: Pick<BBGame, "id" | "forecast_model_id">) =>
+    exactBasketballMarketComparisons(game, markets, edition?.modelId);
 
   useEffect(() => {
     try {
@@ -71,7 +74,7 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
           source_start: game.source_start,
           source_time_valid: game.source_time_valid,
           prediction,
-          marketContext: markets[game.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || null,
+          marketContext: marketsForGame(game).slice(0, 2).map(comparisonQuoteSummary).join(" · ") || null,
         };
         try { window.localStorage.setItem(PREP_LIST_KEY, JSON.stringify({ ids: next, games: updated })); } catch { /* optional storage */ }
         return updated;
@@ -92,7 +95,9 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
         source_start: live.source_start,
         source_time_valid: live.source_time_valid,
         prediction: live.prediction,
-        marketContext: markets[live.id]?.slice(0, 2).map(comparisonQuoteSummary).join(" · ") || savedGames[id]?.marketContext || null,
+        marketContext: status === "live"
+          ? marketsForGame(live).slice(0, 2).map(comparisonQuoteSummary).join(" · ") || null
+          : savedGames[id]?.marketContext || null,
       } satisfies SavedGame : savedGames[id];
     }).filter((game): game is SavedGame => Boolean(game?.prediction));
     if (!rows.length) return;
@@ -234,8 +239,8 @@ export default function LiveBasketballJournal({ games, ratings = [] }: { games: 
                 <p className="journal-editorial-lens"><strong>{lens.title}.</strong> {lens.body}</p>
                 <p className="note"><strong>Reporting question:</strong> {lens.questions[0]}</p>
               </>}
-              {markets[g.id]?.length ? <p className="note">
-                {markets[g.id].slice(0, 2).map(comparisonQuoteSummary).join(" · ")}
+              {marketsForGame(g).length ? <p className="note">
+                {marketsForGame(g).slice(0, 2).map(comparisonQuoteSummary).join(" · ")}
               </p> : null}
               <Link href={`/blog/basketball-game-${g.id}/`}>
                 Read the notebook →

@@ -44,6 +44,21 @@ export type LiveGameMarketComparison = {
 
 export type LiveMarketComparisonStatus = "checking_forecast" | "checking_market" | "ready" | "unavailable";
 
+/**
+ * Return market evidence only when the journal game carries the same
+ * immutable forecast edition used to build the comparison map. A partial
+ * live forecast refresh must not attach current-edition quotes to a static
+ * game row that was not hydrated.
+ */
+export function exactBasketballMarketComparisons(
+  game: Pick<BBGame, "id" | "forecast_model_id">,
+  markets: Record<string, Comparison[]>,
+  modelId: string | null | undefined,
+) {
+  if (!modelId || game.forecast_model_id !== modelId) return [] as Comparison[];
+  return markets[game.id] || [];
+}
+
 /** Keep an empty market map from being presented as a completed zero-quote read. */
 export function liveMarketComparisonStatus(args: {
   modelId: string | null;

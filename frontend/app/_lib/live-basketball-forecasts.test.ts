@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballGameMarketComparison, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, mergeLiveForecast, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
+import { exactBasketballMarketComparisons, forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballGameMarketComparison, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, mergeLiveForecast, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -235,6 +235,25 @@ describe("live basketball forecast merge", () => {
     await expect(loadLiveBasketballMarketComparisons(undefined, null)).resolves.toEqual({});
     expect(fetcher).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
+  });
+
+  it("withholds current market quotes from a static game outside the hydrated edition", () => {
+    const quote = [{ provider: "licensed", bookmaker: "book", market: "spreads" as const, captured_at: "2026-09-20T12:00:00Z", updated_at: "2026-09-20T12:00:00Z", line: -2.5, model_difference: 1, market_home_probability: null }];
+    expect(exactBasketballMarketComparisons(
+      { id: "g1", forecast_model_id: "model-live" },
+      { g1: quote },
+      "model-live",
+    )).toEqual(quote);
+    expect(exactBasketballMarketComparisons(
+      { id: "g1", forecast_model_id: "model-static" },
+      { g1: quote },
+      "model-live",
+    )).toEqual([]);
+    expect(exactBasketballMarketComparisons(
+      { id: "g1", forecast_model_id: null },
+      { g1: quote },
+      "model-live",
+    )).toEqual([]);
   });
 
   it("pins a brief market lookup to the exact game's live forecast edition", async () => {
