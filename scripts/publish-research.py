@@ -91,7 +91,11 @@ if (args.espn_schedule or args.espn_lines) and args.sport in ("basketball", "bot
     )
 if args.espn_lines:
     if args.sport in ("basketball", "both"):
-        run([PY, "-m", "ncaa_scraper.espn_pickcenter", "--season", "2027"])
+        # Inspect a broad but bounded slice of the upcoming slate. ESPN often
+        # publishes basketball markets close to tip; retaining the explicit
+        # bound makes the request cost auditable while avoiding a small fixed
+        # prefix that can leave later games unobserved during preseason.
+        run([PY, "-m", "ncaa_scraper.espn_pickcenter", "--season", "2027", "--limit", "300"])
         run(
             [
                 PY,

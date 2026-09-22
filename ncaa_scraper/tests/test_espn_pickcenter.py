@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from ncaa_scraper import espn_pickcenter as collector
-from ncaa_scraper.espn_pickcenter import BASE_URL, _future_games, american_to_decimal, build_parser, ingest, parse_pickcenter, summary_capture_counts, summary_capture_diagnostics
+from ncaa_scraper.espn_pickcenter import BASE_URL, DEFAULT_CAPTURE_LIMIT, _future_games, american_to_decimal, build_parser, ingest, parse_pickcenter, summary_capture_counts, summary_capture_diagnostics
 from ncaa_scraper.odds_feed import schedules
 
 
@@ -53,6 +53,8 @@ class EspnPickcenterTests(unittest.TestCase):
 
     def test_cli_defaults_to_the_scheduled_capture_horizon(self):
         self.assertEqual(build_parser().parse_args([]).horizon_days, 90)
+        self.assertEqual(build_parser().parse_args([]).limit, DEFAULT_CAPTURE_LIMIT)
+        self.assertEqual(DEFAULT_CAPTURE_LIMIT, 300)
 
     def test_capture_counts_distinguish_empty_pickcenter_summaries(self):
         self.assertEqual(summary_capture_counts([

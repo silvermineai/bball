@@ -34,6 +34,12 @@ MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 # Basketball lines can be published well before tip. Use the existing request
 # cap so scheduled captures inspect more of the upcoming slate while remaining
 # bounded and prospective; identity and clock checks still gate every quote.
+# Keep the public capture bounded, while inspecting a larger slice of the
+# upcoming slate.  The previous 120-game cap left a large pre-season slate
+# uninspected even when the endpoint answered successfully.  Three hundred
+# requests is still below the collector's hard cap and remains a single
+# polite, auditable batch.
+DEFAULT_CAPTURE_LIMIT = 300
 DEFAULT_HORIZON_DAYS = 90
 REQUEST_DELAY_SECONDS = 0.2
 
@@ -297,7 +303,11 @@ def summary_capture_diagnostics(summaries: list[dict]) -> dict[str, int]:
     }
 
 
-def fetch_upcoming(season: int = 2027, horizon_days: int = DEFAULT_HORIZON_DAYS, limit: int = 120) -> tuple[list[dict], dict]:
+def fetch_upcoming(
+    season: int = 2027,
+    horizon_days: int = DEFAULT_HORIZON_DAYS,
+    limit: int = DEFAULT_CAPTURE_LIMIT,
+) -> tuple[list[dict], dict]:
     now = datetime.now(timezone.utc)
     if limit < 1 or limit > 300:
         raise ValueError("limit must be between 1 and 300")
@@ -372,7 +382,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--season", type=int, default=2027)
     parser.add_argument("--horizon-days", type=int, default=DEFAULT_HORIZON_DAYS)
-    parser.add_argument("--limit", type=int, default=120)
+    parser.add_argument("--limit", type=int, default=DEFAULT_CAPTURE_LIMIT)
     return parser
 
 
