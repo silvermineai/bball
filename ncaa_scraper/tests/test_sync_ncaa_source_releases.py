@@ -2,6 +2,7 @@
 
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -15,6 +16,14 @@ SPEC.loader.exec_module(MODULE)
 
 
 class SyncNCAASourceReleasesTest(unittest.TestCase):
+    def test_archive_requires_exact_id_box_supplement(self):
+        source = ROOT / "frontend/public/data/basketball/ncaa-individual.json"
+        payload = json.loads(source.read_text())
+        payload.pop("supplements", None)
+
+        with self.assertRaisesRegex(ValueError, "run ncaa_individual_enrichment"):
+            MODULE.validate_national_individual_release(payload)
+
     def test_national_individual_archive_is_content_addressed_and_receipted(self):
         source = ROOT / "frontend/public/data/basketball/ncaa-individual.json"
         digest = hashlib.sha256(source.read_bytes()).hexdigest()

@@ -19,6 +19,7 @@ from collections.abc import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL = ROOT / ".local/basketball"
+sys.path.insert(0, str(ROOT / "ncaa_scraper"))
 
 INCREMENTAL = os.getenv("BASKETBALL_D1_INCREMENTAL") == "1"
 
@@ -78,6 +79,26 @@ def utcnow() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def validate_national_individual_release(payload: dict[str, object]) -> dict[str, object]:
+    """Require the exact-ID box supplement before archiving the derivative.
+
+    ``ncaa_individual.py`` intentionally only captures the NCAA national
+    ranking pages.  The publisher adds the exact-ID box supplement in a
+    separate step, so archiving a raw intermediate snapshot would make an
+    incomplete release durable.  Reuse the publication-health contract here
+    at the archive boundary as well as at the deploy gate.
+    """
+    try:
+        from ncaa_scraper.publication_health import _ncaa_individual_health
+
+        return _ncaa_individual_health(payload)
+    except ValueError as exc:
+        raise ValueError(
+            "NCAA individual release is not publication-ready; run "
+            "ncaa_individual_enrichment before archiving: " + str(exc)
+        ) from exc
+
+
 def archive_national_individual(season: int = 2026) -> dict[str, object]:
     """Archive the NCAA national player derivative and an explicit receipt.
 
@@ -94,6 +115,10 @@ def archive_national_individual(season: int = 2026) -> dict[str, object]:
         raise SystemExit("NCAA individual release is not valid JSON") from exc
     if not isinstance(payload, dict) or payload.get("season") != season:
         raise SystemExit(f"NCAA individual release has unexpected season (wanted {season})")
+    try:
+        validate_national_individual_release(payload)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     generated_at = payload.get("generated_at")
     if not isinstance(generated_at, str):
         raise SystemExit("NCAA individual release has no source capture timestamp")
