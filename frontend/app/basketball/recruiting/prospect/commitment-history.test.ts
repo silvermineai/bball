@@ -83,4 +83,12 @@ describe("validateRecruitingHistory", () => {
     expect(validateRecruitingHistory([baseline, capture({ edition: "edition-2", source_url: null as unknown as string })])).toBeNull();
     expect(validateRecruitingHistory("history")).toBeNull();
   });
+
+  it("retains dimensional ranks and rejects invalid source values", () => {
+    const dimensional = capture({ position_rank: 4, state_rank: 2, region_rank: null });
+    expect(validateRecruitingHistory([dimensional])).toEqual([dimensional]);
+    expect(validateRecruitingHistory([capture({ position_rank: 0 })])).toBeNull();
+    expect(validateRecruitingHistory([capture({ state_rank: 1.5 })])).toBeNull();
+    expect(validateRecruitingHistory([capture({ region_rank: -2 })])).toBeNull();
+  });
 });

@@ -463,7 +463,7 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
       && invalidSourceHashes === 0;
     const historyRows = athlete_id && includeHistory === "1"
       ? await withTimeout(db.prepare(
-        `SELECT h.edition,h.captured_at,${effectiveRank("h")} AS rank,h.grade,h.status,h.committed_team_id,h.committed_team_name,h.source_url
+        `SELECT h.edition,h.captured_at,${effectiveRank("h")} AS rank,h.position_rank,h.state_rank,h.region_rank,h.grade,h.status,h.committed_team_id,h.committed_team_name,h.source_url
            FROM bb_espn_recruiting h
           WHERE h.season=? AND h.athlete_id=?
           ORDER BY captured_at ASC, edition ASC`,
@@ -611,6 +611,9 @@ recruitingRankings.get("/", zValidator("query", querySchema), async (c) => {
           edition: String((row as { edition?: string }).edition || ""),
           captured_at: String((row as { captured_at?: string }).captured_at || ""),
           rank: row.rank == null ? null : Number(row.rank),
+          position_rank: row.position_rank == null ? null : Number(row.position_rank),
+          state_rank: row.state_rank == null ? null : Number(row.state_rank),
+          region_rank: row.region_rank == null ? null : Number(row.region_rank),
           grade: row.grade == null ? null : Number(row.grade),
           status: row.status == null ? null : String(row.status),
           committed_team_id: row.committed_team_id == null ? null : String(row.committed_team_id),

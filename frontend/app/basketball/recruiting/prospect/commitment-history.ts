@@ -2,6 +2,10 @@ export type RecruitingHistoryEntry = {
   edition: string;
   captured_at: string;
   rank: number | null;
+  /** Source-published position, state, and region ranks when retained. */
+  position_rank?: number | null;
+  state_rank?: number | null;
+  region_rank?: number | null;
   grade: number | null;
   status: string | null;
   committed_team_id: string | null;
@@ -51,8 +55,14 @@ export function validateRecruitingHistory(value: unknown): RecruitingHistoryEntr
     const capturedTime = Date.parse(row.captured_at);
     if (capturedTime < previousTime || (capturedTime === previousTime && row.edition <= previousEdition)) return null;
     const rankValue = row.rank;
+    const positionRankValue = row.position_rank;
+    const stateRankValue = row.state_rank;
+    const regionRankValue = row.region_rank;
     const gradeValue = row.grade;
     if (rankValue === undefined || (rankValue !== null && (!Number.isSafeInteger(rankValue) || rankValue <= 0))) return null;
+    if (positionRankValue !== undefined && positionRankValue !== null && (!Number.isSafeInteger(positionRankValue) || positionRankValue <= 0)) return null;
+    if (stateRankValue !== undefined && stateRankValue !== null && (!Number.isSafeInteger(stateRankValue) || stateRankValue <= 0)) return null;
+    if (regionRankValue !== undefined && regionRankValue !== null && (!Number.isSafeInteger(regionRankValue) || regionRankValue <= 0)) return null;
     if (gradeValue === undefined || (gradeValue !== null && (typeof gradeValue !== "number" || !Number.isFinite(gradeValue) || gradeValue < 0))) return null;
     if (!nullableString(row.status) || !nullableString(row.committed_team_id) || !nullableString(row.committed_team_name) || typeof row.source_url !== "string") return null;
     const normalized: RecruitingHistoryEntry = {
@@ -65,6 +75,12 @@ export function validateRecruitingHistory(value: unknown): RecruitingHistoryEntr
       committed_team_name: row.committed_team_name ?? null,
       source_url: row.source_url,
     };
+    // Older bundled fixtures predate the dimensional rank fields. Preserve
+    // their shape while validating and retaining the fields when a live API
+    // response supplies them.
+    if (positionRankValue !== undefined) normalized.position_rank = positionRankValue ?? null;
+    if (stateRankValue !== undefined) normalized.state_rank = stateRankValue ?? null;
+    if (regionRankValue !== undefined) normalized.region_rank = regionRankValue ?? null;
     rows.push(normalized);
     editions.add(row.edition);
     previousTime = capturedTime;
