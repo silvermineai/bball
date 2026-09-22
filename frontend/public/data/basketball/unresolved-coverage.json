@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-17T10:24:29.481035Z",
+  "generated_at": "2026-09-21T13:59:23.225112Z",
   "total_rows": 175580,
   "rows_with_observed_stats": 174521,
   "rows": [
@@ -34,5 +34,6 @@
       "rows": 1,
       "rows_with_observed_stats": 1
     }
-  ]
+  ],
+  "source_generated_at": "2026-09-17T10:24:29.481035Z"
 }

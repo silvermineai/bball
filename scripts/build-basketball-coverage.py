@@ -58,11 +58,24 @@ def build(conn: sqlite3.Connection) -> list[dict[str, object]]:
 
 def main() -> None:
     # The large warehouse is optional during a D1 resume.  Preserve the last
-    # verified unresolved-coverage artifact rather than replacing it with an
-    # empty report that would falsely imply complete identity coverage.
+    # verified unresolved-coverage rows rather than replacing them with an
+    # empty report that would falsely imply complete identity coverage. Keep
+    # the artifact aligned to the active overview edition and retain the
+    # older timestamp as provenance when the rows came from that snapshot.
     if not DB.exists() or DB.stat().st_size == 0:
         if OUTPUT.exists():
-            print(f"Preserved verified coverage artifact; local warehouse unavailable: {OUTPUT}")
+            overview = json.loads(OVERVIEW.read_text())
+            payload = json.loads(OUTPUT.read_text())
+            edition = overview.get("generated_at")
+            prior = payload.get("generated_at")
+            if isinstance(edition, str) and edition and prior != edition:
+                if isinstance(prior, str) and prior:
+                    payload.setdefault("source_generated_at", prior)
+                payload["generated_at"] = edition
+                OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+                print(f"Aligned verified coverage artifact to overview edition: {OUTPUT}")
+            else:
+                print(f"Preserved verified coverage artifact; local warehouse unavailable: {OUTPUT}")
             return
         raise SystemExit(f"Cannot build coverage without local warehouse: {DB}")
     with sqlite3.connect(DB) as conn:
