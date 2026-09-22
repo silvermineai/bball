@@ -6,6 +6,7 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 import { date, fmt } from "../../_lib/format";
 import type { BBTeam } from "../../_lib/basketball-types";
 import { boutiqueComparisonSeasonMatches } from "../../_lib/boutique-comparison";
+import { boutiqueInitialDirection } from "../../_lib/boutique-controls";
 
 type Kind = "ratings" | "players";
 type Metric = { key: string; label: string; unit: string };
@@ -24,7 +25,7 @@ export default function Boutique({ ratings, independentSeason }: { ratings: BBTe
   const initialSeason = /^\d{4}$/.test(params.get("season") || "") ? params.get("season")! : "2026";
   const initialMetric = /^[a-z_]{2,20}$/.test(params.get("metric") || "") ? params.get("metric")! : initialKind === "ratings" ? "rank" : "box_bpm";
   const [kind, setKind] = useState<Kind>(initialKind), [seasons, setSeasons] = useState<number[]>([]), [metrics, setMetrics] = useState<Metric[]>([]), [sourceReceipts, setSourceReceipts] = useState<SourceReceipt[]>([]);
-  const [season, setSeason] = useState(initialSeason), [metric, setMetric] = useState(initialMetric), [query, setQuery] = useState(params.get("q") || ""), [direction, setDirection] = useState<"desc" | "asc">(params.get("direction") === "desc" ? "desc" : "asc"), [page, setPage] = useState(0);
+  const [season, setSeason] = useState(initialSeason), [metric, setMetric] = useState(initialMetric), [query, setQuery] = useState(params.get("q") || ""), [direction, setDirection] = useState<"desc" | "asc">(boutiqueInitialDirection(initialKind, initialMetric, params.get("direction"))), [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null), [error, setError] = useState(""), [retryNonce, setRetryNonce] = useState(0);
   const independentRatings = useMemo(() => new Map(ratings.map((rating) => [rating.id, rating])), [ratings]);
   const comparisonReady = kind === "ratings" && boutiqueComparisonSeasonMatches(season, independentSeason);
@@ -36,7 +37,7 @@ export default function Boutique({ ratings, independentSeason }: { ratings: BBTe
   const reset = (fn: () => void) => { setPage(0); fn(); };
   return <>
     <div className="page-title"><div className="eyebrow">Additional model archive</div><h1>Bring more<br /><em>models to the table.</em></h1><p>Explore an additional lens on team strength and player value. These ratings and Box Plus/Minus estimates are preserved as recorded; Silvermine forecasts and ratings remain independent.</p><div className="hero-actions"><Link className="button" href="/basketball/ratings/">Open Silvermine ratings ↗</Link><Link className="hero-link" href="/basketball/learn/">Learn the metrics →</Link></div></div>
-    <div className="recruiting-views" aria-label="Boutique model view"><button aria-pressed={kind === "ratings"} onClick={() => { setKind("ratings"); setPage(0); }}>Team ratings</button><button aria-pressed={kind === "players"} onClick={() => { setKind("players"); setPage(0); }}>Player value</button></div>
+    <div className="recruiting-views" aria-label="Boutique model view"><button aria-pressed={kind === "ratings"} onClick={() => { setKind("ratings"); setMetric("rank"); setDirection(boutiqueInitialDirection("ratings", "rank", null)); setPage(0); }}>Team ratings</button><button aria-pressed={kind === "players"} onClick={() => { setKind("players"); setMetric("box_bpm"); setDirection(boutiqueInitialDirection("players", "box_bpm", null)); setPage(0); }}>Player value</button></div>
     <div className="model-compare-grid">
       <article className="paper-panel"><div className="eyebrow">Independent comparison</div><h2>Read disagreement as a question.</h2><p>For current team rows, the recorded reference rank stays separate from the selected metric and its national standing. A positive delta means the recorded overall rank is lower than Silvermine&apos;s rank; it is a prompt to inspect schedule, style and personnel, not a pick.</p></article>
       <article className="paper-panel"><div className="eyebrow">Model boundary</div><h2>Keep comparison models separate.</h2><p>Comparison values are kept separate from the independent Silvermine model and are shown only as contextual reference.</p></article>
