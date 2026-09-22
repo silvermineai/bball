@@ -566,12 +566,38 @@ def womens_forecast_metadata(payload: dict) -> dict:
         if abs(home_probability + away_probability - 1) > 0.002:
             raise ValueError("women's basketball forecast probabilities do not reconcile")
         margin = finite(prediction.get("predicted_margin"), "predicted margin")
-        finite(prediction.get("predicted_home_score"), "predicted home score", lower=0)
-        finite(prediction.get("predicted_away_score"), "predicted away score", lower=0)
+        home_score = finite(prediction.get("predicted_home_score"), "predicted home score", lower=0)
+        away_score = finite(prediction.get("predicted_away_score"), "predicted away score", lower=0)
+        if abs(home_score - away_score - margin) > 0.11:
+            raise ValueError("women's basketball forecast scores do not reconcile with margin")
         low = finite(prediction.get("margin_low"), "margin low")
         high = finite(prediction.get("margin_high"), "margin high")
         if low > high or not low <= margin <= high:
             raise ValueError("women's basketball forecast margin interval is malformed")
+        if payload["model_id"].startswith("womens-basketball-opponent-adjusted-v4-"):
+            inputs = prediction.get("model_inputs")
+            if not isinstance(inputs, dict):
+                raise ValueError("women's basketball forecast adjusted inputs are missing")
+            keys = (
+                "home_adjusted_offense", "home_adjusted_defense",
+                "away_adjusted_offense", "away_adjusted_defense",
+                "home_adjusted_net", "away_adjusted_net", "neutral_court_edge",
+                "home_court_adjustment", "league_average_points",
+            )
+            values = {key: finite(inputs.get(key), f"adjusted input {key}") for key in keys}
+            if values["league_average_points"] <= 0:
+                raise ValueError("women's basketball forecast adjusted scoring environment is malformed")
+            if (
+                abs(values["home_adjusted_net"] - (values["home_adjusted_offense"] - values["home_adjusted_defense"])) > 0.04
+                or abs(values["away_adjusted_net"] - (values["away_adjusted_offense"] - values["away_adjusted_defense"])) > 0.04
+                or abs(values["neutral_court_edge"] - (values["home_adjusted_net"] - values["away_adjusted_net"])) > 0.04
+                or abs(margin - (values["neutral_court_edge"] + values["home_court_adjustment"])) > 0.11
+            ):
+                raise ValueError("women's basketball forecast adjusted units do not reconcile")
+            expected_home = values["home_adjusted_offense"] + values["away_adjusted_defense"] - values["league_average_points"] + values["home_court_adjustment"] / 2
+            expected_away = values["away_adjusted_offense"] + values["home_adjusted_defense"] - values["league_average_points"] - values["home_court_adjustment"] / 2
+            if abs(home_score - expected_home) > 0.11 or abs(away_score - expected_away) > 0.11:
+                raise ValueError("women's basketball forecast adjusted units do not reproduce scores")
 
     coverage = payload.get("coverage")
     if not isinstance(coverage, dict):

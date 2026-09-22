@@ -24,6 +24,7 @@ from ncaa_scraper.womens_basketball_sources import client
 OUT = ROOT / "frontend/public/data/basketball/womens-forecast.json"
 TRAINING_SEASONS = (2023, 2024, 2025)
 VALIDATION_SEASON = 2026
+MODEL_VERSION = "womens-basketball-opponent-adjusted-v4"
 
 
 def number(value):
@@ -45,36 +46,108 @@ def completed_games(rows):
     return [rows for rows in grouped.values() if len(rows) >= 2]
 
 
-def fit_team_ratings(rows, shrink_games=8.0):
+def fit_team_ratings(rows, shrink_games=8.0, iterations=40):
+    """Fit schedule-adjusted scoring units on a neutral-court basis.
+
+    Each team's offense is adjusted for the defenses it faced and each defense
+    for the offenses it faced.  The alternating updates are shrunk toward the
+    observed scoring environment, which keeps sparse teams from acquiring an
+    extreme rating.  Home court is estimated from the residual after team
+    strength rather than from raw home margins alone.
+    """
     values = defaultdict(lambda: {"margin": 0.0, "points": 0.0, "allowed": 0.0, "games": 0, "name": ""})
-    home_margins = []
+    observations = []
     for game in completed_games(rows):
         for row in game:
             team_id = str(row.get("team_id") or "")
             if not team_id:
                 continue
+            opponent = next((candidate for candidate in game if str(candidate.get("team_id") or "") != team_id), None)
+            opponent_id = str((opponent or {}).get("team_id") or "")
+            if not opponent_id:
+                continue
             score = number(row.get("team_score")) or 0.0
             allowed = number(row.get("opponent_team_score")) or 0.0
+            location = str(row.get("team_home_away") or "").casefold()
             item = values[team_id]
             item["margin"] += score - allowed
             item["points"] += score
             item["allowed"] += allowed
             item["games"] += 1
             item["name"] = row.get("team_display_name") or row.get("team_name") or team_id
-            if str(row.get("team_home_away") or "").casefold() == "home":
-                home_margins.append(score - allowed)
-    home_advantage = sum(home_margins) / len(home_margins) if home_margins else 0.0
+            observations.append({
+                "team_id": team_id,
+                "opponent_id": opponent_id,
+                "score": score,
+                "allowed": allowed,
+                "location": location,
+            })
+    if not observations:
+        return {}, 0.0
+
+    league_average = sum(item["score"] for item in observations) / len(observations)
+    offense = {team_id: league_average for team_id in values}
+    defense = {team_id: league_average for team_id in values}
+    home_advantage = 3.0
+    for _ in range(max(1, iterations)):
+        offense_samples = defaultdict(list)
+        defense_samples = defaultdict(list)
+        for item in observations:
+            venue_half = home_advantage / 2.0 if item["location"] == "home" else -home_advantage / 2.0 if item["location"] == "away" else 0.0
+            neutral_score = item["score"] - venue_half
+            neutral_allowed = item["allowed"] + venue_half
+            opponent_id = item["opponent_id"]
+            offense_samples[item["team_id"]].append(neutral_score - defense.get(opponent_id, league_average) + league_average)
+            defense_samples[item["team_id"]].append(neutral_allowed - offense.get(opponent_id, league_average) + league_average)
+
+        next_offense = {}
+        next_defense = {}
+        for team_id, item in values.items():
+            games = item["games"]
+            weight = games / (games + shrink_games)
+            raw_offense = sum(offense_samples[team_id]) / len(offense_samples[team_id])
+            raw_defense = sum(defense_samples[team_id]) / len(defense_samples[team_id])
+            next_offense[team_id] = league_average + weight * (raw_offense - league_average)
+            next_defense[team_id] = league_average + weight * (raw_defense - league_average)
+
+        # Center both units so their weighted means remain tied to the actual
+        # scoring environment rather than drifting during alternating updates.
+        total_games = sum(item["games"] for item in values.values())
+        offense_center = sum(next_offense[team_id] * values[team_id]["games"] for team_id in values) / total_games
+        defense_center = sum(next_defense[team_id] * values[team_id]["games"] for team_id in values) / total_games
+        next_offense = {team_id: value - offense_center + league_average for team_id, value in next_offense.items()}
+        next_defense = {team_id: value - defense_center + league_average for team_id, value in next_defense.items()}
+
+        home_residuals = []
+        for item in observations:
+            if item["location"] != "home":
+                continue
+            team_rating = next_offense[item["team_id"]] - next_defense[item["team_id"]]
+            opponent_rating = next_offense.get(item["opponent_id"], league_average) - next_defense.get(item["opponent_id"], league_average)
+            home_residuals.append(item["score"] - item["allowed"] - (team_rating - opponent_rating))
+        next_home_advantage = sum(home_residuals) / len(home_residuals) if home_residuals else 0.0
+        next_home_advantage = max(-10.0, min(10.0, next_home_advantage))
+        delta = max(
+            abs(next_offense[team_id] - offense[team_id]) for team_id in values
+        )
+        delta = max(delta, max(abs(next_defense[team_id] - defense[team_id]) for team_id in values), abs(next_home_advantage - home_advantage))
+        offense, defense = next_offense, next_defense
+        home_advantage = 0.5 * home_advantage + 0.5 * next_home_advantage
+        if delta < 1e-7:
+            break
+
     ratings = {}
     for team_id, item in values.items():
-        games = item["games"]
-        weight = games / (games + shrink_games)
         ratings[team_id] = {
             "team_id": team_id,
             "team": item["name"],
-            "rating": (item["margin"] / games) * weight,
-            "points": item["points"] / games,
-            "allowed": item["allowed"] / games,
-            "games": games,
+            "rating": offense[team_id] - defense[team_id],
+            "adjusted_offense": offense[team_id],
+            "adjusted_defense": defense[team_id],
+            "league_average": league_average,
+            "points": item["points"] / item["games"],
+            "allowed": item["allowed"] / item["games"],
+            "games": item["games"],
         }
     return ratings, home_advantage
 
@@ -167,26 +240,39 @@ def prediction(home, away, ratings, home_advantage, calibration=None):
     a = ratings.get(str(away))
     h_rating = h["rating"] if h else 0.0
     a_rating = a["rating"] if a else 0.0
-    margin = h_rating - a_rating + home_advantage
+    league_average = (h or a or {}).get("league_average", 68.0)
+    home_offense = h["adjusted_offense"] if h else league_average
+    home_defense = h["adjusted_defense"] if h else league_average
+    away_offense = a["adjusted_offense"] if a else league_average
+    away_defense = a["adjusted_defense"] if a else league_average
+    home_score = home_offense + away_defense - league_average + home_advantage / 2.0
+    away_score = away_offense + home_defense - league_average - home_advantage / 2.0
+    margin = home_score - away_score
     coefficients = (calibration or {}).get("logistic_coefficients") if calibration else None
     if isinstance(coefficients, list) and len(coefficients) == 2:
         probability = _sigmoid(float(coefficients[0]) + float(coefficients[1]) * margin)
     else:
         probability = _sigmoid(margin / 9.0)
-    h_points = h["points"] if h else 68.0
-    a_points = a["points"] if a else 68.0
-    # Team points are per-game averages, so their sum is the expected game
-    # total. Dividing before splitting the total would halve every projection.
-    expected_total = h_points + a_points
     result = {
         "home_win_probability": round(probability, 4),
         "away_win_probability": round(1.0 - probability, 4),
         "predicted_margin": round(margin, 2),
-        "predicted_home_score": round(expected_total / 2.0 + margin / 2.0, 1),
-        "predicted_away_score": round(expected_total / 2.0 - margin / 2.0, 1),
+        "predicted_home_score": round(home_score, 1),
+        "predicted_away_score": round(away_score, 1),
         "estimate_type": "primary" if h and a and h["games"] >= 5 and a["games"] >= 5 else "cold_start",
         "home_training_games": h["games"] if h else 0,
         "away_training_games": a["games"] if a else 0,
+        "model_inputs": {
+            "home_adjusted_offense": round(home_offense, 2),
+            "home_adjusted_defense": round(home_defense, 2),
+            "away_adjusted_offense": round(away_offense, 2),
+            "away_adjusted_defense": round(away_defense, 2),
+            "home_adjusted_net": round(h_rating, 2),
+            "away_adjusted_net": round(a_rating, 2),
+            "neutral_court_edge": round(h_rating - a_rating, 2),
+            "home_court_adjustment": round(home_advantage, 2),
+            "league_average_points": round(league_average, 2),
+        },
     }
     width = number((calibration or {}).get("margin_half_width"))
     if width is not None and width > 0:
@@ -268,17 +354,17 @@ def main():
         })
     team_ratings = []
     for rank, row in enumerate(sorted(ratings.values(), key=lambda value: (-value["rating"], value["team"], value["team_id"])), start=1):
-        team_ratings.append({**row, "rank": rank, "rating": round(row["rating"], 2), "points": round(row["points"], 2), "allowed": round(row["allowed"], 2)})
-    model_fingerprint = hashlib.sha256(json.dumps({**{str(season): receipt.get("sha256") for season, receipt in training_receipts.items()}, str(VALIDATION_SEASON): validation_receipt.get("sha256"), "schedule": receipt_schedule.get("sha256")}, sort_keys=True).encode()).hexdigest()[:12]
+        team_ratings.append({**row, "rank": rank, "rating": round(row["rating"], 2), "adjusted_offense": round(row["adjusted_offense"], 2), "adjusted_defense": round(row["adjusted_defense"], 2), "league_average": round(row["league_average"], 2), "points": round(row["points"], 2), "allowed": round(row["allowed"], 2)})
+    model_fingerprint = hashlib.sha256(json.dumps({"model_version": MODEL_VERSION, **{str(season): receipt.get("sha256") for season, receipt in training_receipts.items()}, str(VALIDATION_SEASON): validation_receipt.get("sha256"), "schedule": receipt_schedule.get("sha256")}, sort_keys=True).encode()).hexdigest()[:12]
     edition = {
         "schema_version": 1,
-        "model_id": f"womens-basketball-margin-v3-{model_fingerprint}",
+        "model_id": f"{MODEL_VERSION}-{model_fingerprint}",
         "sport": "basketball",
         "gender": "women",
         "target_season": 2027,
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "model_status": "published",
-        "method": "Multi-season shrunk team net-margin ratings with a source-native home-court estimate and a nominal 80% margin interval fit from training residuals; the latest completed season is held out for validation before the target refit.",
+        "method": "Multi-season opponent-adjusted offensive and defensive scoring units, shrunk for sample size, with home court estimated after team-strength correction and a nominal 80% margin interval fit from training residuals; the latest completed season is held out for validation before the target refit.",
         "training_seasons": list(TRAINING_SEASONS),
         "validation_season": VALIDATION_SEASON,
         "validation": validation,

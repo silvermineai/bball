@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { womensForecastLabels, womensForecastTotal, womensForecastValidationLabel } from "./womens-forecast-display";
+import { womensAdjustedMatchupInputs, womensForecastLabels, womensForecastTotal, womensForecastValidationLabel } from "./womens-forecast-display";
 
 describe("womensForecastLabels", () => {
   it("keeps probability, margin, score direction, and estimate type readable", () => {
@@ -42,5 +42,33 @@ describe("womensForecastLabels", () => {
     expect(womensForecastValidationLabel({ games: 1, margin_mae: 2, win_accuracy: 0.5, brier_score: 0.25 })).toBe(
       "held-out validation 1 games · 50.0% winner accuracy · 2.0 point margin MAE · Brier 0.250",
     );
+  });
+});
+
+describe("womensAdjustedMatchupInputs", () => {
+  const prediction = {
+    predicted_margin: 4.2,
+    predicted_home_score: 72.1,
+    predicted_away_score: 67.9,
+    model_inputs: {
+      home_adjusted_offense: 70,
+      home_adjusted_defense: 66,
+      away_adjusted_offense: 67,
+      away_adjusted_defense: 68,
+      home_adjusted_net: 4,
+      away_adjusted_net: -1,
+      neutral_court_edge: 5,
+      home_court_adjustment: -0.8,
+      league_average_points: 65.5,
+    },
+  };
+
+  it("returns opponent-adjusted units only when they reproduce the forecast", () => {
+    expect(womensAdjustedMatchupInputs(prediction)).toEqual(prediction.model_inputs);
+    expect(womensAdjustedMatchupInputs({
+      ...prediction,
+      model_inputs: { ...prediction.model_inputs, neutral_court_edge: 12 },
+    })).toBeNull();
+    expect(womensAdjustedMatchupInputs({ ...prediction, model_inputs: undefined })).toBeNull();
   });
 });

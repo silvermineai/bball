@@ -73,6 +73,18 @@ function finiteNumber(value: unknown): value is number {
  * pair cannot produce the recorded margin.
  */
 export const WOMENS_PREDICTION_ARITHMETIC_TOLERANCE = 0.11;
+const WOMENS_MODEL_INPUT_TOLERANCE = 0.04;
+const womensModelInputKeys = [
+  "home_adjusted_offense",
+  "home_adjusted_defense",
+  "away_adjusted_offense",
+  "away_adjusted_defense",
+  "home_adjusted_net",
+  "away_adjusted_net",
+  "neutral_court_edge",
+  "home_court_adjustment",
+  "league_average_points",
+] as const;
 
 export function validWomensPredictionArithmetic(
   prediction: Record<string, unknown>,
@@ -85,6 +97,27 @@ export function validWomensPredictionArithmetic(
   if (!finiteNumber(home) || !finiteNumber(away) || !finiteNumber(margin)) return false;
   if (home < 0 || away < 0) return false;
   return Math.abs((home - away) - margin) <= tolerance;
+}
+
+/** Verify the opponent-adjusted units can reproduce the published forecast. */
+export function validWomensModelInputs(prediction: Record<string, unknown>): boolean {
+  const raw = prediction.model_inputs;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+  const inputs = raw as Record<string, unknown>;
+  if (womensModelInputKeys.some((key) => !finiteNumber(inputs[key]))) return false;
+  const values = Object.fromEntries(womensModelInputKeys.map((key) => [key, inputs[key] as number]));
+  if (values.home_adjusted_offense < 0 || values.home_adjusted_defense < 0
+    || values.away_adjusted_offense < 0 || values.away_adjusted_defense < 0
+    || values.league_average_points <= 0) return false;
+  const near = (left: number, right: number, tolerance = WOMENS_MODEL_INPUT_TOLERANCE) => Math.abs(left - right) <= tolerance;
+  if (!near(values.home_adjusted_net, values.home_adjusted_offense - values.home_adjusted_defense)
+    || !near(values.away_adjusted_net, values.away_adjusted_offense - values.away_adjusted_defense)
+    || !near(values.neutral_court_edge, values.home_adjusted_net - values.away_adjusted_net)
+    || !near(prediction.predicted_margin as number, values.neutral_court_edge + values.home_court_adjustment, WOMENS_PREDICTION_ARITHMETIC_TOLERANCE)) return false;
+  const expectedHome = values.home_adjusted_offense + values.away_adjusted_defense - values.league_average_points + values.home_court_adjustment / 2;
+  const expectedAway = values.away_adjusted_offense + values.home_adjusted_defense - values.league_average_points - values.home_court_adjustment / 2;
+  return near(prediction.predicted_home_score as number, expectedHome, WOMENS_PREDICTION_ARITHMETIC_TOLERANCE)
+    && near(prediction.predicted_away_score as number, expectedAway, WOMENS_PREDICTION_ARITHMETIC_TOLERANCE);
 }
 
 /**
@@ -132,7 +165,8 @@ export function parseWomensForecastArtifact(value: unknown): {
       || (probability as number) < 0 || (probability as number) > 1
       || (awayProbability as number) < 0 || (awayProbability as number) > 1
       || Math.abs((probability as number) + (awayProbability as number) - 1) > 0.001
-      || !validWomensPredictionArithmetic(checked)) {
+      || !validWomensPredictionArithmetic(checked)
+      || (artifact.model_id.startsWith("womens-basketball-opponent-adjusted-v4-") && !validWomensModelInputs(checked))) {
       invalid_rows += 1;
       continue;
     }

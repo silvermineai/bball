@@ -22,6 +22,13 @@ def rows_for_game(game_id, home_score, away_score):
     ]
 
 
+def rows_for_matchup(game_id, home_id, away_id, home_score, away_score, location="neutral"):
+    return [
+        {"game_id": game_id, "team_id": home_id, "team_display_name": home_id, "team_score": home_score, "opponent_team_score": away_score, "team_home_away": location},
+        {"game_id": game_id, "team_id": away_id, "team_display_name": away_id, "team_score": away_score, "opponent_team_score": home_score, "team_home_away": location},
+    ]
+
+
 def test_womens_model_has_explicit_training_and_prediction_contract():
     rows = rows_for_game("1", 80, 60) + rows_for_game("2", 70, 65)
     ratings, home_advantage = fit_team_ratings(rows)
@@ -61,3 +68,29 @@ def test_margin_interval_uses_training_residuals_and_is_reported_on_holdout():
     validation = evaluate(rows, ratings, home_advantage, {**calibration, **interval})
     assert validation["interval_games"] == 10
     assert 0 <= validation["interval_coverage"] <= 1
+
+
+def test_womens_ratings_adjust_equal_raw_margins_for_opponent_strength():
+    # A and C each win their only game by ten, but A beat B while C beat D.
+    # Repeated B-over-D results establish that A faced the stronger opponent.
+    rows = rows_for_matchup("a-b", "A", "B", 75, 65)
+    rows += rows_for_matchup("c-d", "C", "D", 75, 65)
+    for index in range(12):
+        rows += rows_for_matchup(f"b-d-{index}", "B", "D", 90, 60)
+    ratings, home_advantage = fit_team_ratings(rows, shrink_games=1)
+    assert ratings["A"]["rating"] > ratings["C"]["rating"]
+    assert ratings["A"]["adjusted_offense"] > ratings["C"]["adjusted_offense"]
+    assert abs(home_advantage) < 0.01
+
+
+def test_womens_prediction_exposes_reconcilable_adjusted_units():
+    rows = []
+    for index in range(8):
+        rows += rows_for_matchup(str(index), "home", "away", 78 + index, 66, "home")
+    ratings, home_advantage = fit_team_ratings(rows)
+    forecast = prediction("home", "away", ratings, home_advantage)
+    inputs = forecast["model_inputs"]
+    assert abs(inputs["home_adjusted_net"] - (inputs["home_adjusted_offense"] - inputs["home_adjusted_defense"])) <= 0.02
+    assert abs(inputs["away_adjusted_net"] - (inputs["away_adjusted_offense"] - inputs["away_adjusted_defense"])) <= 0.02
+    assert abs(forecast["predicted_margin"] - (inputs["neutral_court_edge"] + inputs["home_court_adjustment"])) <= 0.02
+    assert abs(forecast["predicted_margin"] - (forecast["predicted_home_score"] - forecast["predicted_away_score"])) <= 0.11

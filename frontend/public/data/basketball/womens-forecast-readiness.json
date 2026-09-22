@@ -4,7 +4,7 @@
   "gender": "women",
   "target_season": 2027,
   "status": "published",
-  "model_id": "womens-basketball-margin-v3-097fb78fcb72",
+  "model_id": "womens-basketball-opponent-adjusted-v4-ed0a15ac360a",
   "forecast_rows": 2283,
   "model_boundary": "A women’s-only multi-season forecast is published from separately retained team-box history. Men’s coefficients, calibration, IDs and forecast rows are never substituted.",
   "checks": [

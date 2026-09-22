@@ -3,7 +3,7 @@ import {
   type UpcomingGameAnalysis,
 } from "../_lib/upcoming-game-analysis";
 import type { WomensMatchupRow } from "../_lib/womens-matchups";
-import { womensForecastTotal } from "../_lib/womens-forecast-display";
+import { womensAdjustedMatchupInputs, womensForecastTotal } from "../_lib/womens-forecast-display";
 
 const title = (value: string) => value.charAt(0).toUpperCase() + value.slice(1).replaceAll("-", " ");
 const percent = (value: number | null) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -42,6 +42,7 @@ export default function WomensMatchupAnalysis({
     marketQuoteCount: null,
   });
   const projectedTotal = womensForecastTotal(row.prediction);
+  const modelInputs = womensAdjustedMatchupInputs(row.prediction);
   return (
     <div className="analysis-readiness womens-matchup-analysis" aria-label="Upcoming game analysis readout">
       <div className="analysis-readiness-heading">
@@ -61,6 +62,20 @@ export default function WomensMatchupAnalysis({
         <div><dt>Model edition</dt><dd><code>{modelId || "Unavailable"}</code></dd></div>
         <div><dt>Exact identity</dt><dd>{readout.identity.homeId && readout.identity.awayId ? `${readout.identity.awayId} at ${readout.identity.homeId}` : "Unavailable"}</dd></div>
       </dl>
+      {modelInputs ? <>
+        <small className="analysis-readiness-note"><strong>Opponent-adjusted matchup inputs</strong> · scoring units are adjusted for the strength of each opponent faced.</small>
+        <dl className="womens-matchup-analysis-grid">
+          <div><dt>{row.away || "Away"} offense</dt><dd>{modelInputs.away_adjusted_offense.toFixed(1)}</dd></div>
+          <div><dt>{row.away || "Away"} defense</dt><dd>{modelInputs.away_adjusted_defense.toFixed(1)}</dd></div>
+          <div><dt>{row.away || "Away"} net</dt><dd>{points(modelInputs.away_adjusted_net)}</dd></div>
+          <div><dt>{row.home || "Home"} offense</dt><dd>{modelInputs.home_adjusted_offense.toFixed(1)}</dd></div>
+          <div><dt>{row.home || "Home"} defense</dt><dd>{modelInputs.home_adjusted_defense.toFixed(1)}</dd></div>
+          <div><dt>{row.home || "Home"} net</dt><dd>{points(modelInputs.home_adjusted_net)}</dd></div>
+          <div><dt>Neutral-court edge</dt><dd>{points(modelInputs.neutral_court_edge)}</dd></div>
+          <div><dt>Home-court adjustment</dt><dd>{points(modelInputs.home_court_adjustment)}</dd></div>
+        </dl>
+        <small className="analysis-readiness-note">Units are adjusted points per game: higher offense is better, lower defense is better. The neutral edge plus home court reconciles to the published margin.</small>
+      </> : null}
       <small className="analysis-readiness-note">Evidence: {readout.evidence.join(" · ") || "No verified forecast evidence"}.</small>
       {readout.missing.length ? <small className="analysis-integrity is-review">Still unavailable: {readout.missing.join(" · ")}.</small> : null}
     </div>

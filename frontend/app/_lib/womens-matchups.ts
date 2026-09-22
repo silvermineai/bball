@@ -7,6 +7,17 @@ export type WomensGamePrediction = {
   margin_low?: number | null;
   margin_high?: number | null;
   estimate_type?: string | null;
+  model_inputs?: {
+    home_adjusted_offense: number;
+    home_adjusted_defense: number;
+    away_adjusted_offense: number;
+    away_adjusted_defense: number;
+    home_adjusted_net: number;
+    away_adjusted_net: number;
+    neutral_court_edge: number;
+    home_court_adjustment: number;
+    league_average_points: number;
+  };
 };
 
 export type WomensForecastRow = {

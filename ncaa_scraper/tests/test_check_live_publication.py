@@ -382,6 +382,31 @@ class LivePublicationCheckTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "home win probability"):
             womens_forecast_metadata(payload)
 
+    def test_womens_forecast_v4_requires_reconcilable_adjusted_units(self):
+        payload = self.womens_forecast_payload()
+        payload["model_id"] = "womens-basketball-opponent-adjusted-v4-test"
+        payload["forecasts"][0]["prediction"]["model_inputs"] = {
+            "home_adjusted_offense": 70,
+            "home_adjusted_defense": 68,
+            "away_adjusted_offense": 64.5,
+            "away_adjusted_defense": 68,
+            "home_adjusted_net": 2,
+            "away_adjusted_net": -3.5,
+            "neutral_court_edge": 5.5,
+            "home_court_adjustment": 0,
+            "league_average_points": 68,
+        }
+        self.assertEqual(womens_forecast_metadata(payload)["forecast_rows"], 1)
+        payload["forecasts"][0]["prediction"]["model_inputs"]["neutral_court_edge"] = 10
+        with self.assertRaisesRegex(ValueError, "adjusted units do not reconcile"):
+            womens_forecast_metadata(payload)
+
+    def test_womens_forecast_rejects_score_margin_disagreement(self):
+        payload = self.womens_forecast_payload()
+        payload["forecasts"][0]["prediction"]["predicted_home_score"] = 80
+        with self.assertRaisesRegex(ValueError, "scores do not reconcile"):
+            womens_forecast_metadata(payload)
+
     def test_roster_challenger_requires_the_exact_forecast_edition(self):
         payload = {
             "roster_model": {"primary_model_id": "model-1", "scenario_games": 90},

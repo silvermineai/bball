@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { parseWomensForecastArtifact, validWomensPredictionArithmetic, womensBasketballForecasts } from "../src/womens-basketball-forecasts";
+import { parseWomensForecastArtifact, validWomensModelInputs, validWomensPredictionArithmetic, womensBasketballForecasts } from "../src/womens-basketball-forecasts";
 
 const prediction = {
   home_win_probability: 0.64,
@@ -12,6 +12,24 @@ const prediction = {
   estimate_type: "primary",
   home_training_games: 30,
   away_training_games: 29,
+};
+
+const adjustedPrediction = {
+  ...prediction,
+  predicted_margin: 4.2,
+  predicted_home_score: 72.1,
+  predicted_away_score: 67.9,
+  model_inputs: {
+    home_adjusted_offense: 70,
+    home_adjusted_defense: 66,
+    away_adjusted_offense: 67,
+    away_adjusted_defense: 68,
+    home_adjusted_net: 4,
+    away_adjusted_net: -1,
+    neutral_court_edge: 5,
+    home_court_adjustment: -0.8,
+    league_average_points: 65.5,
+  },
 };
 
 const artifact = {
@@ -56,6 +74,22 @@ describe("women's basketball forecast publication", () => {
     });
     expect(parsed.forecasts).toHaveLength(1);
     expect(parsed.invalid_rows).toBe(2);
+  });
+
+  it("requires opponent-adjusted inputs to reconcile with v4 scores and margin", () => {
+    expect(validWomensModelInputs(adjustedPrediction)).toBe(true);
+    expect(validWomensModelInputs({ ...adjustedPrediction, model_inputs: { ...adjustedPrediction.model_inputs, neutral_court_edge: 9 } })).toBe(false);
+    const v4 = {
+      ...artifact,
+      model_id: "womens-basketball-opponent-adjusted-v4-test",
+      forecasts: [
+        { ...artifact.forecasts[0], prediction: adjustedPrediction },
+        { ...artifact.forecasts[1], prediction: { ...adjustedPrediction, model_inputs: { ...adjustedPrediction.model_inputs, home_adjusted_net: 40 } } },
+      ],
+    };
+    const parsed = parseWomensForecastArtifact(v4);
+    expect(parsed.forecasts).toHaveLength(1);
+    expect(parsed.invalid_rows).toBe(1);
   });
 
   it("requires the source-native women artifact and counts malformed rows", () => {
