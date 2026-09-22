@@ -27,3 +27,36 @@ def test_provider_values_are_padded_without_inventing_values() -> None:
     ) == ["12/30", "76", ""]
     assert MODULE.align_provider_values(["yards"], ["12", "unkeyed"]) == ["12"]
     assert MODULE.align_provider_values(["yards"], [None]) == [""]
+
+
+def test_robots_policy_requires_permission_for_the_exact_api_origin() -> None:
+    body = "User-agent: *\nAllow: /apis/site/v2/\nCrawl-delay: 2\n"
+    result = MODULE.validate_robots(
+        body,
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/summary?event=1",
+    )
+    assert result["crawl_delay_seconds"] == 2
+
+
+def test_robots_policy_fails_closed_when_endpoint_is_disallowed() -> None:
+    body = "User-agent: *\nDisallow: /\n"
+    try:
+        MODULE.validate_robots(
+            body,
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/summary?event=1",
+        )
+    except RuntimeError as exc:
+        assert "no page requested" in str(exc)
+    else:
+        raise AssertionError("disallowed API request must fail closed")
+
+
+def test_default_window_tracks_the_current_college_season() -> None:
+    assert MODULE.default_season_window(MODULE.dt.date(2026, 9, 22)) == (
+        MODULE.dt.date(2026, 8, 20),
+        MODULE.dt.date(2026, 9, 22),
+    )
+    assert MODULE.default_season_window(MODULE.dt.date(2027, 2, 1)) == (
+        MODULE.dt.date(2026, 8, 20),
+        MODULE.dt.date(2027, 2, 1),
+    )

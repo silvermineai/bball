@@ -17,12 +17,50 @@ import json
 import re
 import time
 import urllib.request
+import urllib.parse
+from urllib.robotparser import RobotFileParser
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football"
 UA = "SilvermineResearch/1.0 (+https://bball.silvermine.dev)"
+
+
+def validate_robots(body: str, url: str, user_agent: str = UA) -> dict[str, object]:
+    """Validate the publisher policy before a scoreboard or box request.
+
+    ESPN's API host is separate from ``www.espn.com``.  A successful request
+    to one host cannot establish permission for the other, so the exact API
+    origin's robots response is required.  Parsing is kept separate from the
+    network call so the fail-closed rule is covered without live requests in
+    tests.
+    """
+
+    parser = RobotFileParser()
+    parser.parse(body.splitlines())
+    if not parser.can_fetch(user_agent, url):
+        raise RuntimeError("ESPN robots.txt disallows this request; no page requested")
+    delay = parser.crawl_delay(user_agent) or parser.crawl_delay("*")
+    return {"crawl_delay_seconds": delay}
+
+
+def verify_robots(url: str = API, user_agent: str = UA) -> dict[str, object]:
+    """Require a readable, permissive robots file for the exact API origin."""
+
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise RuntimeError("ESPN API URL must use HTTPS before robots verification")
+    robots_url = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, "/robots.txt", "", ""))
+    request = urllib.request.Request(robots_url, headers={"User-Agent": user_agent, "Accept": "text/plain"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            body = response.read().decode("utf-8", "replace")
+    except Exception as exc:  # pragma: no cover - network behavior varies
+        raise RuntimeError("Cannot verify ESPN robots policy; no page requested") from exc
+    policy = validate_robots(body, url, user_agent)
+    policy.update({"robots_url": robots_url, "robots_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest()})
+    return policy
 
 
 def is_rankable_athlete_id(value: object) -> bool:
@@ -66,6 +104,13 @@ def dates_between(start: dt.date, end: dt.date):
         current += dt.timedelta(days=1)
 
 
+def default_season_window(today: dt.date) -> tuple[dt.date, dt.date]:
+    """Return the current college-football season's capture window."""
+
+    season = today.year if today.month >= 7 else today.year - 1
+    return dt.date(season, 8, 20), today
+
+
 def classify_team(team: dict[str, Any]) -> str | None:
     groups = team.get("groups") or {}
     group_id = str(groups.get("id") or "")
@@ -78,6 +123,7 @@ def classify_team(team: dict[str, Any]) -> str | None:
 
 
 def capture(start: dt.date, end: dt.date, workers: int) -> dict[str, Any]:
+    robots = verify_robots()
     day_urls = [f"{API}/scoreboard?dates={day:%Y%m%d}&groups=35" for day in dates_between(start, end)]
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
         day_results = list(pool.map(get_json, day_urls))
@@ -150,7 +196,7 @@ def capture(start: dt.date, end: dt.date, workers: int) -> dict[str, Any]:
         "generated_at": fetched_at,
         "scope": "ESPN group-35 events classified by exact ESPN team group IDs 57 (D2) and 58 (D3)",
         "source_policy": "Only rows with stable ESPN athlete/team IDs and an exact source team group enter the release; missing categories remain missing.",
-        "source": {"publisher": "ESPN", "scoreboard_url": f"{API}/scoreboard?dates={{yyyymmdd}}&groups=35", "summary_url_template": f"{API}/summary?event={{event_id}}", "team_url_template": f"{API}/teams/{{team_id}}", "receipt_count": len(receipts), "receipt_sha256": digest},
+        "source": {"publisher": "ESPN", "scoreboard_url": f"{API}/scoreboard?dates={{yyyymmdd}}&groups=35", "summary_url_template": f"{API}/summary?event={{event_id}}", "team_url_template": f"{API}/teams/{{team_id}}", "receipt_count": len(receipts), "receipt_sha256": digest, **robots},
         "coverage": {"events_discovered": len(events), "events_with_d2_d3_team": len(valid_events), "games": len(games), "player_rows": len(rows), "players": len({row["athlete_id"] for row in rows}), "teams": len({row["team_id"] for row in rows}), "rows_by_division": {"d2": sum(row["division"] == "d2" for row in rows), "d3": sum(row["division"] == "d3" for row in rows)}, "players_by_division": {"d2": len({row["athlete_id"] for row in rows if row["division"] == "d2"}), "d3": len({row["athlete_id"] for row in rows if row["division"] == "d3"})}},
         "receipts": receipts,
         "games": games,
@@ -160,18 +206,20 @@ def capture(start: dt.date, end: dt.date, workers: int) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start", default="2026-08-20")
-    parser.add_argument("--end", default=dt.date.today().isoformat())
+    parser.add_argument("--start")
+    parser.add_argument("--end")
     parser.add_argument("--workers", type=int, default=6)
-    parser.add_argument("--output", type=Path, default=ROOT / "frontend/public/data/football/lower-division-player-stats-2026.json")
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    start = dt.date.fromisoformat(args.start)
-    end = dt.date.fromisoformat(args.end)
+    default_start, default_end = default_season_window(dt.date.today())
+    start = dt.date.fromisoformat(args.start) if args.start else default_start
+    end = dt.date.fromisoformat(args.end) if args.end else default_end
     if end < start or args.workers < 1 or args.workers > 16:
         raise SystemExit("invalid date range or worker count")
     payload = capture(start, end, args.workers)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    output = args.output or ROOT / f"frontend/public/data/football/lower-division-player-stats-{start.year}.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     print(json.dumps(payload["coverage"], sort_keys=True))
 
 

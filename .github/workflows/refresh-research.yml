@@ -196,6 +196,27 @@ jobs:
           fi
           python scripts/build-womens-basketball-division-readiness.py
 
+      - name: Refresh ESPN lower-division football player boxes
+        # ESPN's group-35 feed is a combined D2/D3 discovery surface. The
+        # capture performs an exact API-origin robots check before any request,
+        # classifies each row from the source team group, and retains hashes
+        # for every summary response. If that policy cannot be verified, keep
+        # the last receipt-backed archive and continue the broader release.
+        if: ${{ github.event_name == 'schedule' || inputs.sport == 'both' || inputs.sport == 'football' || inputs.sport == '' }}
+        run: |
+          set +e
+          python scripts/scrape-football-lower-division-player-stats.py > /tmp/football-lower-division.log 2>&1
+          status=$?
+          cat /tmp/football-lower-division.log
+          if [ "$status" -ne 0 ]; then
+            if grep -Eqi "robots(\\.txt| policy)|cannot verify|disallow|no page requested" /tmp/football-lower-division.log; then
+              echo "::warning::ESPN lower-division player policy could not be verified; retaining the cached receipt-backed archive."
+            else
+              exit "$status"
+            fi
+          fi
+          python scripts/build-football-lower-player-readiness.py
+
       - name: Refresh selected sources, models and publication
         env:
           REFRESH_SPORT: ${{ inputs.sport || 'both' }}
