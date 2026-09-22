@@ -212,6 +212,18 @@ export default function Scorecard() {
   const marketCaptureNote = marketCaptureDiagnostic(marketMetadata);
   const marketCaptureHistoryNote = marketCaptureHistoryDiagnostic(marketMetadata);
   const marketCaptureCoverageNote = marketCaptureCoverageDetail(marketMetadata);
+  const marketEditionLabel = (modelId?: string) => modelId && modelId === liveModelId ? "Active edition" : "Historical edition";
+  const marketComparisonLineageNote = activeModelMarket.state === "settled_comparisons"
+    ? "The active model edition has qualifying settled market comparisons below. Historical editions remain identified by their own immutable model IDs."
+    : activeModelMarket.state === "pending_settlement"
+      ? "The active model edition has qualifying quotes awaiting verified finals. Settled results below are historical evidence from earlier editions and are kept separate."
+      : activeModelMarket.state === "checking"
+        ? "The active model edition is still being verified. Market rows below remain attached to their recorded model IDs until that check completes."
+        : activeModelMarket.state === "unavailable"
+          ? "The live active model could not be verified. Market rows below remain historical evidence attached to their recorded model IDs."
+          : activeModelMarket.state === "no_active_edition"
+            ? "The live catalog has no matching active edition in this scorecard. Market rows below remain historical evidence attached to their recorded model IDs."
+            : "The active model edition has no qualifying market cohort yet. Any settled results below are historical evidence from an earlier model edition and do not describe the current model.";
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -601,7 +613,7 @@ export default function Scorecard() {
       ) : (
         <div>
           <p className="note">
-            Market results stay attached to the exact model edition that produced each selected forecast. Older edition snapshots without model lineage are labeled as legacy pooled results.
+            {marketComparisonLineageNote} Market results stay attached to the exact model edition that produced each selected forecast. Older edition snapshots without model lineage are labeled as legacy pooled results.
           </p>
           <div className="table-scroll">
             <table className="data-table">
@@ -623,7 +635,7 @@ export default function Scorecard() {
               <tbody>
                 {summary.market_metrics.map((r) => (
                   <tr key={`${r.model_id || "legacy"}|${r.provider}|${r.bookmaker}|${r.market}`}>
-                    <th scope="row"><code>{r.model_id || "Legacy pooled"}</code></th>
+                    <th scope="row"><code>{r.model_id || "Legacy pooled"}</code><small>{r.model_id ? marketEditionLabel(r.model_id) : "No model edition recorded"}</small></th>
                     <td><strong>{r.provider}</strong><small>{r.bookmaker}</small></td>
                     <td>{r.market}</td>
                     <td>{r.games}</td>
@@ -667,7 +679,7 @@ export default function Scorecard() {
               <tbody>
                 {pendingMarketMetrics.map((r) => (
                   <tr key={`${r.model_id || "legacy"}|${r.provider}|${r.bookmaker}|${r.market}`}>
-                    <th scope="row"><code>{r.model_id || "Legacy pooled"}</code></th>
+                    <th scope="row"><code>{r.model_id || "Legacy pooled"}</code><small>{r.model_id ? marketEditionLabel(r.model_id) : "No model edition recorded"}</small></th>
                     <td>{r.market}</td>
                     <td className="numeric">{r.games.toLocaleString()}</td>
                     <td className="numeric">
