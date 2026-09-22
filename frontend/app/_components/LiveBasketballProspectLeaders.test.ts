@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import { formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
+import { buildProspectParams, formatProspectSize, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
 
 describe("homepage recruiting section", () => {
   it("renders the prospect board as the fifth dashboard section", () => {
@@ -27,6 +27,14 @@ describe("prospect size formatting", () => {
 describe("prospect class labels", () => {
   it("uses the selected class in the count label", () => {
     expect(prospectCountLabel(254, 2028)).toBe("254 prospects in the 2028 class");
+  });
+
+  it("keeps future-class position, destination and search filters in the request", () => {
+    expect(buildProspectParams({ season: 2029, page: 2, position: "PG", committed: "no", query: "  Crawford  " }).toString()).toBe("season=2029&page=2&committed=no&position=PG&q=Crawford");
+  });
+
+  it("omits empty optional filters instead of broadening them into values", () => {
+    expect(buildProspectParams({ season: 2028, page: 0 }).toString()).toBe("season=2028&page=0&committed=all");
   });
 });
 

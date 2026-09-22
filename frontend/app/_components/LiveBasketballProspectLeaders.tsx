@@ -63,6 +63,29 @@ type ProspectResponse = {
 
 const prospectSeasons = [2025, 2026, 2027, 2028, 2029, 2030] as const;
 export type ProspectSeason = (typeof prospectSeasons)[number];
+export type ProspectCommitment = "all" | "yes" | "no";
+const prospectPositions = ["PG", "SG", "SF", "PF", "C"] as const;
+export type ProspectPosition = "" | (typeof prospectPositions)[number];
+
+/** Keep class, position, commitment and search filters identical for reads and exports. */
+export function buildProspectParams({
+  season,
+  page,
+  query = "",
+  position = "",
+  committed = "all",
+}: {
+  season: number;
+  page: number;
+  query?: string;
+  position?: ProspectPosition;
+  committed?: ProspectCommitment;
+}) {
+  const params = new URLSearchParams({ season: String(season), page: String(page), committed });
+  if (position) params.set("position", position);
+  if (query.trim()) params.set("q", query.trim());
+  return params;
+}
 
 const movement = (row: Prospect) => {
   if (row.rank == null || row.previous_rank == null) return "—";
@@ -168,6 +191,8 @@ export default function LiveBasketballProspectLeaders() {
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
   const [season, setSeason] = useState<ProspectSeason>(2027);
   const [query, setQuery] = useState("");
+  const [position, setPosition] = useState<ProspectPosition>("");
+  const [committed, setCommitted] = useState<ProspectCommitment>("all");
   const [rowLimit, setRowLimit] = useState<10 | 25 | 50>(10);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
@@ -177,8 +202,7 @@ export default function LiveBasketballProspectLeaders() {
     setExporting(true);
     setExportMessage("");
     try {
-      const params = new URLSearchParams({ season: String(season), committed: "all" });
-      if (query.trim()) params.set("q", query.trim());
+      const params = buildProspectParams({ season, page: 0, query, position, committed });
       const cohort = `prospect-export-${Date.now()}`;
       params.set("cohort", cohort);
       const totalRows = Number(data.total);
@@ -217,8 +241,7 @@ export default function LiveBasketballProspectLeaders() {
     setStatus("checking");
     setData(null);
     const timer = window.setTimeout(() => {
-      const params = new URLSearchParams({ season: String(season), page: "0", committed: "all" });
-      if (query.trim()) params.set("q", query.trim());
+      const params = buildProspectParams({ season, page: 0, query, position, committed });
       fetchJson<ProspectResponse>(
         `/api/basketball/research/recruiting-rankings?${params.toString()}`,
         { signal: controller.signal },
@@ -237,7 +260,7 @@ export default function LiveBasketballProspectLeaders() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, season]);
+  }, [committed, position, query, season]);
 
   return (
     <section className="dashboard-section" aria-labelledby="dashboard-prospects">
@@ -250,6 +273,8 @@ export default function LiveBasketballProspectLeaders() {
               {prospectSeasons.map((value) => <option key={value} value={value}>{value} class</option>)}
             </select>
           </label>
+          <label className="control"><span>POSITION</span><select value={position} onChange={(event) => setPosition(event.target.value as ProspectPosition)} aria-label="Prospect position"><option value="">All positions</option>{prospectPositions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+          <label className="control"><span>DESTINATION</span><select value={committed} onChange={(event) => setCommitted(event.target.value as ProspectCommitment)} aria-label="Prospect destination status"><option value="all">All statuses</option><option value="yes">Recorded destination</option><option value="no">No recorded destination</option></select></label>
           <label className="control"><span>SEARCH</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Prospect or destination" aria-label="Search prospect or destination" /></label>
           <label className="control"><span>SHOW</span><select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 10 | 25 | 50)}><option value={10}>10 rows</option><option value={25}>25 rows</option><option value={50}>50 rows</option></select></label>
           <button className="button secondary" type="button" onClick={exportProspects} disabled={exporting || !data?.rows.length}>{exporting ? "Preparing CSV…" : "Download class CSV ↓"}</button>
@@ -257,7 +282,7 @@ export default function LiveBasketballProspectLeaders() {
         </div>
       </div>
       {exportMessage && <p className="note" role="status">{exportMessage}</p>}
-      <p className="dashboard-caption">Current national ranking, movement, grade and destination in a compact {season} class view. The full board supports every tracked class, position and commitment filter.</p>
+      <p className="dashboard-caption">Current national ranking, movement, grade and destination in a compact {season} class view. The full board supports every tracked class, position and commitment filter. “No recorded destination” means the release has no committed team ID; it does not mean no recruiting interest.</p>
       {status === "checking" ? <p className="empty" role="status">Loading current prospects…</p> : status === "unavailable" || !data ? <p className="empty" role="status">The live prospect board is temporarily unavailable. <Link href="/basketball/recruiting/">Open the recruiting board →</Link></p> : (
         <>
           <div className="dashboard-strip dashboard-recruiting-strip">
