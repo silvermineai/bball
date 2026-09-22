@@ -32,6 +32,7 @@ function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
 const providerCapabilities = [
   {
     provider: "The Odds API",
+    source_access: "licensed" as const,
     sports: ["football", "basketball"],
     markets: ["h2h", "spreads", "totals"],
     provider_update_clock: true,
@@ -40,6 +41,7 @@ const providerCapabilities = [
   },
   {
     provider: "CollegeBasketballData.com API",
+    source_access: "licensed" as const,
     sports: ["basketball"],
     markets: ["h2h"],
     provider_update_clock: false,
@@ -48,6 +50,7 @@ const providerCapabilities = [
   },
   {
     provider: "ESPN Summary",
+    source_access: "public" as const,
     sports: ["basketball"],
     markets: ["h2h", "spreads", "totals"],
     provider_update_clock: false,
@@ -56,6 +59,7 @@ const providerCapabilities = [
   },
   {
     provider: "ESPN Summary",
+    source_access: "public" as const,
     sports: ["football"],
     markets: ["h2h", "spreads", "totals"],
     provider_update_clock: false,
@@ -64,6 +68,7 @@ const providerCapabilities = [
   },
   {
     provider: "Licensed CSV export",
+    source_access: "authorized" as const,
     sports: ["football", "basketball"],
     markets: ["h2h", "spreads", "totals"],
     provider_update_clock: true,

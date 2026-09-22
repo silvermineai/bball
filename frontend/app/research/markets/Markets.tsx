@@ -66,7 +66,7 @@ type Meta = {
   unavailable_reason?: string;
   unavailable_sources?: string[];
   provider_capabilities?: Array<{
-    provider: string;
+    source_access?: "licensed" | "public" | "authorized";
     markets: string[];
     provider_update_clock: boolean;
     docs_url: string;
@@ -332,8 +332,8 @@ export default function Markets() {
         </details> : null}
         {archivePartial ? <p className="note" role="status">This archive read is partial while {unavailableSources.length ? unavailableSources.join(", ") : "one binding"} is busy. Counts reflect only the feed that answered; missing observations remain unavailable.</p> : null}
         {meta?.provider_capabilities?.length ? <div className="recruiting-intake-detail" aria-label="Market feed capabilities">
-          {meta.provider_capabilities.map((capability, index) => <span key={`${capability.provider}-${index}`}>
-            <strong>Licensed feed</strong> · {capability.markets.join(", ")} · {capability.provider_update_clock ? "feed update clock required" : "capture clock only"}
+          {meta.provider_capabilities.map((capability, index) => <span key={`${capability.source_access || "source"}-${index}`}>
+            <strong>{capability.source_access === "public" ? "Public capture" : capability.source_access === "authorized" ? "Authorized import" : "Licensed feed"}</strong> · {capability.markets.join(", ")} · {capability.provider_update_clock ? "feed update clock required" : "capture clock only"}
           </span>)}
         </div> : null}
         {meta?.archive_receipts?.length ? <details className="note" style={{ marginTop: 14 }}>
