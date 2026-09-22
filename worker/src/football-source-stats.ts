@@ -155,7 +155,11 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
   }
   if (q.q) {
     // instr keeps searches literal: '%' and '_' are ordinary characters.
-    conditions.push("instr(lower(s.stats_json || ' ' || COALESCE(s.team_id,'') || ' ' || COALESCE(s.athlete_id,'') || ' ' || COALESCE(s.category,'')),lower(?))>0");
+    // Schedule names and IDs are retained alongside the raw source payload;
+    // include them here so a search for a visible game context can locate the
+    // same row in the archive.  COALESCE keeps season/team aggregate rows
+    // searchable when no schedule record exists.
+    conditions.push("instr(lower(s.stats_json || ' ' || COALESCE(s.team_id,'') || ' ' || COALESCE(s.athlete_id,'') || ' ' || COALESCE(s.category,'') || ' ' || COALESCE(s.record_key,'') || ' ' || COALESCE(s.game_id,'') || ' ' || COALESCE(g.home_name,'') || ' ' || COALESCE(g.away_name,'')),lower(?))>0");
     binds.push(q.q);
   }
   const where = conditions.join(" AND ");
@@ -178,7 +182,9 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
   let receipts: { results: Array<{ dataset: Dataset; season: number; receipt_json: string }> };
   try {
     [count, rows, receipts] = await withTimeout(Promise.all([
-      db.prepare(`SELECT count(*) AS total FROM football_stats s WHERE ${where}`)
+      db.prepare(`SELECT count(*) AS total
+        FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
+        WHERE ${where}`)
         .bind(...binds)
         .first<{ total: number }>(),
       db.prepare(`SELECT s.dataset,s.season,s.record_key,s.athlete_id,s.team_id,s.game_id,s.category,s.stats_json,

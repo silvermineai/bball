@@ -66,6 +66,9 @@ describe("football source statistics", () => {
       }],
     });
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("instr(lower(s.stats_json ||"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("COALESCE(g.home_name,'')") && String(sql).includes("COALESCE(g.away_name,'')"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("COALESCE(s.record_key,'')") && String(sql).includes("COALESCE(s.game_id,'')"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("SELECT count(*) AS total") && String(sql).includes("LEFT JOIN football_games g ON g.id=s.game_id"))).toBe(true);
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("team_scope.dataset='teams'") && String(sql).includes("json_extract(team_scope.stats_json,'$.division')"))).toBe(true);
   });
 
