@@ -16,6 +16,8 @@ import {
   womensPlayerStatValue,
   womensPlayerSourceCoverage,
   womensPlayerTableContextFields,
+  mergeWomensPlayerStats,
+  womensBoxDisplayStats,
   type WomensPlayerStats,
 } from "../_lib/womens-player-detail";
 import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
@@ -48,7 +50,7 @@ type BoxPlayer = {
   teams?: Array<{ team_id: string; team: string }>;
 };
 
-type DisplayPlayer = Player & { source: "season" | "box"; box?: BoxPlayer };
+type DisplayPlayer = Player & { source: "season" | "box" | "season+box"; box?: BoxPlayer; seasonStats?: WomensPlayerStats };
 
 type Edition = {
   season: number;
@@ -124,7 +126,16 @@ export default function WomensBasketballPlayers() {
   }, []);
 
   const displayPlayers = useMemo<DisplayPlayer[]>(() => {
-    const seasonPlayers: DisplayPlayer[] = (edition?.players || []).map((player) => ({ ...player, source: "season" }));
+    const boxById = new Map((boxEdition?.players || []).map((player) => [player.player_id, player]));
+    const seasonPlayers: DisplayPlayer[] = (edition?.players || []).map((player) => {
+      const box = boxById.get(player.player_id);
+      // A DNP-only box identity has no observed production to replace the
+      // season row with; retain the overlap evidence without changing values.
+      const boxStats = box && box.games_played > 0 ? womensBoxDisplayStats(box) : {};
+      return box
+        ? { ...player, source: "season+box", box, seasonStats: player.stats, stats: mergeWomensPlayerStats(player.stats, boxStats) }
+        : { ...player, source: "season" };
+    });
     const knownIds = new Set(seasonPlayers.map((player) => player.player_id));
     const boxOnlyPlayers: DisplayPlayer[] = (boxEdition?.players || [])
       .filter((player) => !knownIds.has(player.player_id))
@@ -135,32 +146,7 @@ export default function WomensBasketballPlayers() {
         position: player.position,
         source: "box",
         box: player,
-        stats: {
-          gamesPlayed: player.games_played,
-          gamesStarted: player.starts,
-          avgMinutes: player.per_game.minutes,
-          avgPoints: player.per_game.points,
-          avgRebounds: player.per_game.rebounds,
-          avgOffensiveRebounds: player.per_game.offensive_rebounds,
-          avgDefensiveRebounds: player.per_game.defensive_rebounds,
-          avgAssists: player.per_game.assists,
-          avgSteals: player.per_game.steals,
-          avgBlocks: player.per_game.blocks,
-          avgTurnovers: player.per_game.turnovers,
-          avgFouls: player.per_game.fouls,
-          points: player.totals.points,
-          totalRebounds: player.totals.rebounds,
-          offensiveRebounds: player.totals.offensive_rebounds,
-          defensiveRebounds: player.totals.defensive_rebounds,
-          assists: player.totals.assists,
-          steals: player.totals.steals,
-          blocks: player.totals.blocks,
-          turnovers: player.totals.turnovers,
-          fouls: player.totals.fouls,
-          fieldGoalPct: player.shooting.field_goal_pct,
-          threePointFieldGoalPct: player.shooting.three_point_pct,
-          freeThrowPct: player.shooting.free_throw_pct,
-        },
+        stats: womensBoxDisplayStats(player),
       }));
     return [...seasonPlayers, ...boxOnlyPlayers];
   }, [boxEdition, edition]);
@@ -196,7 +182,7 @@ export default function WomensBasketballPlayers() {
   return <section className="field-card wbb-player-card" aria-labelledby="wbb-players-title">
     <div className="section-heading"><div><div className="eyebrow">WOMEN&apos;S PLAYER TABLE · {WOMENS_SOURCE_SCOPE_LABEL}</div>
     <h2 id="wbb-players-title">Browse observed player production</h2></div><button className="button secondary" type="button" onClick={download} disabled={!rows.length}>Download filtered CSV ↓</button></div>
-    <p className="muted">A searchable table combining source-reported season rows with arithmetic aggregates from retained game-level box scores. Missing values remain unavailable. {WOMENS_SOURCE_SCOPE_NOTE}</p>
+      <p className="muted">A searchable table combining source-reported season rows with arithmetic aggregates from retained game-level box scores. For exact IDs present in both releases, finite game-box values power the table and season-only fields remain available as fallback. Missing values remain unavailable. {WOMENS_SOURCE_SCOPE_NOTE}</p>
     {!edition ? <p className="muted">Loading women&apos;s player table…</p> : <>
       <div className="wbb-player-controls">
         <label htmlFor="wbb-player-search">Search player or team</label>
@@ -223,8 +209,8 @@ export default function WomensBasketballPlayers() {
         <div><strong>{boxEdition ? sourceCoverage.boxIds.toLocaleString() : "—"}</strong><span>Game-box IDs</span></div>
         <div><strong>{boxEdition ? sourceCoverage.overlapIds.toLocaleString() : "—"}</strong><span>Exact-ID overlap</span></div>
       </div>
-      <p className="note">The table keeps one row per exact player ID. The season release contributes {sourceCoverage.seasonOnlyIds.toLocaleString()} IDs without a matching box row; {boxEdition ? `the box archive contributes ${sourceCoverage.boxOnlyIds.toLocaleString()} IDs outside the season release, and ${sourceCoverage.overlapIds.toLocaleString()} IDs appear in both.` : "the game-box archive is unavailable, so overlap and box-only coverage remain unavailable."} This is exact-ID coverage, never a name-based join. · showing {rows.length ? `${page * pageSize + 1}–${page * pageSize + visibleRows.length}` : "0"} of {rows.length.toLocaleString()} matching rows · observed season {edition.observed_player_season} · captured {date(edition.generated_at)}{boxEdition?.coverage.players_multiple_teams ? ` · ${boxEdition.coverage.players_multiple_teams} players have multiple observed teams` : ""}.</p>
-      <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Team</th><th>Pos.</th><th>Record</th><th className="numeric">GP</th>{womensPlayerTableContextFields.map(([, label]) => <th className="numeric" key={label}>{label}</th>)}<th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">MPG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th>Recorded line</th></tr></thead><tbody>{visibleRows.map((player) => <tr key={player.player_id}><th scope="row"><Link href={`/basketball/womens-player/?id=${encodeURIComponent(player.player_id)}`}>{player.name}</Link><small>Player ID {player.player_id}</small></th><td>{player.team}{player.source === "box" && (player.box?.teams?.length || 0) > 1 ? <small>{player.box?.teams?.map((team) => `${team.team} (${team.team_id})`).join(" · ")}</small> : null}</td><td>{player.position || "—"}</td><td>{player.source === "box" ? "Game boxes" : "Season"}</td><td className="numeric">{number(player.stats.gamesPlayed, 0)}</td>{womensPlayerTableContextFields.map(([key]) => <td className="numeric" key={key}>{number(player.stats[key])}</td>)}<td className="numeric">{number(player.stats.avgPoints)}</td><td className="numeric">{number(player.stats.avgRebounds)}</td><td className="numeric">{number(player.stats.avgAssists)}</td><td className="numeric">{number(player.stats.avgMinutes)}</td><td className="numeric">{number(player.stats.avgSteals)}</td><td className="numeric">{number(player.stats.avgBlocks)}</td><td className="numeric">{number(player.stats.avgTurnovers)}</td><td className="numeric">{number(player.stats.fieldGoalPct)}</td><td className="numeric">{number(player.stats.threePointFieldGoalPct)}</td><td className="numeric">{number(player.stats.freeThrowPct)}</td><td><details className="ranking-recorded-details"><summary>{player.source === "box" ? `${player.box?.box_rows.toLocaleString()} box rows` : `${womensPlayerDetailCount(player.stats)} recorded fields`}</summary>{player.source === "box" && player.box ? <><p className="note">Arithmetic aggregate of {player.box.games_played.toLocaleString()} played source rows; {player.box.dnp_rows.toLocaleString()} DNP rows are excluded from totals.</p>{player.box.teams && player.box.teams.length > 1 ? <p className="note">This player has source rows for {player.box.teams.length} teams; totals combine both observed stints.</p> : null}<div className="note">{Object.entries(player.box.totals).map(([key, value]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{womensPlayerFieldLabel(key)}: <strong>{value.toLocaleString("en-US", { maximumFractionDigits: 2 })}</strong></span>)}</div></> : <><p className="note">Source values retained for this player-season row. A dash means the release did not contain a finite numeric value.</p>{womensPlayerDetailGroups.map((group) => <div key={group.label}><strong>{group.label}</strong><div className="note">{group.fields.map(([key, label, kind]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{label}: <strong>{formatWomensPlayerStat(player.stats, key, kind)}</strong></span>)}</div></div>)}{unlistedWomensPlayerFields(player.stats).length ? <div><strong>Other retained fields</strong><div className="note">{unlistedWomensPlayerFields(player.stats).map((key) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{womensPlayerFieldLabel(key)}: <strong>{formatWomensPlayerStat(player.stats, key, "rate")}</strong></span>)}</div></div> : null}</>}</details></td></tr>)}</tbody></table></div>
+      <p className="note">The table keeps one row per exact player ID. The season release contributes {sourceCoverage.seasonOnlyIds.toLocaleString()} IDs without a matching box row; {boxEdition ? `the box archive contributes ${sourceCoverage.boxOnlyIds.toLocaleString()} IDs outside the season release, and ${sourceCoverage.overlapIds.toLocaleString()} IDs appear in both. Overlap rows are marked Season + boxes so the two receipts remain visible.` : "the game-box archive is unavailable, so overlap and box-only coverage remain unavailable."} This is exact-ID coverage, never a name-based join. · showing {rows.length ? `${page * pageSize + 1}–${page * pageSize + visibleRows.length}` : "0"} of {rows.length.toLocaleString()} matching rows · observed season {edition.observed_player_season} · captured {date(edition.generated_at)}{boxEdition?.coverage.players_multiple_teams ? ` · ${boxEdition.coverage.players_multiple_teams} players have multiple observed teams` : ""}.</p>
+      <div className="table-scroll"><table className="data-table"><thead><tr><th>Player</th><th>Team</th><th>Pos.</th><th>Record</th><th className="numeric">GP</th>{womensPlayerTableContextFields.map(([, label]) => <th className="numeric" key={label}>{label}</th>)}<th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">MPG</th><th className="numeric">SPG</th><th className="numeric">BPG</th><th className="numeric">TO/G</th><th className="numeric">FG%</th><th className="numeric">3P%</th><th className="numeric">FT%</th><th>Recorded line</th></tr></thead><tbody>{visibleRows.map((player) => <tr key={player.player_id}><th scope="row"><Link href={`/basketball/womens-player/?id=${encodeURIComponent(player.player_id)}`}>{player.name}</Link><small>Player ID {player.player_id}</small></th><td>{player.team}{player.box && (player.box.teams?.length || 0) > 0 ? <small>Game boxes: {player.box.teams?.map((team) => `${team.team} (${team.team_id})`).join(" · ")}</small> : null}</td><td>{player.position || "—"}</td><td>{player.source === "box" ? "Game boxes" : player.source === "season+box" ? "Season + boxes" : "Season"}</td><td className="numeric">{number(player.stats.gamesPlayed, 0)}</td>{womensPlayerTableContextFields.map(([key]) => <td className="numeric" key={key}>{number(player.stats[key])}</td>)}<td className="numeric">{number(player.stats.avgPoints)}</td><td className="numeric">{number(player.stats.avgRebounds)}</td><td className="numeric">{number(player.stats.avgAssists)}</td><td className="numeric">{number(player.stats.avgMinutes)}</td><td className="numeric">{number(player.stats.avgSteals)}</td><td className="numeric">{number(player.stats.avgBlocks)}</td><td className="numeric">{number(player.stats.avgTurnovers)}</td><td className="numeric">{number(player.stats.fieldGoalPct)}</td><td className="numeric">{number(player.stats.threePointFieldGoalPct)}</td><td className="numeric">{number(player.stats.freeThrowPct)}</td><td><details className="ranking-recorded-details"><summary>{player.box ? `${player.box.box_rows.toLocaleString()} box rows${player.source === "season+box" ? ` · ${womensPlayerDetailCount(player.stats)} merged fields` : ""}` : `${womensPlayerDetailCount(player.stats)} recorded fields`}</summary>{player.box ? <><p className="note">Arithmetic aggregate of {player.box.games_played.toLocaleString()} played source rows; {player.box.dnp_rows.toLocaleString()} DNP rows are excluded from totals. Finite box values take precedence over overlapping season fields in the table; season-only fields remain available in the merged record.</p>{player.box.teams && player.box.teams.length > 1 ? <p className="note">This player has source rows for {player.box.teams.length} teams; totals combine both observed stints.</p> : null}<div className="note">{Object.entries(player.box.totals).map(([key, value]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{womensPlayerFieldLabel(key)}: <strong>{value.toLocaleString("en-US", { maximumFractionDigits: 2 })}</strong></span>)}</div>{player.source === "season+box" && player.seasonStats ? <><p className="note" style={{ marginTop: 10 }}>Season-release values retained for this exact player ID:</p><div className="note">{Object.entries(player.seasonStats).map(([key, value]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{womensPlayerFieldLabel(key)}: <strong>{formatWomensPlayerStat(player.seasonStats!, key, "rate")}</strong></span>)}</div></> : null}</> : <><p className="note">Source values retained for this player-season row. A dash means the release did not contain a finite numeric value.</p>{womensPlayerDetailGroups.map((group) => <div key={group.label}><strong>{group.label}</strong><div className="note">{group.fields.map(([key, label, kind]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{label}: <strong>{formatWomensPlayerStat(player.stats, key, kind)}</strong></span>)}</div></div>)}{unlistedWomensPlayerFields(player.stats).length ? <div><strong>Other retained fields</strong><div className="note">{unlistedWomensPlayerFields(player.stats).map((key) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{womensPlayerFieldLabel(key)}: <strong>{formatWomensPlayerStat(player.stats, key, "rate")}</strong></span>)}</div></div> : null}</>}</details></td></tr>)}</tbody></table></div>
       {!rows.length ? <p className="empty">No retained players match these filters.</p> : null}
       {rows.length > pageSize ? <div className="pagination" aria-label="Women&apos;s player pages"><span>Page {page + 1} of {Math.ceil(rows.length / pageSize)}</span><div><button className="button secondary" type="button" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>← Previous</button><button className="button secondary" type="button" disabled={(page + 1) * pageSize >= rows.length} onClick={() => setPage((current) => current + 1)}>Next →</button></div></div> : null}
       {boxEdition?.coverage.source_fields?.length ? <details className="ranking-recorded-details"><summary>Source field coverage · {boxEdition.coverage.source_fields.length} retained fields</summary><p className="note">Counts below come from raw player-box rows and retain missingness. Finite numeric values are counted separately; identity and context fields are not coerced into statistics.</p><div className="table-scroll"><table className="data-table"><thead><tr><th>Source field</th><th className="numeric">Observed rows</th><th className="numeric">Finite numeric rows</th></tr></thead><tbody>{boxEdition.coverage.source_fields.map((field) => <tr key={field.field}><th scope="row">{field.field}</th><td className="numeric">{field.observed_rows.toLocaleString()}</td><td className="numeric">{field.finite_numeric_rows.toLocaleString()}</td></tr>)}</tbody></table></div></details> : null}

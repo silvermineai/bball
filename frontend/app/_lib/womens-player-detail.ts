@@ -5,11 +5,74 @@ export type WomensPlayerCsvRecord = {
   name: string;
   team: string;
   position: string;
-  source: "season" | "box";
+  source: "season" | "box" | "season+box";
   box_rows?: number;
   dnp_rows?: number;
   stats: WomensPlayerStats;
 };
+
+export type WomensPlayerBoxAggregate = {
+  games_played: number;
+  starts: number;
+  totals: Record<string, number | null | undefined>;
+  per_game: Record<string, number | null | undefined>;
+  shooting: {
+    field_goal_pct: number | null | undefined;
+    three_point_pct: number | null | undefined;
+    free_throw_pct: number | null | undefined;
+  };
+};
+
+/**
+ * Map the retained game-box aggregate to the public player-table vocabulary.
+ * Keeping this mapping in one place prevents a source merge from silently
+ * dropping a box field or giving it a different meaning in CSV and display.
+ */
+export function womensBoxDisplayStats(box: WomensPlayerBoxAggregate): WomensPlayerStats {
+  return {
+    gamesPlayed: box.games_played,
+    gamesStarted: box.starts,
+    avgMinutes: box.per_game.minutes,
+    avgPoints: box.per_game.points,
+    avgRebounds: box.per_game.rebounds,
+    avgOffensiveRebounds: box.per_game.offensive_rebounds,
+    avgDefensiveRebounds: box.per_game.defensive_rebounds,
+    avgAssists: box.per_game.assists,
+    avgSteals: box.per_game.steals,
+    avgBlocks: box.per_game.blocks,
+    avgTurnovers: box.per_game.turnovers,
+    avgFouls: box.per_game.fouls,
+    points: box.totals.points,
+    totalRebounds: box.totals.rebounds,
+    offensiveRebounds: box.totals.offensive_rebounds,
+    defensiveRebounds: box.totals.defensive_rebounds,
+    assists: box.totals.assists,
+    steals: box.totals.steals,
+    blocks: box.totals.blocks,
+    turnovers: box.totals.turnovers,
+    fouls: box.totals.fouls,
+    fieldGoalPct: box.shooting.field_goal_pct,
+    threePointFieldGoalPct: box.shooting.three_point_pct,
+    freeThrowPct: box.shooting.free_throw_pct,
+  };
+}
+
+/**
+ * Merge two exact-ID sources without turning a missing box cell into zero.
+ * Game-box values are preferred for overlapping fields because they are
+ * arithmetic aggregates of the selected observed season; season-release
+ * fields remain available when the box release did not carry that measure.
+ */
+export function mergeWomensPlayerStats(
+  seasonStats: WomensPlayerStats,
+  boxStats: WomensPlayerStats,
+): WomensPlayerStats {
+  const merged: WomensPlayerStats = { ...seasonStats };
+  for (const [key, value] of Object.entries(boxStats)) {
+    if (typeof value === "number" && Number.isFinite(value)) merged[key] = value;
+  }
+  return merged;
+}
 
 export type WomensPlayerSourceCoverage = {
   /** Unique exact IDs in the bounded player-season release. */

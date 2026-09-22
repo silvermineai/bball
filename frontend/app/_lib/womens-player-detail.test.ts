@@ -11,6 +11,8 @@ import {
   compareWomensPlayerRows,
   womensPlayerSourceCoverage,
   womensPlayerTableContextFields,
+  mergeWomensPlayerStats,
+  womensBoxDisplayStats,
 } from "./womens-player-detail";
 
 describe("women's player retained detail", () => {
@@ -73,6 +75,39 @@ describe("women's player retained detail", () => {
     ];
     expect(rows.sort((left, right) => compareWomensPlayerRows(left, right, "avgBlocks")).map((row) => row.player_id))
       .toEqual(["leader", "zero", "missing"]);
+  });
+
+  it("prefers finite exact-ID box values while retaining season-only fields", () => {
+    expect(mergeWomensPlayerStats(
+      { avgPoints: 19.2, points: 768, doubleDouble: 4, futureMetric: 7 },
+      { avgPoints: 8.5, points: 183, doubleDouble: null, assists: 71 },
+    )).toEqual({
+      avgPoints: 8.5,
+      points: 183,
+      doubleDouble: 4,
+      futureMetric: 7,
+      assists: 71,
+    });
+  });
+
+  it("maps game-box totals and rates to the player-table vocabulary", () => {
+    expect(womensBoxDisplayStats({
+      games_played: 12,
+      starts: 8,
+      totals: { points: 120, rebounds: 48 },
+      per_game: { points: 10, rebounds: 4 },
+      shooting: { field_goal_pct: 50, three_point_pct: null, free_throw_pct: 80 },
+    })).toMatchObject({
+      gamesPlayed: 12,
+      gamesStarted: 8,
+      points: 120,
+      totalRebounds: 48,
+      avgPoints: 10,
+      avgRebounds: 4,
+      fieldGoalPct: 50,
+      threePointFieldGoalPct: null,
+      freeThrowPct: 80,
+    });
   });
 
   it("counts source cohorts by exact player ID without deduplicating names", () => {
