@@ -5,7 +5,8 @@ import Link from "next/link";
 import type { Game, Overview } from "../_lib/data";
 import { date, fmt, kick } from "../_lib/format";
 import { signed } from "../_lib/format";
-import { footballModelFactors } from "../_lib/football-model-factors";
+import { footballCalibrationReliabilityForDivision, footballModelFactors, type FootballCalibrationReliability, type FootballReliabilityBand } from "../_lib/football-model-factors";
+import { footballForecastDivision } from "../_lib/football-forecast-evidence";
 import {
   dashboardFootballMarketComparisons,
   loadLiveFootballForecasts,
@@ -96,6 +97,29 @@ export function dashboardForecastModelFactors(
   return footballModelFactors(model, game);
 }
 
+/**
+ * Return holdout context only for the exact forecast edition and division that
+ * produced the row. The current published reliability artifact is D1-only;
+ * lower-division rows must remain explicitly unavailable until they publish
+ * their own calibration cohort.
+ */
+export function dashboardForecastCalibration(
+  game: Pick<Game, "home_division" | "away_division" | "prediction">,
+  reliability: FootballReliabilityBand[] | null | undefined,
+  expectedModelId?: string | null,
+): FootballCalibrationReliability | null {
+  const prediction = game.prediction;
+  if (!prediction || !expectedModelId || prediction.model_id !== expectedModelId) return null;
+  const homeDivision = footballForecastDivision(game.home_division);
+  const awayDivision = footballForecastDivision(game.away_division);
+  if (!homeDivision || homeDivision !== awayDivision) return null;
+  return footballCalibrationReliabilityForDivision(
+    prediction.home_win_probability,
+    reliability,
+    homeDivision,
+  );
+}
+
 /** Replace the first landing-page slice with the current forecast catalog. */
 export default function LiveFootballDashboardForecastTable({
   initialGames,
@@ -103,7 +127,9 @@ export default function LiveFootballDashboardForecastTable({
   expectedModelId,
 }: {
   initialGames: Game[];
-  model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
+  model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef"> & {
+    evaluation?: { reliability?: FootballReliabilityBand[] };
+  };
   expectedModelId?: string | null;
 }) {
   const [games, setGames] = useState(initialGames);
@@ -181,13 +207,14 @@ export default function LiveFootballDashboardForecastTable({
       <div className="dashboard-table-wrap">
         <table className="data-table dashboard-table forecast-table">
         <thead>
-          <tr><th>Game</th><th>Kickoff</th><th>Inputs</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th className="numeric">Margin</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
+          <tr><th>Game</th><th>Kickoff</th><th>Inputs</th><th className="numeric">Projected</th><th className="numeric">Home win</th><th>Held-out fit</th><th className="numeric">Margin</th><th className="numeric">Market</th><th className="numeric">Model − line</th><th className="numeric">Range</th><th className="numeric">Total</th></tr>
         </thead>
         <tbody>
           {rows.map((game) => {
             const prediction = game.prediction!;
             const market = summarizeMarketLines(dashboardFootballMarketComparisons(game, marketComparisons));
             const factors = dashboardForecastModelFactors(game, model, expectedModelId);
+            const calibration = dashboardForecastCalibration(game, model?.evaluation?.reliability, expectedModelId);
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>
@@ -206,6 +233,13 @@ export default function LiveFootballDashboardForecastTable({
                 </td>
                 <td className="numeric"><strong>{fmt(prediction.away_score)}–{fmt(prediction.home_score)}</strong><small>{prediction.home_win_probability >= 0.5 ? game.home_name : game.away_name} projected winner · {forecastSignal(game)}</small></td>
                 <td className="numeric"><strong>{fmt(prediction.home_win_probability * 100)}%</strong></td>
+                <td>
+                  {calibration ? <>
+                    <strong>{calibration.side} {fmt(calibration.confidence_lower * 100, 0)}–{fmt(calibration.confidence_upper * 100, 0)}%</strong>
+                    <small>{calibration.games.toLocaleString()} held-out games · {calibration.observed == null ? "observed rate unavailable" : `${fmt(calibration.observed * 100, 1)}% observed`}</small>
+                    <small>{calibration.observed_gap_pp == null ? "Observed-minus-predicted unavailable" : `Observed ${calibration.observed_gap_pp >= 0 ? "+" : ""}${fmt(calibration.observed_gap_pp, 1)} pp`}</small>
+                  </> : <span className="note">Unavailable for this edition or division</span>}
+                </td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
                 <td className="numeric">{!hasQualifiedMarketComparison(market) ? "—" : <>{market.spread == null ? null : <span>H {market.spread >= 0 ? "+" : ""}{fmt(market.spread)}</span>}{market.total == null ? null : <small>O/U {fmt(market.total)}</small>}{market.homeProbability == null ? null : <small>ML {fmt(market.homeProbability * 100, 1)}% home</small>}{market.capturedAt && <small>{date(market.capturedAt)}</small>}</>}</td>
                 <td className="numeric">{market.spreadGap == null && market.totalGap == null && market.winProbabilityGap == null ? "—" : <>{market.spreadGap == null ? null : <span>{market.spreadGap >= 0 ? "+" : ""}{fmt(market.spreadGap)} spread</span>}{market.totalGap == null ? null : <small>{market.totalGap >= 0 ? "+" : ""}{fmt(market.totalGap)} total</small>}{market.winProbabilityGap == null ? null : <small>{market.winProbabilityGap >= 0 ? "+" : ""}{fmt(market.winProbabilityGap * 100, 1)} pp ML</small>}</>}</td>

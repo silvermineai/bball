@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "../_lib/data";
-import { dashboardForecastModelFactors, footballForecastCsvRows } from "./LiveFootballDashboardForecastTable";
+import { dashboardForecastCalibration, dashboardForecastModelFactors, footballForecastCsvRows } from "./LiveFootballDashboardForecastTable";
 
 const game: Game = {
   id: "g1",
@@ -65,5 +65,31 @@ describe("football forecast board export", () => {
       ...game,
       prediction: { ...game.prediction!, model_id: "new-edition" },
     }, model, "edition")).toBeNull();
+  });
+
+  it("shows held-out context only for the exact D1 model edition", () => {
+    const reliability = [{ lower: 0.6, upper: 0.7, games: 100, predicted: 0.65, observed: 0.68 }];
+    const exact = dashboardForecastCalibration({
+      ...game,
+      prediction: { ...game.prediction!, model_id: "edition" },
+    }, reliability, "edition");
+    expect(exact).toMatchObject({
+      side: "Home",
+      confidence_lower: 0.6,
+      confidence_upper: 0.7,
+      games: 100,
+      observed: 0.68,
+      observed_gap_pp: 3,
+    });
+    expect(dashboardForecastCalibration({
+      ...game,
+      prediction: { ...game.prediction!, model_id: "older-edition" },
+    }, reliability, "edition")).toBeNull();
+    expect(dashboardForecastCalibration({
+      ...game,
+      home_division: "d2",
+      away_division: "d2",
+      prediction: { ...game.prediction!, model_id: "edition" },
+    }, reliability, "edition")).toBeNull();
   });
 });
