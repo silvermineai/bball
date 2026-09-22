@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { BBRosters } from "../../_lib/basketball-types";
 import { useBasketballRelease } from "../../_components/useBasketballRelease";
+import { movementEvidenceGuide } from "./movement-guide";
 
 type MovementStatus = "different_program" | "new_to_dataset";
 type MovementPlayer = {
@@ -75,7 +76,15 @@ export default function MovementWatch() {
       .slice(0, 10),
     [data, published],
   );
-  const count = data?.status_counts[status] ?? 0;
+  const count = data?.status_counts[status];
+  const evidenceGuide = data && count != null
+    ? movementEvidenceGuide({
+        season: data.season,
+        status,
+        matchingCount: count,
+        playersObserved: data.players_observed,
+      })
+    : [];
 
   return (
     <section className="section paper-panel movement-watch" aria-labelledby="movement-watch-title">
@@ -103,7 +112,7 @@ export default function MovementWatch() {
       </div>
       <p className="note">
         {data
-          ? `${count.toLocaleString()} matching observations · ${data.players_observed.toLocaleString()} player IDs in the full archive.`
+          ? `${count == null ? "Unavailable" : count.toLocaleString()} matching observations · ${data.players_observed.toLocaleString()} player IDs in the full archive.`
           : error ? <>{error} <button className="button secondary" type="button" onClick={retryLiveRoster}>Retry movement archive</button></> : "Checking the live roster observation edition…"}
       </p>
       {data?.source && (
@@ -112,6 +121,26 @@ export default function MovementWatch() {
           {data.source.fetched_at ? ` · retrieved ${new Date(data.source.fetched_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC` : " · retrieval clock unavailable"}
           {data.source.sha256 ? ` · SHA-256 ${data.source.sha256.slice(0, 16)}…` : " · digest unavailable"}
         </p>
+      )}
+      {evidenceGuide.length > 0 && (
+        <section className="recruiting-evidence" aria-labelledby="movement-evidence-guide-title">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">How to read this list</div>
+              <h3 id="movement-evidence-guide-title">Start with the join, then respect the boundary.</h3>
+            </div>
+          </div>
+          <ol>
+            {evidenceGuide.map((row) => (
+              <li key={row.key}>
+                <strong>{row.signal}</strong>
+                <small>{row.observed}</small>
+                <p>{row.establishes}</p>
+                <p className="note">Boundary: {row.boundary}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
       {players.length > 0 ? (
         <div className="table-scroll" style={{ marginTop: 16 }}>
