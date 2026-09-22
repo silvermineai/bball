@@ -658,7 +658,8 @@ export default function Scorecard() {
                   <th>Market winner%</th>
                   <th>Model Brier</th>
                   <th>Market Brier</th>
-                  <th>Direction result</th>
+                  <th>Model direction</th>
+                  <th>Quoted side result</th>
                 </tr>
               </thead>
               <tbody>
@@ -675,6 +676,7 @@ export default function Scorecard() {
                     <td>{fmt(r.model_brier, 4)}</td>
                     <td>{fmt(r.market_brier, 4)}</td>
                     <td>{directionSummary(r.direction_results)}</td>
+                    <td>{directionSummary(r.line_results || {})}</td>
                   </tr>
                 ))}
               </tbody>
@@ -881,9 +883,11 @@ export default function Scorecard() {
                             {c.direction_result && (
                               <>
                                 <br />
-                                Hypothetical direction: {c.direction_result}
+                                Model direction result: {c.direction_result}
                               </>
                             )}
+                            {c.line_result && <><br />Quoted side result: {c.line_result}</>}
+                            {c.model_result && <><br />Model side result: {c.model_result}</>}
                           </p>
                         ))}
                       </details>

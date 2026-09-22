@@ -171,6 +171,12 @@ export function winnerPickCorrect(probabilityValue: number | null, homeWon: bool
   return (probabilityValue > 0.5) === homeWon;
 }
 
+function settlementResult(outcome: number): "win" | "loss" | "push" {
+  if (outcome > 0) return "win";
+  if (outcome < 0) return "loss";
+  return "push";
+}
+
 function eligibility(row: Json, state: Json | null): string | null {
   if (!state) return "missing_schedule";
   const payload = parse(row.payload_json) || {};
@@ -437,7 +443,11 @@ function compare(prediction: Json, quote: Json, state: Json): Json | null {
         output.model_absolute_error = Math.abs(estimate - actual);
         output.market_absolute_error = Math.abs(baseline - actual);
         const outcome = actual - baseline;
-        output.direction_result = Math.abs(Number(output.model_difference)) < 1e-9 ? "pass" : Math.abs(outcome) < 1e-9 ? "push" : Number(output.model_difference) * outcome > 0 ? "win" : "loss";
+        output.line_result = settlementResult(outcome);
+        output.model_result = Math.abs(Number(output.model_difference)) < 1e-9
+          ? "pass"
+          : settlementResult(Number(output.model_difference) * outcome);
+        output.direction_result = Math.abs(Number(output.model_difference)) < 1e-9 ? "pass" : output.line_result === "push" ? "push" : output.model_result;
       }
     } else if (market === "h2h" && margin !== 0 && modelWin !== null) {
       const outcome = margin > 0 ? 1 : 0;
@@ -519,12 +529,18 @@ function summary(rows: Json[], registeredVersions: number, marketObservations: n
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, quotes]) => {
     const first = quotes[0];
     const direction: Record<string, number> = {};
+    const line: Record<string, number> = {};
+    const model: Record<string, number> = {};
     for (const q of quotes) if (typeof q.direction_result === "string") direction[q.direction_result] = (direction[q.direction_result] || 0) + 1;
+    for (const q of quotes) if (typeof q.line_result === "string") line[q.line_result] = (line[q.line_result] || 0) + 1;
+    for (const q of quotes) if (typeof q.model_result === "string") model[q.model_result] = (model[q.model_result] || 0) + 1;
     const base = {
       model_id: first.model_id, provider: first.provider, bookmaker: first.bookmaker, market: first.market, games: quotes.length,
       model_difference_mean: mean(quotes.flatMap((q) => number(q.model_difference) === null ? [] : [Number(q.model_difference)])),
       market_overround_mean: mean(quotes.flatMap((q) => number(q.market_overround) === null ? [] : [Number(q.market_overround)])),
       direction_results: direction,
+      line_results: line,
+      model_results: model,
     };
     if (!includeSettlementMetrics) return base;
     return {

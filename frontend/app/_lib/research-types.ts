@@ -20,6 +20,10 @@ export type Comparison = {
   market_overround?: number;
   model_absolute_error?: number;
   market_absolute_error?: number;
+  /** Settled result of the quoted home/away or over/under side. */
+  line_result?: "win" | "loss" | "push";
+  /** Settled result for the side indicated by the model difference. */
+  model_result?: "win" | "loss" | "push" | "pass";
   direction_result?: string;
   model_brier?: number;
   market_brier?: number;
@@ -179,6 +183,8 @@ export type SportSummary = {
     model_winner_accuracy?: number | null;
     market_winner_accuracy?: number | null;
     direction_results: Record<string, number>;
+    line_results?: Record<string, number>;
+    model_results?: Record<string, number>;
   }[];
   /**
    * Upcoming and awaiting-result quote cohorts. These describe current model
@@ -193,6 +199,8 @@ export type SportSummary = {
     model_difference_mean: number | null;
     market_overround_mean: number | null;
     direction_results: Record<string, number>;
+    line_results?: Record<string, number>;
+    model_results?: Record<string, number>;
   }[];
 };
 

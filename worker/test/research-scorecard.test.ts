@@ -514,9 +514,19 @@ describe("live research scorecard", () => {
       { model_id: "model-1", estimate_type: "primary", selected_forecasts: 1, eligible_forecasts: 1, settled_games: 1, margin_mae: 5 },
     ]);
     expect(body.games?.[0]?.estimate_type).toBe("primary");
+    expect(body.games?.[0]?.comparisons).toEqual([expect.objectContaining({
+      line_result: "win",
+      model_result: "win",
+      direction_result: "win",
+    })]);
+    expect(body.games?.[1]?.comparisons).toEqual([expect.objectContaining({
+      line_result: "loss",
+      model_result: "win",
+      direction_result: "win",
+    })]);
     expect(body.sports.basketball.market_metrics).toMatchObject([
-      { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8 },
-      { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9 },
+      { model_id: "model-1", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 5, market_mae: 8, line_results: { win: 1 }, model_results: { win: 1 } },
+      { model_id: "model-2", provider: "licensed-feed", bookmaker: "book-1", market: "spreads", games: 1, model_mae: 7, market_mae: 9, line_results: { loss: 1 }, model_results: { win: 1 } },
     ]);
     expect(body.sports.basketball.pending_market_metrics).toEqual([]);
   });
