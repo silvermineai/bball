@@ -96,6 +96,14 @@ describe("live research scorecard", () => {
       selected_comparisons: 0,
       rejection_counts: { missing_market_identity: 1 },
     });
+    expect(body.games[0].market_readiness).toMatchObject({
+      status: "no_qualified_line",
+      retained_observations: 1,
+      eligible_observations: 0,
+      comparable_observations: 0,
+      selected_comparisons: 0,
+      rejection_counts: { missing_market_identity: 1 },
+    });
   });
 
   it("withholds a market when one capture clock has conflicting prices", async () => {

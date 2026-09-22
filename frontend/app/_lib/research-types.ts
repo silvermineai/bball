@@ -54,6 +54,20 @@ export type LedgerGame = {
   actual_margin: number | null;
   actual_total: number | null;
   comparisons: Comparison[];
+  /**
+   * Per-game market state from the scorecard's timing, identity and model
+   * gates. This prevents an empty comparison list from being rendered as a
+   * zero model-to-market gap.
+   */
+  market_readiness?: {
+    status: "available" | "no_qualified_line" | "forecast_excluded";
+    message: string;
+    retained_observations: number;
+    eligible_observations: number;
+    comparable_observations: number;
+    selected_comparisons: number;
+    rejection_counts: Record<string, number>;
+  };
 };
 export type LedgerVersion = LedgerGame;
 export type Metrics = {
