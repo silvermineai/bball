@@ -39,6 +39,7 @@ export type LiveNCAAPlayerRow = {
   def_poss?: number | null;
   usage_events?: number | null;
   team_usage_events?: number | null;
+  team_minutes?: number | null;
   team_possessions?: number | null;
   rim_attempts?: number | null;
   rim_makes?: number | null;
@@ -157,6 +158,7 @@ export function playerRecordedDetailGroups(row: LiveNCAAPlayerRow): RecordedPlay
   add(context, "Defensive possessions", row.def_poss);
   add(context, "Usage events", row.usage_events);
   add(context, "Team usage events", row.team_usage_events);
+  add(context, "Team minutes", row.team_minutes);
   add(context, "Team possessions", row.team_possessions);
   add(context, "Usage share", recordedPercent(row.usage_events, row.team_usage_events), { percent: true, decimals: 1 });
   add(context, "Possession share", recordedPercent(row.possessions ?? row.off_poss, row.team_possessions), { percent: true, decimals: 1 });
@@ -299,7 +301,7 @@ export const playerCsvHeaders = [
   "Rank", "Player ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
   "Points", "PPG", "Rebounds", "RPG", "Offensive rebounds", "OR/G", "Defensive rebounds", "DR/G",
   "Assists", "APG", "Steals", "SPG", "Blocks", "BPG", "Double-doubles", "Fouls", "PF/G", "Turnovers", "TO/G",
-  "FGA", "FGM", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value", "Core stat fields recorded",
+  "FGA", "FGM", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value", "Core stat fields recorded", "Offensive possessions", "Team possessions", "Usage events", "Team usage events", "Team minutes",
 ];
 
 /** Keep the homepage export aligned with the visible player table and retain raw denominators. */
@@ -325,7 +327,7 @@ export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCel
       row.games, row.minutes, mpg, row.points, ppg, row.rebounds, rpg, row.offensive_rebounds, orpg,
       row.defensive_rebounds, drpg, row.assists, apg, row.steals, spg, row.blocks, bpg, row.double_doubles, row.fouls, fpg,
       row.turnovers, topg, row.fga, row.fgm, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts,
-      metric, row.value, `${coverage.observed}/${coverage.total}`,
+      metric, row.value, `${coverage.observed}/${coverage.total}`, row.possessions ?? row.off_poss, row.team_possessions, row.usage_events, row.team_usage_events, row.team_minutes,
     ];
   });
 }

@@ -86,6 +86,7 @@ describe("homepage NCAA player export", () => {
       team_possessions: 2000,
       usage_events: 120,
       team_usage_events: 600,
+      team_minutes: 3000,
       rim_makes: 24,
       rim_attempts: 40,
       mid_makes: 12,
@@ -99,8 +100,25 @@ describe("homepage NCAA player export", () => {
     expect(groups.find((group) => group.key === "impact")?.items).toEqual(expect.arrayContaining([
       { label: "Usage share", value: 20, percent: true, decimals: 1 },
       { label: "Possession share", value: 20, percent: true, decimals: 1 },
+      { label: "Team minutes", value: 3000 },
       { label: "Net RAPM", value: 2.345, decimals: 2 },
     ]));
+  });
+
+  it("exports usage-rate denominators when the source records them", () => {
+    const values = playerCsvRows([{
+      ...row,
+      possessions: 400,
+      team_possessions: 2000,
+      usage_events: 120,
+      team_usage_events: 600,
+      team_minutes: 3000,
+    }], "usage_rate")[0];
+    expect(values[playerCsvHeaders.indexOf("Offensive possessions")]).toBe(400);
+    expect(values[playerCsvHeaders.indexOf("Team possessions")]).toBe(2000);
+    expect(values[playerCsvHeaders.indexOf("Usage events")]).toBe(120);
+    expect(values[playerCsvHeaders.indexOf("Team usage events")]).toBe(600);
+    expect(values[playerCsvHeaders.indexOf("Team minutes")]).toBe(3000);
   });
 
   it("does not invent detail values when source denominators are missing", () => {
