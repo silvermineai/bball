@@ -21,6 +21,8 @@ type ArchiveValidation = {
   malformed_game_dates: number;
   same_team_opponent: number;
   malformed_stats_json: number;
+  negative_stats: number;
+  invalid_percentages: number;
   invalid_possessions: number;
   impossible_shooting: number;
   invalid_minutes: number;
@@ -330,6 +332,8 @@ export default function NcaaPlayerBox() {
         <div><dt>{meta.validation.missing_game_dates.toLocaleString()}</dt><dd>Missing game dates</dd></div>
         <div><dt>{meta.validation.malformed_game_dates.toLocaleString()}</dt><dd>Malformed game dates</dd></div>
         <div><dt>{meta.validation.same_team_opponent.toLocaleString()}</dt><dd>Same team/opponent labels</dd></div>
+        <div><dt>{(meta.validation.negative_stats ?? 0).toLocaleString()}</dt><dd>Negative stat values</dd></div>
+        <div><dt>{(meta.validation.invalid_percentages ?? 0).toLocaleString()}</dt><dd>Out-of-range percentages</dd></div>
         <div><dt>{meta.validation.invalid_possessions.toLocaleString()}</dt><dd>Negative possession values</dd></div>
         <div><dt>{meta.validation.impossible_shooting.toLocaleString()}</dt><dd>Impossible made/attempt totals</dd></div>
         <div><dt>{meta.validation.invalid_minutes.toLocaleString()}</dt><dd>Out-of-range minutes</dd></div>

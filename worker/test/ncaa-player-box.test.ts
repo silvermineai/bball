@@ -59,7 +59,7 @@ describe("NCAA player source archive", () => {
     const gamePrepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({
         first: async () => sql.includes("total_rows")
-          ? { total_rows: 7, missing_ids: 0 }
+          ? { total_rows: 7, missing_ids: 0, negative_stats: 2, invalid_percentages: 1 }
           : { total: 7 },
       })),
       all: async () => ({ results: [{ season: 2026 }] }),
@@ -79,10 +79,12 @@ describe("NCAA player source archive", () => {
       game_rows: 7,
       season_rows: 3,
       source: { sha256: digest },
-      validation: { total_rows: 7 },
+      validation: { total_rows: 7, negative_stats: 2, invalid_percentages: 1 },
     });
     expect(gamePrepare).toHaveBeenCalled();
     expect(researchPrepare).toHaveBeenCalled();
+    expect(gamePrepare.mock.calls.some(([sql]) => String(sql).includes("AS negative_stats"))).toBe(true);
+    expect(gamePrepare.mock.calls.some(([sql]) => String(sql).includes("AS invalid_percentages"))).toBe(true);
   });
 
   it("serves receipt-backed catalog metadata when the archive database is busy", async () => {

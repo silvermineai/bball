@@ -12,6 +12,8 @@ type ArchiveValidation = {
   malformed_game_dates: number;
   same_team_opponent: number;
   malformed_stats_json: number;
+  negative_stats: number;
+  invalid_percentages: number;
   invalid_possessions: number;
   impossible_shooting: number;
   invalid_minutes: number;
@@ -39,6 +41,26 @@ const validationSql = `SELECT count(*) AS total_rows,
   sum(CASE WHEN game_date IS NOT NULL AND trim(game_date)<>'' AND (game_date NOT GLOB '[0-9][0-9]/[0-9][0-9]/[0-9][0-9][0-9][0-9]' OR date(substr(game_date,7,4)||'-'||substr(game_date,1,2)||'-'||substr(game_date,4,2)) IS NULL) THEN 1 ELSE 0 END) AS malformed_game_dates,
   sum(CASE WHEN lower(trim(team_name))=lower(trim(opponent_name)) AND trim(team_name)<>'' THEN 1 ELSE 0 END) AS same_team_opponent,
   sum(CASE WHEN json_valid(stats_json)=0 THEN 1 ELSE 0 END) AS malformed_stats_json,
+  sum(CASE WHEN json_valid(stats_json)=1 AND (
+    json_extract(stats_json,'$.pts')<0 OR json_extract(stats_json,'$.fgm')<0 OR json_extract(stats_json,'$.fga')<0 OR
+    json_extract(stats_json,'$.tpm')<0 OR json_extract(stats_json,'$.tpa')<0 OR json_extract(stats_json,'$.ftm')<0 OR
+    json_extract(stats_json,'$.fta')<0 OR json_extract(stats_json,'$.rimm')<0 OR json_extract(stats_json,'$.rima')<0 OR
+    json_extract(stats_json,'$.midm')<0 OR json_extract(stats_json,'$.mida')<0 OR json_extract(stats_json,'$.pbackm')<0 OR
+    json_extract(stats_json,'$.pbacka')<0 OR json_extract(stats_json,'$.orb')<0 OR json_extract(stats_json,'$.drb')<0 OR
+    json_extract(stats_json,'$.reb')<0 OR json_extract(stats_json,'$.ast')<0 OR json_extract(stats_json,'$.stl')<0 OR
+    json_extract(stats_json,'$.blk')<0 OR json_extract(stats_json,'$.tov')<0 OR json_extract(stats_json,'$.pf')<0 OR
+    json_extract(stats_json,'$.o_poss')<0 OR json_extract(stats_json,'$.mins')<0
+  ) THEN 1 ELSE 0 END) AS negative_stats,
+  sum(CASE WHEN json_valid(stats_json)=1 AND (
+    (json_extract(stats_json,'$.fg_pct') IS NOT NULL AND (json_extract(stats_json,'$.fg_pct')<0 OR json_extract(stats_json,'$.fg_pct')>1)) OR
+    (json_extract(stats_json,'$.tp_pct') IS NOT NULL AND (json_extract(stats_json,'$.tp_pct')<0 OR json_extract(stats_json,'$.tp_pct')>1)) OR
+    (json_extract(stats_json,'$.ft_pct') IS NOT NULL AND (json_extract(stats_json,'$.ft_pct')<0 OR json_extract(stats_json,'$.ft_pct')>1)) OR
+    (json_extract(stats_json,'$.rim_pct') IS NOT NULL AND (json_extract(stats_json,'$.rim_pct')<0 OR json_extract(stats_json,'$.rim_pct')>1)) OR
+    (json_extract(stats_json,'$.mid_pct') IS NOT NULL AND (json_extract(stats_json,'$.mid_pct')<0 OR json_extract(stats_json,'$.mid_pct')>1)) OR
+    (json_extract(stats_json,'$.pback_pct') IS NOT NULL AND (json_extract(stats_json,'$.pback_pct')<0 OR json_extract(stats_json,'$.pback_pct')>1)) OR
+    (json_extract(stats_json,'$.efg_pct') IS NOT NULL AND (json_extract(stats_json,'$.efg_pct')<0 OR json_extract(stats_json,'$.efg_pct')>1)) OR
+    json_extract(stats_json,'$.ts_pct')<0
+  ) THEN 1 ELSE 0 END) AS invalid_percentages,
   sum(CASE WHEN json_valid(stats_json)=1 AND json_extract(stats_json,'$.o_poss') IS NOT NULL AND json_extract(stats_json,'$.o_poss')<0 THEN 1 ELSE 0 END) AS invalid_possessions,
   sum(CASE WHEN json_valid(stats_json)=1 AND (json_extract(stats_json,'$.fgm')>json_extract(stats_json,'$.fga') OR json_extract(stats_json,'$.tpm')>json_extract(stats_json,'$.tpa') OR json_extract(stats_json,'$.ftm')>json_extract(stats_json,'$.fta') OR json_extract(stats_json,'$.rimm')>json_extract(stats_json,'$.rima') OR json_extract(stats_json,'$.midm')>json_extract(stats_json,'$.mida') OR json_extract(stats_json,'$.pbackm')>json_extract(stats_json,'$.pbacka')) THEN 1 ELSE 0 END) AS impossible_shooting,
   sum(CASE WHEN json_valid(stats_json)=1 AND json_extract(stats_json,'$.mins') IS NOT NULL AND (json_extract(stats_json,'$.mins')<0 OR json_extract(stats_json,'$.mins')>60) THEN 1 ELSE 0 END) AS invalid_minutes,
@@ -56,6 +78,8 @@ function parseValidation(row: Record<string, unknown> | undefined): ArchiveValid
     malformed_game_dates: value("malformed_game_dates"),
     same_team_opponent: value("same_team_opponent"),
     malformed_stats_json: value("malformed_stats_json"),
+    negative_stats: value("negative_stats"),
+    invalid_percentages: value("invalid_percentages"),
     invalid_possessions: value("invalid_possessions"),
     impossible_shooting: value("impossible_shooting"),
     invalid_minutes: value("invalid_minutes"),
