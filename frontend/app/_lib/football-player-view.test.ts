@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   footballEventDataset,
+  footballFcsRankingBasis,
   footballCohortPercentile,
   footballCohortPercentiles,
   computeFcsEpaRanks,
@@ -99,6 +100,16 @@ describe("football player index category selection", () => {
     expect(fcsRanks.get(footballPlayerRankKey("3", "c", "defensive"))).toBe(1);
     expect(fcsRanks.has(footballPlayerRankKey("4", "d", "defensive"))).toBe(false);
   });
+  it("gives equal source-box totals the same competition rank", () => {
+    const ranks = computeSourceBoxRanks([
+      { id: "1", team_id: "a", name: "Alpha", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { tackles: 12 } } } },
+      { id: "2", team_id: "b", name: "Beta", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { tackles: 12 } } } },
+      { id: "3", team_id: "c", name: "Gamma", division: "fbs", categories: ["defensive"], production: { defensive: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { tackles: 10 } } } },
+    ], "defensive", "fbs");
+    expect(ranks.get(footballPlayerRankKey("1", "a", "defensive"))).toBe(1);
+    expect(ranks.get(footballPlayerRankKey("2", "b", "defensive"))).toBe(1);
+    expect(ranks.get(footballPlayerRankKey("3", "c", "defensive"))).toBe(3);
+  });
   it("uses the best ranked category for the all-players view", () => {
     const selected = productionForCategory(row(12, 40), "all");
     expect(selected?.category).toBe("receiving");
@@ -162,12 +173,40 @@ describe("football player division rankings", () => {
   });
 
   it("uses exact-ID source-box yards when an FCS EPA value is unavailable", () => {
-    const ranks = computeFcsEpaRanks([
+    const players: FootballRankablePlayer[] = [
       { id: "1", team_id: "a", name: "Yard Leader", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 500, epa: null, epa_per_play: null, touchdowns: 4, rank: null } } },
       { id: "2", team_id: "b", name: "Yard Two", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 400, epa: null, epa_per_play: null, touchdowns: 3, rank: null } } },
-    ], "rushing", { rushing: 50 });
+    ];
+    const ranks = computeFcsEpaRanks(players, "rushing", { rushing: 50 });
+    expect(footballFcsRankingBasis(players, "rushing", { rushing: 50 })).toBe("source_box_yards");
     expect(ranks.get(footballPlayerRankKey("1", "a", "rushing"))).toBe(1);
     expect(ranks.get(footballPlayerRankKey("2", "b", "rushing"))).toBe(2);
+  });
+
+  it("never mixes FCS EPA and yardage in one ranking cohort", () => {
+    const players: FootballRankablePlayer[] = [
+      { id: "1", team_id: "a", name: "EPA Row", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 100, epa: 4, epa_per_play: 0.1, touchdowns: 1, rank: null } } },
+      { id: "2", team_id: "b", name: "Yards Only", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 900, epa: null, epa_per_play: null, touchdowns: 8, rank: null } } },
+    ];
+    const ranks = computeFcsEpaRanks(players, "rushing", { rushing: 50 });
+    expect(footballFcsRankingBasis(players, "rushing", { rushing: 50 })).toBe("total_epa");
+    expect(ranks.get(footballPlayerRankKey("1", "a", "rushing"))).toBe(1);
+    expect(ranks.has(footballPlayerRankKey("2", "b", "rushing"))).toBe(false);
+  });
+
+  it("uses competition ranks for equal FCS EPA and provisional EPA", () => {
+    const players: FootballRankablePlayer[] = [
+      { id: "1", team_id: "a", name: "Alpha", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 100, epa: 4, epa_per_play: 0.1, touchdowns: 1, rank: null } } },
+      { id: "2", team_id: "b", name: "Beta", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 120, epa: 4, epa_per_play: 0.1, touchdowns: 1, rank: null } } },
+      { id: "3", team_id: "c", name: "Gamma", division: "fcs", categories: ["rushing"], production: { rushing: { plays: 60, yards: 80, epa: 2, epa_per_play: 0.05, touchdowns: 0, rank: null } } },
+    ];
+    const fcs = computeFcsEpaRanks(players, "rushing", { rushing: 50 });
+    const provisional = computeProvisionalProductionRanks(players, "rushing", "fcs");
+    for (const ranks of [fcs, provisional]) {
+      expect(ranks.get(footballPlayerRankKey("1", "a", "rushing"))).toBe(1);
+      expect(ranks.get(footballPlayerRankKey("2", "b", "rushing"))).toBe(1);
+      expect(ranks.get(footballPlayerRankKey("3", "c", "rushing"))).toBe(3);
+    }
   });
 });
 

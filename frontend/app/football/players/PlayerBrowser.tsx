@@ -13,6 +13,7 @@ import {
   computeSourceBoxRanks,
   compareFootballPlayers,
   footballCohortPercentiles,
+  footballFcsRankingBasis,
   footballPlayerRankKey,
   footballPlayerCategories,
   footballEventDataset,
@@ -161,6 +162,14 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     ),
     [category, data, season],
   );
+  const fcsRankBasis = useMemo(
+    () => footballFcsRankingBasis(
+      data?.season === +season ? data.players : [],
+      category,
+      Object.fromEntries(Object.entries(data?.rankings || {}).map(([key, value]) => [key, value.minimum_plays])),
+    ),
+    [category, data, season],
+  );
   const sourceBoxRanks = useMemo(
     () => computeSourceBoxRanks(
       data?.season === +season ? data.players : [],
@@ -281,11 +290,15 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
     const rankBasis = s?.rank != null
       ? "publisher_source_rank"
       : sourceBoxMetric
-        ? `exact_id_source_box_${sourceBoxMetric}`
+        ? `exact_id_source_box_${sourceBoxMetric}_competition_rank`
         : season === "2026"
-          ? "provisional_observed_total_epa"
+          ? "provisional_observed_total_epa_competition_rank"
           : division === "fcs"
-            ? "silvermine_fcs_production_order"
+            ? fcsRankBasis === "total_epa"
+              ? "silvermine_fcs_total_epa_competition_rank"
+              : fcsRankBasis === "source_box_yards"
+                ? "silvermine_fcs_source_box_yards_competition_rank"
+                : "unavailable"
             : "unavailable";
     return [season, p.division, selected?.category || category, rank, rankBasis, p.name, p.id, p.team, p.team_id, p.conference, p.box_games, s?.games, s?.plays, s?.yards, s?.yards_per_play ?? yardsPerPlay, s?.touchdowns, s?.success_rate == null ? null : s.success_rate * 100, s?.epa, s?.epa_per_play, efficiencyPercentiles.get(footballPlayerRankKey(p.id, p.team_id, selected?.category || category)), data?.rankings[selected?.category || category]?.minimum_plays, rank != null ? "yes" : "no", s?.metrics ? JSON.stringify(s.metrics) : null];
   };
@@ -493,7 +506,7 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
         zero. The EPA / play percentile compares observed values within the
         selected season, division and category cohort; it is a descriptive rate
         context and does not replace the source rank or create a composite grade.
-        {sourceBoxMetric ? ` ${sourceBoxMetric} order is a transparent exact-ID source-box total; it is not a composite grade.` : season === "2026" ? " The 2026 offensive order is provisional: it ranks observed total EPA within the selected division because the partial-season source has not issued qualified native ranks. It is descriptive and should not be read as a full-season or composite grade." : division === "fcs" ? " FCS rank is a Silvermine ordering of retained EPA when available, otherwise exact-ID source-box yards after the same category play threshold; the publisher does not provide a source FCS rank." : " FBS rank is the retained source rank."}
+        {sourceBoxMetric ? ` ${sourceBoxMetric} order is a transparent exact-ID source-box total; equal totals share a competition rank, and it is not a composite grade.` : season === "2026" ? " The 2026 offensive order is provisional: it competition-ranks observed total EPA within the selected division because the partial-season source has not issued qualified native ranks. Equal EPA totals share a rank. It is descriptive and should not be read as a full-season or composite grade." : division === "fcs" ? ` FCS rank is a Silvermine competition ranking of ${fcsRankBasis === "total_epa" ? "retained total EPA" : fcsRankBasis === "source_box_yards" ? "exact-ID source-box yards because this cohort has no retained EPA" : "available retained production"} after the category play threshold; equal values share a rank, and EPA is never compared with yards. The publisher does not provide a source FCS rank.` : " FBS rank is the retained source rank."}
       </p>
       {eventDataset && !sourceBoxMetric ? (
         <section className="section paper-panel">

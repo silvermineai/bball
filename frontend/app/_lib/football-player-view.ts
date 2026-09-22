@@ -210,6 +210,28 @@ export function footballPlayerRankKey(playerId: string, teamId: string, category
 }
 
 /**
+ * Assign competition ranks after callers sort rows by their recorded value.
+ * Stable name/ID ordering may order exact ties on screen, but it must never
+ * turn equal evidence into different ranks.
+ */
+function competitionRankMap<T>(
+  rows: T[],
+  value: (row: T) => number,
+  key: (row: T) => string,
+) {
+  let priorValue: number | null = null;
+  let rank = 0;
+  return new Map(rows.map((row, index) => {
+    const currentValue = value(row);
+    if (priorValue == null || currentValue !== priorValue) {
+      rank = index + 1;
+      priorValue = currentValue;
+    }
+    return [key(row), rank] as const;
+  }));
+}
+
+/**
  * Resolve a small, exact-ID comparison set for the player board.  The board
  * can contain multiple team-season rows for the same athlete, so callers pass
  * the player/team key rather than an athlete ID alone.  Missing categories are
@@ -256,40 +278,80 @@ export function computeSourceBoxRanks(
     left.player.id.localeCompare(right.player.id) ||
     left.player.team_id.localeCompare(right.player.team_id),
   );
-  return new Map(rows.map((row, index) => [footballPlayerRankKey(row.player.id, row.player.team_id, category), index + 1]));
+  return competitionRankMap(
+    rows,
+    (row) => row.value,
+    (row) => footballPlayerRankKey(row.player.id, row.player.team_id, category),
+  );
+}
+
+type FcsRankBasis = "total_epa" | "source_box_yards";
+
+function eligibleFcsRankRows(
+  players: FootballRankablePlayer[],
+  category: string,
+  minimumPlays: Record<string, number | undefined>,
+) {
+  return players.flatMap((player) => {
+    if (player.division !== "fcs") return [];
+    const categories = category === "all" ? player.categories : [category];
+    return categories.flatMap((selected) => {
+      const stats = player.production[selected];
+      const minimum = minimumPlays[selected];
+      return stats && minimum != null && (stats.plays ?? 0) >= minimum
+        ? [{ player, category: selected, epa: stats.epa, yards: stats.yards }]
+        : [];
+    });
+  });
+}
+
+/**
+ * Name the one comparable measure used for the complete FCS ranking cohort.
+ * Yards are a board-level fallback only when no eligible row has retained EPA;
+ * EPA and yards are never compared as if they shared a unit.
+ */
+export function footballFcsRankingBasis(
+  players: FootballRankablePlayer[],
+  category: string,
+  minimumPlays: Record<string, number | undefined>,
+): FcsRankBasis | null {
+  const rows = eligibleFcsRankRows(players, category, minimumPlays);
+  if (rows.some((row) => row.epa != null && Number.isFinite(row.epa))) return "total_epa";
+  if (rows.some((row) => row.yards != null && Number.isFinite(row.yards))) return "source_box_yards";
+  return null;
 }
 
 /**
  * Rank retained FCS production locally because the source board only assigns
- * publisher ranks to FBS rows. EPA is preferred when present; exact-ID source
- * box yards provide a transparent fallback for FCS rows without an EPA
- * release. The result is separate from the source rank and limited to scope.
+ * publisher ranks to FBS rows. Retained EPA is used when the qualified cohort
+ * contains it; exact-ID source-box yards are used only when EPA is unavailable
+ * for the entire cohort. The result is separate from the source rank and
+ * limited to scope, so unlike measures can never enter one rank order.
  */
 export function computeFcsEpaRanks(
   players: FootballRankablePlayer[],
   category: string,
   minimumPlays: Record<string, number | undefined>,
 ) {
-  const rows = players.flatMap((player) => {
-    if (player.division !== "fcs") return [];
-    const categories = category === "all" ? player.categories : [category];
-    return categories.flatMap((selected) => {
-      const stats = player.production[selected];
-      const minimum = minimumPlays[selected];
-      const value = stats?.epa ?? stats?.yards;
-      return stats && minimum != null && (stats.plays ?? 0) >= minimum && value != null && Number.isFinite(value)
-        ? [{ player, category: selected, epa: value }]
-        : [];
-    });
+  const eligible = eligibleFcsRankRows(players, category, minimumPlays);
+  const basis = footballFcsRankingBasis(players, category, minimumPlays);
+  if (!basis) return new Map<string, number>();
+  const rows = eligible.flatMap((row) => {
+    const value = basis === "total_epa" ? row.epa : row.yards;
+    return value != null && Number.isFinite(value) ? [{ ...row, value }] : [];
   });
   rows.sort((left, right) =>
-    right.epa - left.epa ||
+    right.value - left.value ||
     left.player.name.localeCompare(right.player.name) ||
     left.player.id.localeCompare(right.player.id) ||
     left.player.team_id.localeCompare(right.player.team_id) ||
     left.category.localeCompare(right.category),
   );
-  return new Map(rows.map((row, index) => [footballPlayerRankKey(row.player.id, row.player.team_id, row.category), index + 1]));
+  return competitionRankMap(
+    rows,
+    (row) => row.value,
+    (row) => footballPlayerRankKey(row.player.id, row.player.team_id, row.category),
+  );
 }
 
 /**
@@ -323,7 +385,11 @@ export function computeProvisionalProductionRanks(
     left.player.team_id.localeCompare(right.player.team_id) ||
     left.category.localeCompare(right.category),
   );
-  return new Map(rows.map((row, index) => [footballPlayerRankKey(row.player.id, row.player.team_id, row.category), index + 1]));
+  return competitionRankMap(
+    rows,
+    (row) => row.epa,
+    (row) => footballPlayerRankKey(row.player.id, row.player.team_id, row.category),
+  );
 }
 
 /** Select the source row that the player index should display. */
