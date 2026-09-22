@@ -7,6 +7,7 @@ import { fetchJson } from "../../_lib/fetch-json";
 import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 import { parseRecruitingRelease } from "../../_lib/recruiting";
 import { buildRecruitingProductionIndex, exactRecruitingProduction, type RecruitingProductionIndex } from "../../_lib/recruiting-production-index";
+import { recruitingProductionCoverage } from "../../_lib/recruiting-production-coverage";
 import {
   RECRUITING_SHORTLIST_STORAGE_KEY,
   recruitingShortlistEditionLabel,
@@ -864,6 +865,9 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     const production = exactRecruitingProduction(productionIndex, row.athlete_id);
     return production ? [{ prospect: row, production }] : [];
   }) || [];
+  const pageProductionCoverage = productionStatus === "live" && productionIndex && result
+    ? recruitingProductionCoverage(result.rows, productionIndex)
+    : null;
   const movementEvidence = result?.rank_movement
     ? result.rank_movement.moved_up + result.rank_movement.moved_down + result.rank_movement.unchanged + result.rank_movement.rank_unavailable
     : 0;
@@ -1279,6 +1283,12 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             </div>
             <p className="note">This table joins the active prospect page to the separately reviewed production release only through the exact publisher athlete ID. The release carries {productionIndex.linkedRows.toLocaleString()} unique production links among {productionIndex.sourceRows.toLocaleString()} retained people; an absent row remains unavailable and is not a zero. It describes prior production and does not establish eligibility, transfer status or a future role.</p>
             <p className="note">Production release edition <code>{productionIndex.edition}</code> · reviewed {new Date(productionIndex.reviewedAt).toLocaleString("en-US", { dateStyle: "medium", timeZone: "UTC" })} UTC.</p>
+            {pageProductionCoverage && <div className="strip" aria-label="Current prospect page production coverage" style={{ marginBottom: 16 }}>
+              <div><strong>{pageProductionCoverage.linkedRows.toLocaleString()}</strong><span>Exact-ID links on page</span></div>
+              <div><strong>{pageProductionCoverage.unavailableRows.toLocaleString()}</strong><span>Page rows without link</span></div>
+              <div><strong>{pageProductionCoverage.linkedShare == null ? "—" : `${(pageProductionCoverage.linkedShare * 100).toFixed(1)}%`}</strong><span>Page coverage</span></div>
+              <div><strong>{pageProductionCoverage.totalRows.toLocaleString()}</strong><span>Prospect rows shown</span></div>
+            </div>}
             {pageProductionRows.length ? <div className="table-scroll"><table className="data-table">
               <thead><tr><th>Prospect / exact ID</th><th>Prior team</th><th className="numeric">Season</th><th className="numeric">Games</th><th className="numeric">MIN/G</th><th className="numeric">PTS/G</th><th className="numeric">REB/G</th><th className="numeric">AST/G</th><th className="numeric">TS%</th><th className="numeric">eFG%</th></tr></thead>
               <tbody>{pageProductionRows.map(({ prospect, production }) => <tr key={`production-link-${prospect.athlete_id}`}>
