@@ -217,6 +217,46 @@ type MarketComparisonReadiness = {
   rejection_counts: Partial<Record<MarketRejection, number>>;
 };
 
+type GameMarketReadinessStatus = "available" | "no_qualified_line" | "forecast_excluded";
+
+/**
+ * Keep the per-game line state explicit. An empty comparisons array has two
+ * materially different meanings to a consumer: no line was retained, or the
+ * forecast was excluded before a line could be compared. Publishing the
+ * distinction lets an upcoming-game board be useful without implying that a
+ * missing quote is a zero edge.
+ */
+function gameMarketReadiness(
+  exclusion: string | null,
+  retained: number,
+  eligible: number,
+  comparable: number,
+  selected: number,
+  rejectionCounts: Partial<Record<MarketRejection, number>>,
+): Json {
+  const status: GameMarketReadinessStatus = exclusion
+    ? "forecast_excluded"
+    : selected > 0
+      ? "available"
+      : "no_qualified_line";
+  const message = status === "available"
+    ? "A qualified pregame line is available for model comparison."
+    : status === "forecast_excluded"
+      ? "The forecast is excluded from model-versus-line comparison."
+      : retained === 0
+        ? "No retained pregame line is available for this game."
+        : "Retained market observations did not pass the comparison checks; no line is published.";
+  return {
+    status,
+    message,
+    retained_observations: retained,
+    eligible_observations: eligible,
+    comparable_observations: comparable,
+    selected_comparisons: selected,
+    rejection_counts: rejectionCounts,
+  };
+}
+
 function marketExclusion(quote: Json, prediction: Json, state: Json, now: string): MarketRejection | null {
   const q = parse(quote.payload_json) || {};
   // Source adapters use both millisecond and microsecond ISO spellings. Work
@@ -673,6 +713,12 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
       comparisons: [],
     };
     const gameQuotes = quotesByGame.get(String(row.game_id)) || [];
+    let gameEligibleObservations = 0;
+    let gameComparableObservations = 0;
+    const gameRejectionCounts: Partial<Record<MarketRejection, number>> = {};
+    const rejectGame = (reason: MarketRejection) => {
+      gameRejectionCounts[reason] = (gameRejectionCounts[reason] || 0) + 1;
+    };
     comparisonReadiness.selected_game_observations += gameQuotes.length;
     if (!exclusion && effectiveState) {
       const chosen = new Map<string, Json>();
@@ -681,12 +727,15 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
       for (const quote of gameQuotes) {
         const marketReason = marketExclusion(quote, { ...effectiveRow, payload_json: row.payload_json }, effectiveState, now);
         if (marketReason) {
+          rejectGame(marketReason);
           reject(marketReason);
           continue;
         }
+        gameEligibleObservations += 1;
         comparisonReadiness.eligible_observations += 1;
         const comparisonReason = comparisonExclusion({ ...effectiveRow, payload_json: row.payload_json }, quote);
         if (comparisonReason) {
+          rejectGame(comparisonReason);
           reject(comparisonReason);
           continue;
         }
@@ -700,19 +749,32 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
           // at this capture clock, so retaining either price would create a
           // false comparison and make the result depend on SQL row order.
           reject("ambiguous_quote");
+          rejectGame("ambiguous_quote");
           ambiguousQuoteKeys.add(identity);
           chosen.delete(selectionKey);
           continue;
         }
         seenQuoteSignatures.set(identity, signature);
+        gameComparableObservations += 1;
         comparisonReadiness.comparable_observations += 1;
         chosen.set(selectionKey, quote);
       }
       item.comparisons = [...chosen.values()].map((quote) => compare({ ...effectiveRow, payload_json: row.payload_json }, quote, effectiveState)).filter((quote): quote is Json => quote !== null);
       comparisonReadiness.selected_comparisons += (item.comparisons as Json[]).length;
     } else {
-      for (const _quote of gameQuotes) reject("forecast_excluded");
+      for (const _quote of gameQuotes) {
+        rejectGame("forecast_excluded");
+        reject("forecast_excluded");
+      }
     }
+    item.market_readiness = gameMarketReadiness(
+      exclusion,
+      gameQuotes.length,
+      gameEligibleObservations,
+      gameComparableObservations,
+      (item.comparisons as Json[]).length,
+      gameRejectionCounts,
+    );
     rows.push(item);
   }
   return { rows, registeredVersions: Number(count?.total || 0), comparisonReadiness };

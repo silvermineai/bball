@@ -625,6 +625,58 @@ describe("live research scorecard", () => {
     });
   });
 
+  it("labels an upcoming forecast with no retained line instead of implying a zero market edge", async () => {
+    const selected = {
+      id: "registration-no-line",
+      sport: "basketball",
+      game_id: "game-no-line",
+      model_id: "model-no-line",
+      generated_at: "2026-09-19T00:00:00.000000Z",
+      registered_at: "2026-09-19T00:01:00.000000Z",
+      starts_at: "2099-01-02T00:00:00.000000Z",
+      time_tbd: 0,
+      payload_json: JSON.stringify({
+        home_id: "home-no-line", away_id: "away-no-line", home_name: "Home", away_name: "Away", season: 2027,
+        prediction: { home_margin: 4, total: 141, home_win_probability: 0.64, margin_low: -6, margin_high: 14 },
+      }),
+      state_json: JSON.stringify({
+        home_id: "home-no-line", away_id: "away-no-line", starts_at: "2099-01-02T00:00:00.000000Z",
+        time_tbd: 0, completed: 0, home_score: null, away_score: null,
+      }),
+      exclusion: null,
+    };
+    const prepare = vi.fn((sql: string) => {
+      const first = async () => sql.includes("audit_predictions") ? { total: 1 } : { total: 0 };
+      return {
+        first,
+        bind: (..._args: unknown[]) => ({
+          first,
+          all: async () => sql.includes("FROM audit_predictions p") ? { results: [selected] } : { results: [] },
+        }),
+      };
+    });
+    const response = await researchScorecard.request(
+      "/?sport=basketball&season=2027&model=model-no-line&limit=5000",
+      {},
+      { RESEARCH_DB: { prepare } as never },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { games: Array<Record<string, unknown>> };
+    expect(body.games[0]).toMatchObject({
+      status: "scheduled",
+      comparisons: [],
+      market_readiness: {
+        status: "no_qualified_line",
+        message: "No retained pregame line is available for this game.",
+        retained_observations: 0,
+        eligible_observations: 0,
+        comparable_observations: 0,
+        selected_comparisons: 0,
+        rejection_counts: {},
+      },
+    });
+  });
+
   it("returns a retryable response when the scorecard warehouse is busy", async () => {
     const response = await researchScorecard.request(
       "/?sport=basketball&season=2027",
