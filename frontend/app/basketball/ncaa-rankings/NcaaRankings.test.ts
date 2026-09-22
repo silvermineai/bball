@@ -55,7 +55,7 @@ describe("NCAA ranking export pagination", () => {
     page: 0,
     page_size: 1,
     total: 2,
-    rows: [{} as NcaaRankingResult["rows"][number]],
+    rows: [{ rank: 1 } as NcaaRankingResult["rows"][number]],
     ...overrides,
   });
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 import { hasRankingEvidence, rankingEvidence } from "../../_lib/ncaa-ranking-evidence";
+import { validateRankingCohort } from "../../_lib/ncaa-ranking-integrity";
 import { basketballScopeAvailable, parseSportScope, scopeLabel, type SportScope } from "../../_lib/sport-scope";
 import DivisionPlayerRankings from "../../_components/DivisionPlayerRankings";
 
@@ -191,6 +192,8 @@ export function validateNcaaRankingExportPage(
   ) {
     throw new Error("The player ranking release changed during export.");
   }
+  const integrity = validateRankingCohort(payload.total, payload.rows);
+  if (!integrity.ok) throw new Error(integrity.reason);
   if (page < totalPages - 1 && payload.rows.length === 0) {
     throw new Error("The player ranking release returned an incomplete page.");
   }
@@ -260,7 +263,11 @@ export default function NcaaRankings() {
     setResult(null);
     fetch(`/api/basketball/research/ncaa-player-rankings?${params}`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw Error("The rankings could not be loaded."); return r.json() as Promise<Result>; })
-      .then((value) => { if (!controller.signal.aborted) setResult(value); })
+      .then((value) => {
+        const integrity = validateRankingCohort(value.total, value.rows);
+        if (!integrity.ok) throw new Error(integrity.reason);
+        if (!controller.signal.aborted) setResult(value);
+      })
       .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
   }, [classYear, metric, minGames, minMinutes, minVolume, page, position, query, retryNonce, season, scope]);
