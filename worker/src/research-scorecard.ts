@@ -811,7 +811,7 @@ async function loadReport(db: D1Database, sport: Sport | "all", season: number |
         ? "SELECT count(*) AS total FROM audit_markets WHERE sport=? AND game_id=?"
         : "SELECT count(*) AS total FROM audit_markets WHERE sport=?").bind(...(gameId ? [code, gameId] : [code])).first<{ total: number }>(),
       db.prepare(gameId
-        ? "SELECT count(*) AS total FROM audit_unmatched WHERE sport=? AND game_id=?"
+        ? "SELECT count(*) AS total FROM audit_unmatched WHERE sport=? AND event_id=?"
         : "SELECT count(*) AS total FROM audit_unmatched WHERE sport=?").bind(...(gameId ? [code, gameId] : [code])).first<{ total: number }>(),
     ]);
     return {
@@ -856,7 +856,7 @@ researchScorecard.get("/", zValidator("query", querySchema), async (c) => {
       gameId: gameId || null,
       message: error instanceof Error ? error.message : String(error),
     });
-    return c.json({ error: "The live research scorecard is temporarily unavailable.", detail: error instanceof Error ? error.message : String(error) }, 503, { "Cache-Control": "no-store" });
+    return c.json({ error: "The live research scorecard is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
   }
   const filtered = report.games.filter((row) => {
     if (status !== "all" && row.status !== status) return false;
