@@ -3,6 +3,7 @@ import {
   classDestinationRows,
   classDestinationRecurrence,
   classDestinationIdentityCoverage,
+  classCommitmentTrend,
   classRankConcentration,
   classMovementRows,
   classPositionMix,
@@ -219,6 +220,69 @@ describe("recruiting class coverage", () => {
     }]);
     expect(classRankConcentration([{ ...snapshot, rank_distribution: distribution.map((row, index) => index === 0 ? { ...row, total: 2 } : row) }])).toEqual([]);
     expect(classRankConcentration([{ ...snapshot, source_receipt: null }])).toEqual([]);
+  });
+});
+
+describe("recruiting commitment pipeline", () => {
+  const digestA = "a".repeat(64);
+  const digestB = "b".repeat(64);
+  const snapshot = (season: string, total: number, committed: number, ranked: number, digest: string) => ({
+    season,
+    total,
+    cohort: { ranked, graded: total, committed },
+    captured_at: "2026-09-18T00:00:00Z",
+    edition: digest,
+    source_receipt: {
+      dataset: "recruiting_rankings" as const,
+      captured_at: "2026-09-18T00:00:00Z",
+      source_rows: total,
+      sha256: digest,
+      sha256_scope: "release_edition" as const,
+      integrity: "verified" as const,
+    },
+    position_breakdown: [],
+    commitment_destinations: [],
+  });
+
+  it("reconciles recorded commitment rates and compares verified classes", () => {
+    expect(classCommitmentTrend([
+      snapshot("2027", 10, 2, 8, digestA),
+      snapshot("2028", 20, 8, 15, digestB),
+    ])).toEqual([
+      {
+        season: "2027",
+        total: 10,
+        recordedCommitments: 2,
+        noRecordedDestination: 8,
+        recordedCommitmentShare: 0.2,
+        ranked: 8,
+        rankedShare: 0.8,
+        priorSeason: null,
+        commitmentDelta: null,
+        commitmentShareDelta: null,
+        receipt: { sourceRows: 10, sha256: digestA },
+      },
+      {
+        season: "2028",
+        total: 20,
+        recordedCommitments: 8,
+        noRecordedDestination: 12,
+        recordedCommitmentShare: 0.4,
+        ranked: 15,
+        rankedShare: 0.75,
+        priorSeason: "2027",
+        commitmentDelta: 6,
+        commitmentShareDelta: 0.2,
+        receipt: { sourceRows: 20, sha256: digestB },
+      },
+    ]);
+  });
+
+  it("withholds malformed, duplicate, or unverified classes", () => {
+    const valid = snapshot("2027", 10, 2, 8, digestA);
+    expect(classCommitmentTrend([{ ...valid, cohort: { ...valid.cohort, committed: 11 } }])).toEqual([]);
+    expect(classCommitmentTrend([{ ...valid, source_receipt: null }])).toEqual([]);
+    expect(classCommitmentTrend([valid, valid])).toEqual([]);
   });
 });
 

@@ -184,6 +184,20 @@ export type RecruitingClassRankConcentration = {
   top100Share: number;
 };
 
+export type RecruitingClassCommitmentTrend = {
+  season: string;
+  total: number;
+  recordedCommitments: number;
+  noRecordedDestination: number;
+  recordedCommitmentShare: number;
+  ranked: number;
+  rankedShare: number;
+  priorSeason: string | null;
+  commitmentDelta: number | null;
+  commitmentShareDelta: number | null;
+  receipt: RecruitingClassSnapshotReceipt;
+};
+
 export type RecruitingDestinationIdentityCoverage = {
   season: string;
   retainedDestinations: number;
@@ -506,6 +520,50 @@ export function classSnapshotCoverage(snapshot: ClassSnapshot) {
     graded: share(snapshot.cohort?.graded),
     committed: share(snapshot.cohort?.committed),
   };
+}
+
+/**
+ * Track the national recorded commitment pipeline only across complete class
+ * releases. A missing destination remains a missing field, and the prior
+ * class delta is retained as context rather than a projection of unsigned
+ * players or future roster movement.
+ */
+export function classCommitmentTrend(snapshots: ClassSnapshot[]): RecruitingClassCommitmentTrend[] {
+  const verified = snapshots.flatMap((snapshot) => {
+    const receipt = classSnapshotReceipt(snapshot);
+    const total = snapshot.total;
+    const committed = snapshot.cohort?.committed;
+    const ranked = snapshot.cohort?.ranked;
+    if (
+      !receipt
+      || !Number.isSafeInteger(total) || total <= 0
+      || typeof committed !== "number" || !Number.isSafeInteger(committed) || committed < 0 || committed > total
+      || typeof ranked !== "number" || !Number.isSafeInteger(ranked) || ranked < 0 || ranked > total
+      || !/^\d{4}$/.test(snapshot.season)
+    ) return [];
+    return [{
+      season: snapshot.season,
+      total,
+      recordedCommitments: committed,
+      noRecordedDestination: total - committed,
+      recordedCommitmentShare: committed / total,
+      ranked,
+      rankedShare: ranked / total,
+      receipt,
+    }];
+  }).sort((a, b) => Number(a.season) - Number(b.season));
+
+  const seasons = new Set(verified.map((row) => row.season));
+  if (seasons.size !== verified.length) return [];
+  return verified.map((row, index) => {
+    const prior = verified[index - 1];
+    return {
+      ...row,
+      priorSeason: prior?.season || null,
+      commitmentDelta: prior ? row.recordedCommitments - prior.recordedCommitments : null,
+      commitmentShareDelta: prior ? row.recordedCommitmentShare - prior.recordedCommitmentShare : null,
+    };
+  });
 }
 
 /**
@@ -896,6 +954,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const positionMixRows = classPositionMix(classSnapshots);
   const movementRows = classMovementRows(classSnapshots);
   const rankConcentrationRows = classRankConcentration(classSnapshots);
+  const commitmentTrendRows = classCommitmentTrend(classSnapshots);
   const positionColumns = Array.from(new Set(positionMixRows.flatMap((row) => row.positions.map((position) => position.position)))).sort((a, b) => {
     const order = ["PG", "SG", "SF", "PF", "C", "G", "F", "W", "UNKNOWN"];
     return (order.indexOf(a) < 0 ? order.length : order.indexOf(a)) - (order.indexOf(b) < 0 ? order.length : order.indexOf(b)) || a.localeCompare(b);
@@ -988,6 +1047,25 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               <td><Link href={`/basketball/recruiting/?season=${encodeURIComponent(snapshot.season)}`}>Open class →</Link></td>
             </tr>;
           })}</tbody>
+        </table></div>
+      </section>}
+      {commitmentTrendRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-commitment-trend-title" style={{ marginBottom: 24 }}>
+        <div className="section-heading" style={{ marginBottom: 10 }}>
+          <div><div className="eyebrow">Commitment pipeline / verified national class releases</div><h3 id="recruiting-commitment-trend-title">Track where the recorded class pipeline stands.</h3></div>
+          <span className="note">{commitmentTrendRows.length} verified classes</span>
+        </div>
+        <p className="note">Every row reconciles to the full prospect denominator and a verified release digest. “No destination recorded” is a missing source field, not evidence that a prospect is unsigned or available. Deltas compare the prior retained class release.</p>
+        <div className="table-scroll"><table className="data-table">
+          <thead><tr><th>Class</th><th className="numeric">Prospects</th><th className="numeric">Recorded commitments</th><th className="numeric">No destination recorded</th><th className="numeric">Commitment rate</th><th className="numeric">Vs prior class</th><th>Evidence</th></tr></thead>
+          <tbody>{commitmentTrendRows.map((row) => <tr key={`commitment-trend-${row.season}`}>
+            <th scope="row"><button className="text-link" type="button" onClick={() => { setSeason(row.season); setPage(0); }}>{row.season}</button><small>{row.ranked.toLocaleString()} ranked · {(row.rankedShare * 100).toFixed(1)}%</small></th>
+            <td className="numeric">{row.total.toLocaleString()}</td>
+            <td className="numeric"><strong>{row.recordedCommitments.toLocaleString()}</strong></td>
+            <td className="numeric">{row.noRecordedDestination.toLocaleString()}</td>
+            <td className="numeric">{(row.recordedCommitmentShare * 100).toFixed(1)}%</td>
+            <td className="numeric">{row.commitmentDelta == null ? "—" : <><strong>{row.commitmentDelta > 0 ? "+" : ""}{row.commitmentDelta.toLocaleString()}</strong><small>{row.commitmentShareDelta == null ? "" : `${row.commitmentShareDelta > 0 ? "+" : ""}${(row.commitmentShareDelta * 100).toFixed(1)} pts vs ${row.priorSeason}`}</small></>}</td>
+            <td><small>Verified digest · {row.receipt.sourceRows.toLocaleString()} rows</small><small className="source-hash">{row.receipt.sha256.slice(0, 12)}…</small></td>
+          </tr>)}</tbody>
         </table></div>
       </section>}
       {rankConcentrationRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-rank-concentration-title" style={{ marginBottom: 24 }}>
