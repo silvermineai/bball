@@ -14,6 +14,7 @@ import { buildNotebookShotPrep } from "./notebook-shot-prep";
 import { notebookPersonnelWatch } from "./notebook-personnel-watch";
 import { explainBasketballPrediction } from "../_lib/basketball-prediction-explanation";
 import { buildNotebookEvidenceRows } from "./notebook-evidence";
+import LiveBriefMarketTrail from "../basketball/briefs/LiveBriefMarketTrail";
 
 /**
  * Keep the forecast identity visible on every notebook. A publication date on
@@ -675,6 +676,18 @@ export default function BasketballNotebook({
           <p className="note">These are the stored matchup-factor estimates for this edition. They identify a film starting point; they do not establish a tactical result or a player availability decision.</p>
         </section>
       )}
+
+
+      <section className="section" aria-labelledby="notebook-market-trail">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Market evidence / exact game</div>
+            <h2 id="notebook-market-trail">Check the line beside this forecast.</h2>
+          </div>
+        </div>
+        <p className="note">The notebook refreshes the exact game and current forecast edition before showing any qualifying market comparison. A missing quote stays unavailable; no line or edge is inferred.</p>
+        <LiveBriefMarketTrail gameId={game.id} />
+      </section>
 
 
       <section className="section two-col">
