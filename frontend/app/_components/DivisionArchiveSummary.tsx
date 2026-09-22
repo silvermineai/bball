@@ -9,6 +9,7 @@ import {
 } from "../_lib/division-archive-summary";
 import DivisionCoverageMatrix from "./DivisionCoverageMatrix";
 import MensLowerDivisionScheduleArchive from "./MensLowerDivisionScheduleArchive";
+import MensLowerDivisionRatings from "./MensLowerDivisionRatings";
 
 const date = (value: string | null) => {
   if (!value) return "capture date unavailable";
@@ -45,6 +46,7 @@ export default function DivisionArchiveSummary({ division }: { division: LowerBa
     {error ? <p className="status-error" role="alert">{error}</p> : !summary ? <p className="muted" role="status">Loading division archive summary…</p> : <>
       <DivisionCoverageMatrix sport="basketball" gender="men" division={division} />
       <MensLowerDivisionScheduleArchive division={division} />
+      <MensLowerDivisionRatings division={division} />
       <div className="scope-snapshot-counts" aria-label={`Division ${division} archive counts`}>
         <strong>{summary.players.toLocaleString()}</strong><span>player rows</span>
         <strong>{summary.teams.toLocaleString()}</strong><span>team rows</span>
