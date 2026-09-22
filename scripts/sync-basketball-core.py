@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import sqlite3
 import subprocess
@@ -141,7 +142,7 @@ def forecast_payload(game, prediction):
     return payload
 
 
-def published_model_metadata(model, expected_forecasts):
+def published_model_metadata(model, expected_forecasts, *, total_interval=None):
     """Return the public model contract used to validate a complete D1 edition."""
     metadata = {
         key: model[key]
@@ -158,7 +159,61 @@ def published_model_metadata(model, expected_forecasts):
         if key in model
     }
     metadata["expected_forecasts"] = expected_forecasts
+    if total_interval is None:
+        total_interval = total_interval_contract(model, [])
+    metadata["intervals"] = {"total": total_interval}
     return metadata
+
+
+def total_interval_contract(model, forecast_rows):
+    """Validate total uncertainty before a model receipt can enter D1.
+
+    Older editions are retained for reproducibility and are explicitly marked
+    unavailable. Once an edition publishes a held-out total calibration, a
+    partial row refresh must fail before any SQL is emitted; otherwise the
+    catalog could claim calibrated totals while the live board silently mixes
+    rows with and without their intervals.
+    """
+    calibration = model.get("calibration") if isinstance(model, dict) else None
+    width = calibration.get("total_half_width") if isinstance(calibration, dict) else None
+    if not isinstance(width, (int, float)) or isinstance(width, bool) or not math.isfinite(width) or width <= 0:
+        return {
+            "status": "unavailable",
+            "reason": "This model edition predates independent held-out total calibration.",
+            "forecast_rows": 0,
+        }
+    missing = []
+    malformed = []
+    for game, prediction in forecast_rows:
+        game_id = str(game.get("id") or "")
+        if not isinstance(prediction, dict):
+            missing.append(game_id)
+            continue
+        values = [prediction.get(key) for key in ("total", "total_low", "total_high")]
+        if any(not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value) for value in values):
+            missing.append(game_id)
+            continue
+        total, low, high = values
+        if low > high or total < low or total > high:
+            malformed.append(game_id)
+    if missing:
+        raise ValueError(
+            "Calibrated total interval is missing from forecast rows: "
+            + ", ".join(missing[:5])
+            + (" …" if len(missing) > 5 else "")
+        )
+    if malformed:
+        raise ValueError(
+            "Calibrated total interval is malformed for forecast rows: "
+            + ", ".join(malformed[:5])
+            + (" …" if len(malformed) > 5 else "")
+        )
+    return {
+        "status": "calibrated",
+        "method": "held_out_absolute_total_error_quantile_80",
+        "calibration_half_width": width,
+        "forecast_rows": len(forecast_rows),
+    }
 
 
 def roster_publication(artifact, model_id, forecast_game_ids):
@@ -253,6 +308,7 @@ def build(season=2023):
             conn = None
     statements = []
     forecast_rows = list(forecast_records(overview))
+    total_interval = total_interval_contract(model, forecast_rows)
     roster_metadata, roster_scenarios = roster_publication(
         roster_artifact,
         model["id"],
@@ -261,7 +317,11 @@ def build(season=2023):
     # Models are queried only for identity and creation time by the public API.
     # Keep a compact, useful metadata record in D1 while the complete fitted
     # artifact remains in the static, hash-checked edition.
-    model_metadata = published_model_metadata(model, len(forecast_rows))
+    model_metadata = published_model_metadata(
+        model,
+        len(forecast_rows),
+        total_interval=total_interval,
+    )
     # A repeated publication can reuse the same model ID when only source
     # metadata changed. Remove that edition's old slate before rebuilding it so
     # D1 cannot retain a forecast for a game that left the current schedule.

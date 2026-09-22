@@ -74,6 +74,23 @@ class BasketballCoreSyncTests(unittest.TestCase):
         self.assertEqual(metadata["expected_forecasts"], 1629)
         self.assertEqual(metadata["target_season"], 2027)
         self.assertNotIn("efficiency", metadata)
+        self.assertEqual(metadata["intervals"]["total"]["status"], "unavailable")
+
+    def test_total_interval_contract_requires_every_row_for_new_editions(self):
+        model = {"calibration": {"total_half_width": 18.0}}
+        rows = [
+            ({"id": "primary"}, {"total": 145.0, "total_low": 127.0, "total_high": 163.0}),
+            ({"id": "cold"}, {"total": 140.0, "total_low": 110.0, "total_high": 170.0}),
+        ]
+        contract = MODULE.total_interval_contract(model, rows)
+        self.assertEqual(contract["status"], "calibrated")
+        self.assertEqual(contract["forecast_rows"], 2)
+        metadata = MODULE.published_model_metadata(model, 2, total_interval=contract)
+        self.assertEqual(metadata["intervals"]["total"]["status"], "calibrated")
+        with self.assertRaisesRegex(ValueError, "missing from forecast rows"):
+            MODULE.total_interval_contract(model, [(rows[0][0], {"total": 145.0})])
+        with self.assertRaisesRegex(ValueError, "malformed for forecast rows"):
+            MODULE.total_interval_contract(model, [(rows[0][0], {"total": 145.0, "total_low": 150.0, "total_high": 160.0})])
 
     def test_roster_publication_keeps_exact_model_scenarios(self):
         artifact = {
