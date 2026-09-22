@@ -44,10 +44,34 @@ describe("player shot location helpers", () => {
           { contest_id: "contest-2", x: null, y: null, made: null, zone: "unknown" },
         ],
       },
-    }], { player_id: "player-1", player_name: "Example Player" })).toEqual([
-      { player_id: "player-1", player_name: "Example Player", season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 0, contest_id: "contest-1", x: 1, y: 2, distance_ft: 12, zone: "rim", type: "layup", made: true, points: 2, raw_coordinate: '["contest-1",1,2,12,"rim","layup",true,2]' },
-      { player_id: "player-1", player_name: "Example Player", season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 1, contest_id: "contest-2", x: null, y: null, distance_ft: null, zone: "unknown", type: null, made: null, points: null, raw_coordinate: '{"contest_id":"contest-2","x":null,"y":null,"made":null,"zone":"unknown"}' },
+    }], { player_id: "player-1", player_name: "Example Player" }, {
+      dataset: "ncaa_shots",
+      fetched_at: "2026-09-18T00:00:00Z",
+      sha256: "a".repeat(64),
+    })).toEqual([
+      { player_id: "player-1", player_name: "Example Player", season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 0, contest_id: "contest-1", x: 1, y: 2, distance_ft: 12, zone: "rim", type: "layup", made: true, points: 2, location_status: "plotted", source_dataset: "ncaa_shots", source_fetched_at: "2026-09-18T00:00:00Z", source_sha256: "a".repeat(64), raw_coordinate: '["contest-1",1,2,12,"rim","layup",true,2]' },
+      { player_id: "player-1", player_name: "Example Player", season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 1, contest_id: "contest-2", x: null, y: null, distance_ft: null, zone: "unknown", type: null, made: null, points: null, location_status: "missing", source_dataset: "ncaa_shots", source_fetched_at: "2026-09-18T00:00:00Z", source_sha256: "a".repeat(64), raw_coordinate: '{"contest_id":"contest-2","x":null,"y":null,"made":null,"zone":"unknown"}' },
     ]);
+  });
+
+  it("labels full-court and placeholder coordinates without changing their source values", () => {
+    const rows = playerShotCoordinateExportRows([{
+      season: 2026,
+      team_id: "team-1",
+      team_name: "Example",
+      stats: {
+        coordinates: [
+          ["contest-1", 4, 60, 60, "backcourt", "heave", false, 3],
+          ["contest-2", 0, 0, null, "unknown", null, null, null],
+        ],
+      },
+    }]);
+
+    expect(rows.map((row) => ({ x: row.x, y: row.y, location_status: row.location_status }))).toEqual([
+      { x: 4, y: 60, location_status: "beyond_half_court" },
+      { x: 0, y: 0, location_status: "missing" },
+    ]);
+    expect(rows.every((row) => row.source_sha256 === null)).toBe(true);
   });
 
   it("filters event markers without treating unknown outcomes as misses", () => {

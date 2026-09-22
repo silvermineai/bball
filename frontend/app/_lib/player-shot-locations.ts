@@ -84,7 +84,17 @@ export type PlayerShotCoordinateExportRow = {
   type: string | null;
   made: boolean | number | null;
   points: number | null;
+  location_status: CourtLocationStatus;
+  source_dataset: string | null;
+  source_fetched_at: string | null;
+  source_sha256: string | null;
   raw_coordinate: string;
+};
+
+export type PlayerShotCoordinateProvenance = {
+  dataset?: string | null;
+  fetched_at?: string | null;
+  sha256?: string | null;
 };
 
 /** Expand the compact tuple used by the NCAA shot release without coercion. */
@@ -106,6 +116,7 @@ export function expandPlayerShotCoordinate(raw: PlayerShotCoordinate | PlayerSho
 export function playerShotCoordinateExportRows(
   rows: readonly PlayerShotCoordinateInput[],
   identity: { player_id?: string | null; player_name?: string | null } = {},
+  provenance: PlayerShotCoordinateProvenance = {},
 ): PlayerShotCoordinateExportRow[] {
   return rows.flatMap((row) => (row.stats.coordinates || []).map((raw, coordinate_index) => {
     const shot = expandPlayerShotCoordinate(raw);
@@ -124,6 +135,10 @@ export function playerShotCoordinateExportRows(
       type: shot.type ?? null,
       made: shot.made ?? null,
       points: shot.points ?? null,
+      location_status: classifyPlayerShotLocation(shot),
+      source_dataset: provenance.dataset ?? null,
+      source_fetched_at: provenance.fetched_at ?? null,
+      source_sha256: provenance.sha256 ?? null,
       raw_coordinate: JSON.stringify(raw),
     };
   }));
