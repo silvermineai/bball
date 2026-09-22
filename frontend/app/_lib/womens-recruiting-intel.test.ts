@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import release from "../../public/data/basketball/womens-recruiting.json";
-import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingRelease, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows } from "./womens-recruiting-intel";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingRelease, womensRecruitingPositionSupply, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows } from "./womens-recruiting-intel";
 
 const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[0][number]> = {}) => ({
   player_id: "p-1",
@@ -103,6 +103,29 @@ describe("women's recruiting prospect cohort", () => {
     expect(summarizeWomensRecruitingProspects([
       { athlete_id: "1", name: "A" },
       { athlete_id: "1", name: "Duplicate" },
+    ])).toEqual([]);
+  });
+
+  it("summarizes position supply without promoting verbal status to a destination", () => {
+    const rows = womensRecruitingPositionSupply([
+      { athlete_id: "1", name: "A", position: "SG", status: "Verbal", committed_team_id: null },
+      { athlete_id: "2", name: "B", position: "SG", status: "Undecided", committed_team_id: "20" },
+      { athlete_id: "3", name: "C", position: "PG", status: "Verbal", committed_team_id: null },
+      { athlete_id: "4", name: "D", position: null, status: null, committed_team_id: null },
+    ]);
+    expect(rows).toEqual([
+      {
+        position: "SG",
+        prospects: 2,
+        destinationIds: 1,
+        statuses: [{ status: "Undecided", prospects: 1 }, { status: "Verbal", prospects: 1 }],
+      },
+      { position: "PG", prospects: 1, destinationIds: 0, statuses: [{ status: "Verbal", prospects: 1 }] },
+      { position: "Position unavailable", prospects: 1, destinationIds: 0, statuses: [{ status: "Status unavailable", prospects: 1 }] },
+    ]);
+    expect(womensRecruitingPositionSupply([
+      { athlete_id: "1", name: "A", position: "SG" },
+      { athlete_id: "1", name: "Duplicate", position: "PG" },
     ])).toEqual([]);
   });
 

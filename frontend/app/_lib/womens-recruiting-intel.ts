@@ -34,6 +34,13 @@ export type WomensRecruitingStatusSummary = {
   destinationIds: number;
 };
 
+export type WomensRecruitingPositionSupply = {
+  position: string;
+  prospects: number;
+  destinationIds: number;
+  statuses: Array<{ status: string; prospects: number }>;
+};
+
 export type WomensRecruitingRelease = {
   schema_version: 1;
   sport: "basketball";
@@ -258,6 +265,41 @@ export function summarizeWomensRecruitingProspects(
       destinationIds: value.destinationIds,
     }))
     .sort((left, right) => right.prospects - left.prospects || left.status.localeCompare(right.status));
+}
+
+/**
+ * Build a compact position-by-status census from one exact-ID prospect
+ * release. Source status language remains a label only: it is never promoted
+ * to a commitment or destination when the release carries no team ID.
+ */
+export function womensRecruitingPositionSupply(
+  records: WomensRecruitingProspect[],
+): WomensRecruitingPositionSupply[] {
+  if (!records.every((row) => typeof row.name === "string" && row.name.trim())) return [];
+  const ids = records.map((row) => typeof row.athlete_id === "string" ? row.athlete_id.trim() : "");
+  if (ids.some((id) => !id) || new Set(ids).size !== ids.length) return [];
+
+  const positions = new Map<string, { prospects: number; destinationIds: number; statuses: Map<string, number> }>();
+  records.forEach((row) => {
+    const position = row.position?.trim().toUpperCase() || "Position unavailable";
+    const status = row.status?.trim() || "Status unavailable";
+    const current = positions.get(position) || { prospects: 0, destinationIds: 0, statuses: new Map<string, number>() };
+    current.prospects += 1;
+    if (row.committed_team_id?.trim()) current.destinationIds += 1;
+    current.statuses.set(status, (current.statuses.get(status) || 0) + 1);
+    positions.set(position, current);
+  });
+
+  return Array.from(positions.entries())
+    .map(([position, value]) => ({
+      position,
+      prospects: value.prospects,
+      destinationIds: value.destinationIds,
+      statuses: Array.from(value.statuses.entries())
+        .map(([status, prospects]) => ({ status, prospects }))
+        .sort((left, right) => right.prospects - left.prospects || left.status.localeCompare(right.status)),
+    }))
+    .sort((left, right) => right.prospects - left.prospects || left.position.localeCompare(right.position));
 }
 
 /**

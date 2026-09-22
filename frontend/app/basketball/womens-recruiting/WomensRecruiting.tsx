@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { downloadCsv, toCsv, type CsvCell } from "../../_lib/csv";
 import {
   rankWomensRecruitingProspects,
+  womensRecruitingPositionSupply,
   type WomensRecruitingProspect,
   type WomensRecruitingRelease,
 } from "../../_lib/womens-recruiting-intel";
@@ -49,6 +50,7 @@ export default function WomensRecruiting({ release }: { release: WomensRecruitin
     () => [...new Set(release.records.map((record) => record.status || "Status unavailable"))].sort(),
     [release.records],
   );
+  const positionSupply = useMemo(() => womensRecruitingPositionSupply(release.records), [release.records]);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return rankWomensRecruitingProspects(
@@ -75,6 +77,27 @@ export default function WomensRecruiting({ release }: { release: WomensRecruitin
       <div><strong>{release.coverage.ranked.toLocaleString()}</strong><span>With rank</span></div>
       <div><strong>{release.coverage.committed.toLocaleString()}</strong><span>Recorded destinations</span></div>
     </section>
+    {positionSupply.length > 0 ? <section className="paper-panel recruiting-class-table" aria-labelledby="womens-recruiting-position-supply" style={{ marginBottom: 24 }}>
+      <div className="section-heading">
+        <div>
+          <div className="eyebrow">Position supply · exact source IDs</div>
+          <h2 id="womens-recruiting-position-supply">See the class shape before opening a prospect.</h2>
+        </div>
+        <span className="note">{positionSupply.length} recorded position groups</span>
+      </div>
+      <p className="note">Status counts repeat the publisher&apos;s retained labels. “Verbal” is planning context only; without a destination ID it does not establish a school commitment, enrollment or roster join.</p>
+      <div className="table-scroll">
+        <table className="data-table">
+          <thead><tr><th>Position</th><th className="numeric">Prospects</th>{statuses.map((value) => <th className="numeric" key={value}>{value}</th>)}<th className="numeric">Destination IDs</th></tr></thead>
+          <tbody>{positionSupply.map((row) => <tr key={row.position}>
+            <th scope="row">{row.position}</th>
+            <td className="numeric"><strong>{row.prospects.toLocaleString()}</strong></td>
+            {statuses.map((value) => <td className="numeric" key={`${row.position}-${value}`}>{(row.statuses.find((item) => item.status === value)?.prospects || 0).toLocaleString()}</td>)}
+            <td className="numeric">{row.destinationIds.toLocaleString()}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </section> : null}
     <section className="section" aria-labelledby="womens-recruiting-board">
       <div className="section-heading">
         <div>
