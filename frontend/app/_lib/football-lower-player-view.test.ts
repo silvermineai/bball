@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballPlayerRankValue, lowerFootballPlayerSelectionSearch, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, parseLowerFootballPlayerSelection, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballMetricOptions, lowerFootballPlayerRankValue, lowerFootballPlayerSelectionSearch, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, parseLowerFootballPlayerSelection, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -79,6 +79,26 @@ describe("lower football player aggregation", () => {
       { metrics: { passingYards: 200, passingTouchdowns: 2 } },
       { metrics: { passingYards: 100, interceptions: 1 } },
     ])).toEqual(["interceptions", "passingTouchdowns", "passingYards"]);
+  });
+
+  it("offers only numeric exact-source fields for lower-division ranking", () => {
+    const options = lowerFootballMetricOptions([
+      row({ labels: ["C/ATT", "YDS", "TD"], stats: ["10/20", "200", "2"] }),
+      row({ athlete_id: "a2", labels: ["C/ATT", "YDS", "TD"], stats: ["4/8", "80", "1"] }),
+    ], "d2", "passing", "passingYards");
+    expect(options).toEqual([
+      { key: "passingYards", label: "YDS" },
+      { key: "passingTouchdowns", label: "TD" },
+    ]);
+  });
+
+  it("ranks an alternate retained source field without crossing identity scopes", () => {
+    const ranked = aggregateLowerFootballPlayers([
+      row(),
+      row({ athlete_id: "a2", athlete: "Other QB", stats: ["20/20", "50", "4"] }),
+      row({ division: "d3", athlete_id: "a3", stats: ["20/20", "900", "99"] }),
+    ], "d2", "passing", "", "passingTouchdowns");
+    expect(ranked.map((player) => [player.athlete_id, player.primary])).toEqual([["a2", 4], ["a1", 2]]);
   });
 
   it("fails closed across divisions and categories", () => {

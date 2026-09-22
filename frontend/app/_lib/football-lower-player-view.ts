@@ -276,6 +276,31 @@ export function lowerFootballMetricKeys(
   return [...new Set(players.flatMap((player) => Object.keys(player.metrics)))].sort((left, right) => left.localeCompare(right));
 }
 
+export type LowerFootballMetricOption = {
+  key: string;
+  label: string;
+};
+
+/** Return numeric provider fields present in one exact division/category cohort. */
+export function lowerFootballMetricOptions(
+  rows: readonly LowerFootballRawRow[],
+  division: "d2" | "d3",
+  category: LowerFootballCategory,
+  primaryKey: string,
+): LowerFootballMetricOption[] {
+  const fields = new Map<string, string>();
+  for (const row of rows) {
+    if (row.division !== division || row.category !== category) continue;
+    row.keys.forEach((key, index) => {
+      if (numberValue(row.stats[index]) == null) return;
+      if (!fields.has(key)) fields.set(key, row.labels?.[index] || key);
+    });
+  }
+  return [...fields.entries()]
+    .map(([key, label]) => ({ key, label }))
+    .sort((left, right) => (left.key === primaryKey ? -1 : right.key === primaryKey ? 1 : left.label.localeCompare(right.label) || left.key.localeCompare(right.key)));
+}
+
 /**
  * ESPN lower-division boxes can contain a synthetic ``Team`` row with a
  * negative ID for team totals. Keep that row in the raw archive for audit and
@@ -314,9 +339,11 @@ export function aggregateLowerFootballPlayers(
   division: "d2" | "d3",
   category: LowerFootballCategory,
   query = "",
+  primaryKey?: string,
 ): LowerFootballPlayer[] {
   const definition = lowerFootballCategories.find((item) => item.key === category);
   if (!definition) return [];
+  const rankMetric = primaryKey || definition.metric;
   const needle = query.trim().toLowerCase();
   const grouped = new Map<string, LowerFootballPlayer & { game_ids: Set<string> }>();
   for (const row of rows) {
@@ -350,14 +377,14 @@ export function aggregateLowerFootballPlayers(
   return [...grouped.values()]
     .map(({ game_ids: _gameIds, ...player }) => ({
       ...player,
-      primary: player.metrics[definition.metric] || 0,
+      primary: player.metrics[rankMetric] ?? 0,
       per_game: 0,
     }))
     .map((player) => ({
       ...player,
       per_game: player.games > 0 ? player.primary / player.games : 0,
     }))
-    .filter((player) => player.primary > 0)
+    .filter((player) => Object.prototype.hasOwnProperty.call(player.metrics, rankMetric) && player.primary > 0)
     .sort((left, right) => right.primary - left.primary || left.athlete.localeCompare(right.athlete) || left.athlete_id.localeCompare(right.athlete_id));
 }
 
