@@ -222,6 +222,63 @@ class ImportTests(unittest.TestCase):
         self.assertEqual(kicking["metrics"]["field_goal_pct"], 0.5)
         self.assertEqual(kicking["metrics"]["extra_point_pct"], 1)
 
+    def test_box_passing_adapts_legacy_positional_espn_fields(self):
+        production = box_category_production(
+            [
+                {
+                    "category": "passing",
+                    "game_id": "g1",
+                    "stat_1": "11/17",
+                    "stat_2": "192",
+                    "stat_3": "11.3",
+                    "stat_4": "1",
+                    "stat_5": "0",
+                },
+                {
+                    "category": "passing",
+                    "game_id": "g2",
+                    "stat_1": "8/10",
+                    "stat_2": "105",
+                    "stat_4": "2",
+                    "stat_5": "1",
+                },
+            ],
+            "passing",
+        )
+        self.assertEqual(production["records"], 2)
+        self.assertEqual(production["games"], 2)
+        self.assertEqual(
+            production["metrics"],
+            {
+                "completions": 19,
+                "pass_attempts": 27,
+                "passing_yards": 297,
+                "passing_touchdowns": 3,
+                "interceptions": 1,
+            },
+        )
+
+    def test_box_passing_prefers_named_fields_over_legacy_positions(self):
+        production = box_category_production(
+            [
+                {
+                    "category": "passing",
+                    "game_id": "g1",
+                    "completions/passingAttempts": "5/6",
+                    "passingYards": "70",
+                    "passingTouchdowns": "2",
+                    "stat_1": "11/17",
+                    "stat_2": "192",
+                    "stat_4": "1",
+                }
+            ],
+            "passing",
+        )
+        self.assertEqual(production["metrics"]["completions"], 5)
+        self.assertEqual(production["metrics"]["pass_attempts"], 6)
+        self.assertEqual(production["metrics"]["passing_yards"], 70)
+        self.assertEqual(production["metrics"]["passing_touchdowns"], 2)
+
     def test_player_board_adds_exact_id_box_production_but_not_name_only_events(self):
         store_rows(self.conn, "teams", 2025, [{"team_id": "11", "division": "fbs", "short_display_name": "Alpha"}], {"fetched_at": "2026-01-01T00:00:00Z"})
         store_rows(

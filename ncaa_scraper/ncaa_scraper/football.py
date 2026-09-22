@@ -57,6 +57,7 @@ BOX_PRODUCTION_FIELDS = {
         "pass_attempts": ("completions/passingAttempts", "pair_attempted"),
         "passing_yards": ("passingYards", "sum"),
         "passing_touchdowns": ("passingTouchdowns", "sum"),
+        "interceptions": ("interceptions", "sum"),
     },
     "rushing": {
         "rushing_attempts": ("rushingAttempts", "sum"),
@@ -147,6 +148,22 @@ def box_category_production(rows: list[dict], category: str) -> dict | None:
         observed = False
         for output, (source, operation) in fields.items():
             value = row.get(source)
+            # Older ESPN box releases used a positional passing schema.  The
+            # source row is still retained verbatim, but without this narrow
+            # category-specific adapter its real production is silently
+            # omitted from the exact-ID player board.  Only fill a missing
+            # named field from the documented legacy positions; never let a
+            # positional value override a present named field and never apply
+            # the mapping to another category.
+            if category == "passing" and value in (None, ""):
+                legacy_source = {
+                    "completions/passingAttempts": "stat_1",
+                    "passingYards": "stat_2",
+                    "passingTouchdowns": "stat_4",
+                    "interceptions": "stat_5",
+                }.get(source)
+                if legacy_source is not None:
+                    value = row.get(legacy_source)
             if operation.startswith("pair_"):
                 made, attempted = _source_pair(value)
                 value = made if operation == "pair_made" else attempted
@@ -217,6 +234,7 @@ def box_offensive_board_production(summary: dict, category: str) -> dict:
         "epa_per_play": None,
         "success_rate": None,
         "touchdowns": touchdowns,
+        "interceptions": metrics.get("interceptions"),
         "games": summary["games"],
         "rank": None,
         "source": "box",
