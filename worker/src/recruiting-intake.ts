@@ -69,7 +69,12 @@ recruitingIntake.get("/", async (c) => {
         `SELECT c.edition, c.captured_at AS latest_captured_at,
                 count(r.athlete_id) AS rows,
                 sum(CASE WHEN r.rank IS NOT NULL THEN 1 ELSE 0 END) AS ranked_rows,
-                sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_rows
+                sum(CASE WHEN r.committed_team_id IS NOT NULL THEN 1 ELSE 0 END) AS committed_rows,
+                sum(CASE
+                  WHEN typeof(r.source_sha256) <> 'text'
+                    OR length(trim(r.source_sha256)) <> 64
+                    OR lower(trim(r.source_sha256)) GLOB '*[^0-9a-f]*'
+                  THEN 1 ELSE 0 END) AS invalid_source_hashes
            FROM bb_espn_recruiting_current c
            LEFT JOIN bb_espn_recruiting r
              ON r.season=c.season AND r.edition=c.edition
@@ -81,6 +86,7 @@ recruitingIntake.get("/", async (c) => {
         rows: number;
         ranked_rows: number | null;
         committed_rows: number | null;
+        invalid_source_hashes: number | null;
       }>(),
     ]), DB_TIMEOUT_MS);
     const publicProviders = providers.results.map((provider) => ({ ...provider, provider: "Authorized feed" }));
@@ -94,6 +100,16 @@ recruitingIntake.get("/", async (c) => {
       return Number.isSafeInteger(rows) && rows >= 0 ? sum + rows : sum;
     }, 0);
     const authorizedRows = Number(summary?.total || 0) + providerFeedRows;
+    const publicRankingEdition = typeof publicRankings?.edition === "string" && /^[a-f0-9]{64}$/i.test(publicRankings.edition)
+      ? publicRankings.edition.toLowerCase()
+      : null;
+    const publicRankingRows = Number(publicRankings?.rows || 0);
+    const publicRankingInvalidHashes = Number(publicRankings?.invalid_source_hashes || 0);
+    const publicRankingReceiptVerified = publicRankingEdition !== null
+      && Number.isSafeInteger(publicRankingRows)
+      && publicRankingRows > 0
+      && Number.isSafeInteger(publicRankingInvalidHashes)
+      && publicRankingInvalidHashes === 0;
     const response = c.json({
       season,
       total: summary?.total ?? 0,
@@ -105,11 +121,19 @@ recruitingIntake.get("/", async (c) => {
       provider_feeds: publicProviderFeeds,
       provider_capabilities: publicCapabilities,
       public_rankings: {
-        rows: Number(publicRankings?.rows || 0),
+        rows: publicRankingRows,
         ranked_rows: Number(publicRankings?.ranked_rows || 0),
         committed_rows: Number(publicRankings?.committed_rows || 0),
         edition: publicRankings?.edition || null,
         latest_captured_at: publicRankings?.latest_captured_at || null,
+        source_receipt: {
+          dataset: "recruiting_rankings",
+          captured_at: publicRankings?.latest_captured_at || null,
+          source_rows: publicRankingRows,
+          sha256: publicRankingReceiptVerified ? publicRankingEdition : null,
+          sha256_scope: publicRankingReceiptVerified ? "release_edition" : "unavailable",
+          integrity: publicRankingReceiptVerified ? "verified" : "unavailable",
+        },
         policy: "Public prospect rankings are separate from authorized transfer, eligibility and portal intake; they do not establish roster status or eligibility.",
       },
       policy: "Coverage metadata only. A zero authorized-intake count means no licensed transfer/eligibility export is loaded; the separate public prospect board is reported above when available. Source-reported rows remain in the authorized D1 intake and are not republished as a provider-feed mirror.",
@@ -134,6 +158,14 @@ recruitingIntake.get("/", async (c) => {
         committed_rows: 0,
         edition: null,
         latest_captured_at: null,
+        source_receipt: {
+          dataset: "recruiting_rankings",
+          captured_at: null,
+          source_rows: 0,
+          sha256: null,
+          sha256_scope: "unavailable",
+          integrity: "unavailable",
+        },
         policy: "Public prospect ranking coverage is unavailable while the warehouse is unavailable.",
       },
       source: "unavailable",
