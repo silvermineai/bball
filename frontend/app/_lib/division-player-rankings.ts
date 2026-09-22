@@ -97,6 +97,49 @@ export function divisionMetricLabel(metric: DivisionRankingMetric): string {
   return divisionRankingMetrics.find(([key]) => key === metric)?.[2] || metric;
 }
 
+export type DivisionRankingMetricGuide = {
+  definition: string;
+  denominator: string;
+  interpretation: string;
+};
+
+/** Explain retained source fields without turning them into a composite grade. */
+export function divisionRankingMetricGuide(metric: DivisionRankingMetric): DivisionRankingMetricGuide {
+  if (["ppg", "rpg", "apg", "spg", "bpg", "mpg", "threes_pg"].includes(metric)) {
+    return {
+      definition: `${divisionMetricLabel(metric)} is the publisher's recorded per-game rate.`,
+      denominator: "The source season's recorded games for that player.",
+      interpretation: "Use it to compare production rates after applying the minimum-games filter; it does not describe role, minutes, or opponent strength by itself.",
+    };
+  }
+  if (["fg_pct", "three_pct", "ft_pct"].includes(metric)) {
+    return {
+      definition: `${divisionMetricLabel(metric)} is the publisher's recorded shooting percentage.`,
+      denominator: "The source shooting-attempt denominator, when present in the release.",
+      interpretation: "Treat the percentage alongside attempts and games. A missing attempt field is kept missing rather than reconstructed here.",
+    };
+  }
+  if (metric === "ast_to") {
+    return {
+      definition: "A/TO is the publisher's recorded assist-to-turnover ratio.",
+      denominator: "Recorded turnovers in the source row.",
+      interpretation: "Higher values indicate more recorded assists per recorded turnover; small samples can move the rate sharply.",
+    };
+  }
+  if (metric === "dbl_dbl") {
+    return {
+      definition: "DD is the recorded number of double-doubles.",
+      denominator: "A count across the source season, not a per-game rate.",
+      interpretation: "Counts reward availability and games played, so keep GP visible when comparing players.",
+    };
+  }
+  return {
+    definition: `${divisionMetricLabel(metric)} is a recorded source total.`,
+    denominator: "The source season's retained games or possessions, depending on the field.",
+    interpretation: "Totals describe accumulated production and are sensitive to games played and role; use the GP filter and the retained-fields drawer for context.",
+  };
+}
+
 export function divisionMetricValue(player: DivisionPlayer, metric: DivisionRankingMetric): number | null {
   const value = player[metric];
   return finite(value) ? value : null;

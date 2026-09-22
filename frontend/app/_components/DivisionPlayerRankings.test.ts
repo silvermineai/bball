@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeLiveRow } from "./DivisionPlayerRankings";
+import { divisionRankingMetricGuide } from "../_lib/division-player-rankings";
 
 describe("live lower-division ranking rows", () => {
   it("keeps exact source identity, selected value, payload fields, and publisher rank", () => {
@@ -28,5 +29,20 @@ describe("live lower-division ranking rows", () => {
       ppg_rank: 1,
     });
     expect(row.source_stats?.ppg?.rank).toBe(1);
+  });
+
+  it("explains rates, percentages, and totals without inventing a composite grade", () => {
+    expect(divisionRankingMetricGuide("ppg")).toMatchObject({
+      definition: expect.stringContaining("per-game rate"),
+      denominator: expect.stringContaining("recorded games"),
+    });
+    expect(divisionRankingMetricGuide("fg_pct")).toMatchObject({
+      definition: expect.stringContaining("shooting percentage"),
+      denominator: expect.stringContaining("attempt denominator"),
+    });
+    expect(divisionRankingMetricGuide("pts")).toMatchObject({
+      definition: expect.stringContaining("recorded source total"),
+      interpretation: expect.stringContaining("games played"),
+    });
   });
 });

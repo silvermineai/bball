@@ -6246,6 +6246,31 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 .ranking-recorded-details { margin-top: 4px; font-size: 0.78rem; }
 .ranking-recorded-details summary { color: var(--muted); cursor: pointer; }
 .ranking-recorded-details small { font-family: "IBM Plex Mono", monospace; line-height: 1.45; white-space: normal; }
+.ranking-reading-guide {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.ranking-reading-guide summary {
+  padding: 10px 12px;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.ranking-reading-guide-body {
+  display: grid;
+  gap: 7px;
+  padding: 0 12px 12px;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+.ranking-reading-guide-body p { margin: 0; }
+.ranking-reading-guide-body strong { color: var(--ink); }
 .ranking-recorded-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

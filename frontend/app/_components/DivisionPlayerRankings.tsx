@@ -6,6 +6,7 @@ import { lowerDivisionPlayerHref } from "../_lib/division-archive-links";
 import {
   divisionMetricCoverage,
   divisionMetricLabel,
+  divisionRankingMetricGuide,
   divisionRankingMetrics,
   rankDivisionPlayers,
   type DivisionPlayer,
@@ -171,6 +172,15 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
           {[0, 5, 10, 15, 20].map((games) => <option key={games} value={games}>{games ? `${games} games` : "Any recorded games"}</option>)}
         </select>
       </div>
+      <details className="ranking-reading-guide">
+        <summary>How to read this ranking</summary>
+        <div className="ranking-reading-guide-body">
+          <p><strong>{divisionMetricLabel(metric)}:</strong> {divisionRankingMetricGuide(metric).definition}</p>
+          <p><strong>Denominator:</strong> {divisionRankingMetricGuide(metric).denominator}</p>
+          <p><strong>Use it carefully:</strong> {divisionRankingMetricGuide(metric).interpretation}</p>
+          <p><strong>Rank method:</strong> qualifying rows are sorted by the selected recorded value within Division {division}; ties share a competition rank (1, 1, 3). Rows without a finite selected value stay out of the ranking, while the coverage line below the controls keeps that missingness visible.</p>
+        </div>
+      </details>
       <p className="note">{liveStatus === "ready" ? `${(liveTotal ?? activeResult.total).toLocaleString()} live qualifying players` : `${activeResult.total.toLocaleString()} qualifying players`} · showing {activeResult.rows.length} · {divisionMetricLabel(metric)} · season {publication.season} · {liveStatus === "ready" ? "current source API" : `captured ${captured(publication.generated_at)}`}{liveStatus === "unavailable" ? " · live refresh unavailable; using the retained archive" : ""}.</p>
       <p className="note" role="status">{liveStatus === "ready" ? "Live publisher rows are filtered by exact division, selected metric, and minimum games. Missing source fields remain absent; the table falls back to the retained archive only when the live request is unavailable." : `Metric coverage: ${coverage.valueRows.toLocaleString()} of ${coverage.gameQualifiedRows.toLocaleString()} search and game-qualified ${division === "2" ? "Division II" : "Division III"} rows have a recorded ${divisionMetricLabel(metric).toLowerCase()} value${coverage.missingValueRows ? `; ${coverage.missingValueRows.toLocaleString()} remain unavailable` : "."} The ${coverage.divisionRows.toLocaleString()}-row division denominator is retained for context.`}</p>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Conf.</th><th>Class</th><th className="numeric">GP</th><th className="numeric">{divisionMetricLabel(metric)}</th><th className="numeric">Source rank</th><th>Recorded stats</th></tr></thead><tbody>{activeResult.rows.map((player) => <tr key={`${division}-${player.player_id}`}><td className="numeric"><strong>#{player.rank}</strong></td><th scope="row"><Link href={lowerDivisionPlayerHref(division, player.player_id)}>{player.name} →</Link><small>Player ID {player.player_id}</small></th><td>{player.team_name || "—"}</td><td>{player.conference || "—"}</td><td>{player.class_year || "—"}</td><td className="numeric">{value(player.games, 0)}</td><td className="numeric"><strong>{value(player.value)}</strong></td><td className="numeric">{player.source_rank == null ? "—" : `#${player.source_rank}`}</td><td><details className="ranking-recorded-details"><summary>Open retained fields</summary><p className="note">Source values retained for this player row. A dash means the release did not contain a finite numeric value; no value is inferred.</p>{divisionPlayerDetailGroups.map((group) => <div key={group.label}><strong>{group.label}</strong><div className="note">{group.fields.map(([key, label, kind]) => <span key={key} style={{ display: "inline-block", marginRight: 12 }}>{label}: <strong>{detailValue(player, key, kind)}</strong></span>)}</div></div>)}{player.source_stats && Object.keys(player.source_stats).length ? <p className="note">Publisher evidence: {Object.entries(player.source_stats).map(([key, evidence]) => `${key}${evidence.rank == null ? "" : ` (#${evidence.rank})`}${evidence.value == null ? "" : ` = ${evidence.value}`}`).join(" · ")}</p> : null}</details></td></tr>)}</tbody></table></div>
