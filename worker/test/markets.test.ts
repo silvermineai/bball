@@ -185,6 +185,36 @@ describe("market archive metadata", () => {
     });
   });
 
+  it("distinguishes a robots-policy block from a successful empty quote response", async () => {
+    const batch = vi.fn().mockResolvedValue([
+      { results: [] },
+      { results: [{ total: 0, pregame: 0 }] },
+      { results: [{ receipts: 1, latest_captured_at: "2026-09-15T18:00:00Z" }] },
+      { results: [{ payload_json: JSON.stringify({
+        provider: "ESPN Summary",
+        sport: "basketball",
+        season: 2027,
+        summary_count: 0,
+        summary_with_pickcenter: 0,
+        summary_with_odds: 0,
+        accepted_markets: 0,
+        rejected_records: 0,
+        capture_blocked_reason: "robots_policy_unverified",
+      }), captured_at: "2026-09-15T18:00:00Z" }] },
+    ]);
+    const response = await markets.request("/?meta=1&sport=basketball", {}, { DB: { prepare: vi.fn(() => ({ bind: vi.fn(() => ({})) })), batch } });
+    await expect(response.json()).resolves.toMatchObject({
+      research_capture: {
+        market_status: "capture_blocked_policy",
+        capture_blocked_reason: "robots_policy_unverified",
+      },
+      research_capture_summary: {
+        captures_blocked_policy: 1,
+        latest_blocked_policy_at: "2026-09-15T18:00:00Z",
+      },
+    });
+  });
+
   it("keeps a partially readable capture incomplete when accepted quotes coexist with fetch failures", async () => {
     const batch = vi.fn().mockResolvedValue([
       { results: [] },

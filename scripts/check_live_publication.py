@@ -130,7 +130,7 @@ def validate_market_capture(payload: dict, sport: str) -> str | None:
     if not isinstance(capture, dict):
         raise ValueError(f"{sport} market capture metadata is malformed")
     status = capture.get("market_status")
-    allowed = {"no_eligible_summaries", "no_quotes_published", "quotes_failed_validation", "capture_incomplete", "validated_quotes"}
+    allowed = {"no_eligible_summaries", "no_quotes_published", "quotes_failed_validation", "capture_incomplete", "capture_blocked_policy", "validated_quotes"}
     if status not in allowed:
         raise ValueError(f"{sport} market capture has an unresolved status")
     captured_at = capture.get("captured_at")
@@ -159,6 +159,7 @@ def validate_market_capture(payload: dict, sport: str) -> str | None:
     fetch_failures = nonnegative_int("summary_fetch_failures") or 0
     accepted = nonnegative_int("accepted_markets") or 0
     rejected = nonnegative_int("rejected_records") or 0
+    blocked_reason = capture.get("capture_blocked_reason")
     source_count = summary_count if summary_count is not None else source_rows
     if source_count is None:
         raise ValueError(f"{sport} market capture has no inspected-summary count")
@@ -176,6 +177,9 @@ def validate_market_capture(payload: dict, sport: str) -> str | None:
     if status == "no_eligible_summaries":
         if source_count != 0 or eligible_games not in (None, 0) or accepted or rejected:
             raise ValueError(f"{sport} market capture no-eligible status does not reconcile")
+    elif status == "capture_blocked_policy":
+        if blocked_reason != "robots_policy_unverified" or source_count != 0 or (priced_rows or 0) != 0 or accepted or rejected or fetch_failures:
+            raise ValueError(f"{sport} market capture policy-blocked status does not reconcile")
     elif status == "no_quotes_published":
         if source_count <= 0 or (priced_rows or 0) != 0 or accepted or rejected:
             raise ValueError(f"{sport} market capture no-quote status does not reconcile")

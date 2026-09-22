@@ -700,6 +700,20 @@ class LivePublicationCheckTest(unittest.TestCase):
             },
         }, "basketball"), "validated_quotes")
 
+    def test_market_capture_status_distinguishes_policy_block_from_no_quote(self):
+        self.assertEqual(validate_market_capture({
+            "research_capture": {
+                "captured_at": "2026-09-10T18:00:00Z",
+                "summary_count": 0,
+                "summary_with_pickcenter": 0,
+                "summary_with_odds": 0,
+                "accepted_markets": 0,
+                "rejected_records": 0,
+                "capture_blocked_reason": "robots_policy_unverified",
+                "market_status": "capture_blocked_policy",
+            },
+        }, "basketball"), "capture_blocked_policy")
+
     def test_market_capture_receipts_without_status_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "receipts but no latest capture status"):
             validate_market_capture({"research_receipts": 1}, "basketball")
@@ -742,6 +756,18 @@ class LivePublicationCheckTest(unittest.TestCase):
                     "accepted_markets": 0,
                     "rejected_records": 0,
                     "market_status": "no_quotes_published",
+                },
+            }, "basketball")
+
+    def test_market_capture_rejects_policy_block_with_source_rows(self):
+        with self.assertRaisesRegex(ValueError, "policy-blocked status does not reconcile"):
+            validate_market_capture({
+                "research_capture": {
+                    "captured_at": "2026-09-10T18:00:00Z",
+                    "summary_count": 1,
+                    "summary_with_pickcenter": 0,
+                    "capture_blocked_reason": "robots_policy_unverified",
+                    "market_status": "capture_blocked_policy",
                 },
             }, "basketball")
 

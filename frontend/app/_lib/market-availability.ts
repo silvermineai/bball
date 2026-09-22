@@ -3,6 +3,7 @@ export type MarketCaptureStatus =
   | "no_quotes_published"
   | "quotes_failed_validation"
   | "capture_incomplete"
+  | "capture_blocked_policy"
   | "validated_quotes"
   | "unknown";
 
@@ -16,6 +17,8 @@ export function marketCaptureStatusLabel(status: MarketCaptureStatus | null | un
       return "Published quotes failed exact-game or timing checks";
     case "capture_incomplete":
       return "Capture incomplete · some eligible summaries could not be read";
+    case "capture_blocked_policy":
+      return "Capture blocked · source policy could not be verified";
     case "validated_quotes":
       return "Validated quotes are available";
     default:
@@ -33,6 +36,8 @@ export function marketCaptureStatusDetail(status: MarketCaptureStatus | null | u
       return "A quote was seen, but it did not pass exact participants, start-time and pregame checks.";
     case "capture_incomplete":
       return "Some eligible game summaries could not be read during the capture. Quote availability remains unresolved; no line is inferred.";
+    case "capture_blocked_policy":
+      return "The source robots policy could not be verified, so no summary request was made. This is a capture block, not evidence that the provider had no line.";
     case "validated_quotes":
       return "At least one quote passed the exact participants, start-time and pregame checks.";
     default:
@@ -51,6 +56,8 @@ export function marketCaptureNextStep(status: MarketCaptureStatus | null | undef
       return "Correct the rejected rows using exact game IDs, participants, and pregame capture/update clocks before importing again.";
     case "capture_incomplete":
       return "Retry the bounded capture after the source responds; use the authorized CSV template only when a complete quote and timing record is available.";
+    case "capture_blocked_policy":
+      return "Retry after the source robots policy is readable and permissive, or use the authorized CSV template with exact game and pregame clocks.";
     case "validated_quotes":
       return "Open the forecast record to inspect the qualifying model-to-line comparisons.";
     default:

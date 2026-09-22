@@ -15,6 +15,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 PY = sys.executable
+# This publisher runs from the repository root, while the scraper package is
+# nested one level below it.  Import only the receipt helper; the collector
+# subprocesses still own all source requests and robots checks.
+sys.path.insert(0, str(ROOT / "ncaa_scraper"))
+from ncaa_scraper.research_ledger import record_market_capture_blocked
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
     "--sport",
@@ -33,7 +38,7 @@ def run(command, cwd=ROOT):
     subprocess.run(command, cwd=cwd, env=ENV, check=True)
 
 
-def run_espn_capture(command, label: str) -> bool:
+def run_espn_capture(command, label: str, *, sport: str | None = None, season: int | None = None) -> bool:
     """Run an ESPN capture, retaining the previous ledger on policy failure.
 
     The collectors fail closed before any API request when the exact ESPN API
@@ -51,7 +56,15 @@ def run_espn_capture(command, label: str) -> bool:
         return True
     output = f"{result.stdout}\n{result.stderr}"
     if re.search(r"ESPN robots(?:\.txt| policy)|Cannot verify ESPN robots|no page requested|disallows this request", output, re.IGNORECASE):
-        print(f"::warning::{label} ESPN robots policy could not be verified; retaining the prior receipt-backed capture.", file=sys.stderr)
+        if sport is not None and season is not None:
+            receipt = record_market_capture_blocked(sport, season, "robots_policy_unverified")
+            print(
+                f"::warning::{label} ESPN robots policy could not be verified; no source request was made. "
+                f"Recorded policy-blocked capture at {receipt['captured_at']} and retained prior market rows.",
+                file=sys.stderr,
+            )
+        else:
+            print(f"::warning::{label} ESPN robots policy could not be verified; retaining the prior receipt-backed capture.", file=sys.stderr)
         return False
     raise subprocess.CalledProcessError(result.returncode, command)
 
@@ -119,7 +132,7 @@ if args.espn_lines:
         # publishes basketball markets close to tip; retaining the explicit
         # bound makes the request cost auditable while avoiding a small fixed
         # prefix that can leave later games unobserved during preseason.
-        if run_espn_capture([PY, "-m", "ncaa_scraper.espn_pickcenter", "--season", "2027", "--limit", "300"], "ESPN basketball market capture"):
+        if run_espn_capture([PY, "-m", "ncaa_scraper.espn_pickcenter", "--season", "2027", "--limit", "300"], "ESPN basketball market capture", sport="basketball", season=2027):
             run(
                 [
                     PY,
@@ -130,7 +143,7 @@ if args.espn_lines:
                 ]
             )
     if args.sport in ("football", "both"):
-        if run_espn_capture([PY, "-m", "ncaa_scraper.espn_football_pickcenter", "--season", "2026"], "ESPN football market capture"):
+        if run_espn_capture([PY, "-m", "ncaa_scraper.espn_football_pickcenter", "--season", "2026"], "ESPN football market capture", sport="football", season=2026):
             run(
                 [
                     PY,

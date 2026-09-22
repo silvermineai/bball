@@ -17,6 +17,7 @@ describe("market connector readiness", () => {
     expect(marketReadinessState({ research_receipts: 1, research_capture: { market_status: "quotes_failed_validation" } })).toBe("captured_rejected");
     expect(marketReadinessState({ research_receipts: 1, research_capture: { market_status: "validated_quotes" } })).toBe("validated");
     expect(marketReadinessState({ research_receipts: 1, research_capture: { market_status: "capture_incomplete" } })).toBe("captured_incomplete");
+    expect(marketReadinessState({ research_receipts: 1, research_capture: { market_status: "capture_blocked_policy" } })).toBe("capture_blocked");
   });
 
   it("keeps an in-flight request visibly separate", () => {
@@ -30,6 +31,7 @@ describe("market connector readiness", () => {
     expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "no_quotes_published" } })).toContain("No line is inferred");
     expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "quotes_failed_validation" } })).toContain("failed exact-game");
     expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "capture_incomplete" } })).toContain("could not be read");
+    expect(marketReadinessDetail({ research_receipts: 1, research_capture: { market_status: "capture_blocked_policy" } })).toContain("no summary request was made");
   });
 
   it("reports capture coverage separately from accepted quotes", () => {

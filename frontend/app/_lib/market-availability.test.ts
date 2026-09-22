@@ -8,6 +8,8 @@ describe("market capture availability", () => {
     expect(marketCaptureStatusLabel("quotes_failed_validation")).toContain("failed exact-game");
     expect(marketCaptureStatusLabel("capture_incomplete")).toContain("incomplete");
     expect(marketCaptureStatusDetail("capture_incomplete")).toContain("could not be read");
+    expect(marketCaptureStatusLabel("capture_blocked_policy")).toContain("policy");
+    expect(marketCaptureStatusDetail("capture_blocked_policy")).toContain("no summary request was made");
   });
 
   it("keeps unknown and missing statuses explicit", () => {
@@ -19,6 +21,7 @@ describe("market capture availability", () => {
     expect(marketCaptureNextStep("no_quotes_published")).toContain("authorized CSV template");
     expect(marketCaptureNextStep("quotes_failed_validation")).toContain("exact game IDs");
     expect(marketCaptureNextStep("capture_incomplete")).toContain("Retry");
+    expect(marketCaptureNextStep("capture_blocked_policy")).toContain("robots policy");
     expect(marketCaptureNextStep(undefined)).toContain("missing evidence stays unavailable");
   });
 });

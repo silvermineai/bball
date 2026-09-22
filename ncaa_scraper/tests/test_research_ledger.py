@@ -19,6 +19,7 @@ from ncaa_scraper.research_ledger import (
     register,
     preserve_unpublished_sports,
     source_connection,
+    record_market_capture_blocked,
     timestamp,
 )
 
@@ -474,6 +475,25 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(result["versions"][0]["id"], "bb-version")
         self.assertEqual(result["sports"]["basketball"], {"games": 1})
         self.assertEqual(result["market_observations"], 4)
+
+    def test_policy_block_receipt_has_no_market_observation_fields(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "research-ledger.sqlite3"
+            receipt = record_market_capture_blocked(
+                "basketball",
+                2027,
+                "robots_policy_unverified",
+                now=T1,
+                path=path,
+            )
+            self.assertEqual(receipt["market_status"], "capture_blocked_policy")
+            self.assertFalse(receipt["robots_policy_verified"])
+            conn = sqlite3.connect(path)
+            self.assertEqual(conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 0)
+            row = conn.execute("SELECT payload_json FROM audit_receipts").fetchone()
+            self.assertIsNotNone(row)
+            self.assertEqual(json.loads(row[0])["capture_blocked_reason"], "robots_policy_unverified")
+            conn.close()
 
 
 if __name__ == "__main__":

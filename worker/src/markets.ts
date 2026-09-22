@@ -111,7 +111,8 @@ type ResearchCapture = {
   rows_with_lines?: number;
   accepted_markets?: number;
   rejected_records?: number;
-  market_status?: "no_eligible_summaries" | "no_quotes_published" | "quotes_failed_validation" | "capture_incomplete" | "validated_quotes" | "unknown";
+  market_status?: "no_eligible_summaries" | "no_quotes_published" | "quotes_failed_validation" | "capture_incomplete" | "capture_blocked_policy" | "validated_quotes" | "unknown";
+  capture_blocked_reason?: "robots_policy_unverified";
 };
 
 type ResearchCaptureSummary = {
@@ -119,10 +120,12 @@ type ResearchCaptureSummary = {
   captures_with_quotes: number;
   captures_with_validated_markets: number;
   captures_incomplete: number;
+  captures_blocked_policy: number;
   latest_captured_at: string | null;
   latest_validated_capture_at: string | null;
   latest_no_quote_capture_at: string | null;
   latest_incomplete_capture_at: string | null;
+  latest_blocked_policy_at: string | null;
   latest_failed_validation_at: string | null;
 };
 
@@ -134,6 +137,18 @@ function captureMarketStatus(capture: Omit<ResearchCapture, "provider" | "captur
   const eligibleGames = capture.eligible_games;
   const captureTruncated = capture.capture_truncated === true;
   const fetchFailures = capture.summary_fetch_failures ?? 0;
+  // A policy-blocked receipt proves that the connector did not make a source
+  // request. Keep it distinct from a successful empty summary response and
+  // from an incomplete request, while requiring all quote counters to remain
+  // empty.
+  if (
+    capture.capture_blocked_reason === "robots_policy_unverified"
+    && (sourceRows === undefined || sourceRows === 0)
+    && (pricedRows === undefined || pricedRows === 0)
+    && accepted === 0
+    && rejected === 0
+    && fetchFailures === 0
+  ) return "capture_blocked_policy";
   // A capture receipt is evidence about the connector's own counters, not a
   // license to infer that quotes existed.  If the counters contradict one
   // another, keep the status unresolved so publication checks and consumers
@@ -220,6 +235,9 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     if (typeof payload.rejected_records === "number" && Number.isInteger(payload.rejected_records) && payload.rejected_records >= 0) {
       result.rejected_records = payload.rejected_records;
     }
+    if (payload.capture_blocked_reason === "robots_policy_unverified") {
+      result.capture_blocked_reason = payload.capture_blocked_reason;
+    }
     result.market_status = captureMarketStatus(result);
     return result;
   } catch {
@@ -249,10 +267,12 @@ function summarizeResearchCaptures(values: unknown): ResearchCaptureSummary {
       (capture.accepted_markets || 0) > 0,
     ).length,
     captures_incomplete: captures.filter((capture) => capture.market_status === "capture_incomplete").length,
+    captures_blocked_policy: captures.filter((capture) => capture.market_status === "capture_blocked_policy").length,
     latest_captured_at: byNewest[0]?.captured_at || null,
     latest_validated_capture_at: firstAt((capture) => (capture.accepted_markets || 0) > 0),
     latest_no_quote_capture_at: firstAt((capture) => capture.market_status === "no_quotes_published"),
     latest_incomplete_capture_at: firstAt((capture) => capture.market_status === "capture_incomplete"),
+    latest_blocked_policy_at: firstAt((capture) => capture.market_status === "capture_blocked_policy"),
     latest_failed_validation_at: firstAt((capture) => capture.market_status === "quotes_failed_validation"),
   };
 }

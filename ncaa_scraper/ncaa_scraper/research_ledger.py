@@ -22,6 +22,11 @@ DB = ROOT / ".local/research-ledger.sqlite3"
 OUT = ROOT / "frontend/public/data/research"
 POLICY = "first-eligible-registration-v1"
 SPORTS = ("football", "basketball")
+# These are bounded connector outcomes rather than market rows.  Keeping a
+# policy-blocked attempt in the receipt ledger makes an empty archive
+# explainable without weakening the fail-closed source check or inventing a
+# quote.
+CAPTURE_BLOCKED_POLICY = "capture_blocked_policy"
 # These fields define the registered estimate.  Forecast artifacts may gain
 # explanatory diagnostics (for example component efficiencies) over time;
 # those diagnostics do not change the prediction that was evaluated.  Keep
@@ -133,6 +138,60 @@ def connect(path=DB):
         (ROOT / "worker/migrations/0010_research_ledger.sql").read_text()
     )
     return conn
+
+
+def record_market_capture_blocked(
+    sport: str,
+    season: int,
+    reason: str,
+    *,
+    provider: str = "ESPN Summary",
+    now: str | None = None,
+    path: Path = DB,
+) -> dict:
+    """Record a source-policy block without creating market observations.
+
+    ESPN's exact API origin must pass the robots check before a summary is
+    requested.  When that check cannot be verified, retain a small receipt so
+    the public readiness page can distinguish "provider returned no line" from
+    "provider was not queried".  The receipt intentionally carries no event,
+    participant, price, or inferred schedule data.
+    """
+    if sport not in SPORTS:
+        raise ValueError("Unknown sport")
+    if not isinstance(season, int) or season < 2022:
+        raise ValueError("Invalid season")
+    if provider != "ESPN Summary":
+        raise ValueError("Unsupported market capture provider")
+    if reason != "robots_policy_unverified":
+        raise ValueError("Unsupported capture block reason")
+    captured_at = timestamp(now or utcnow())
+    receipt = {
+        "provider": provider,
+        "sport": sport,
+        "season": season,
+        "captured_at": captured_at,
+        "market_status": CAPTURE_BLOCKED_POLICY,
+        "capture_blocked_reason": reason,
+        "summary_count": 0,
+        "summary_with_pickcenter": 0,
+        "summary_with_odds": 0,
+        "accepted_markets": 0,
+        "rejected_records": 0,
+        "timing_basis": "no_source_request",
+        "robots_policy_verified": False,
+    }
+    conn = connect(path)
+    try:
+        receipt_id = digest(receipt)
+        conn.execute(
+            "INSERT OR IGNORE INTO audit_receipts VALUES (?,?,?,?)",
+            (receipt_id, captured_at, provider, encoded(receipt)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return receipt
 
 
 @contextmanager

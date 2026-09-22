@@ -74,6 +74,7 @@ export type MarketReadinessState =
   | "captured_no_quotes"
   | "captured_rejected"
   | "captured_incomplete"
+  | "capture_blocked"
   | "validated";
 
 /**
@@ -95,6 +96,8 @@ export function marketReadinessState(
       return "captured_rejected";
     case "capture_incomplete":
       return "captured_incomplete";
+    case "capture_blocked_policy":
+      return "capture_blocked";
     case "no_eligible_summaries":
     case "no_quotes_published":
       return "captured_no_quotes";
@@ -111,6 +114,7 @@ export function marketReadinessLabel(state: MarketReadinessState): string {
     case "captured_no_quotes": return "Capture ran · no quote qualified";
     case "captured_rejected": return "Capture ran · quotes rejected";
     case "captured_incomplete": return "Capture incomplete · retry required";
+    case "capture_blocked": return "Capture blocked · policy check required";
     case "validated": return "Validated quote capture available";
   }
 }
@@ -133,6 +137,8 @@ export function marketReadinessDetail(
       return "A capture ran, but its published quotes failed exact-game or pregame timing checks. Comparisons remain withheld.";
     case "captured_incomplete":
       return "A capture ran, but one or more eligible game summaries could not be read. Comparisons remain withheld until a complete capture is available.";
+    case "capture_blocked":
+      return "The source robots policy could not be verified, so no summary request was made. This does not establish that the provider had no line.";
     case "validated":
       return "At least one quote passed capture validation. Each quote still needs exact forecast registration and comparison checks.";
   }
@@ -150,6 +156,8 @@ export function marketReadinessScorecardNote(state: MarketReadinessState): strin
       return "A capture ran without a validated quote. No line or model edge is inferred from the schedule or an unpriced summary.";
     case "captured_incomplete":
       return "A capture ran, but one or more eligible summaries could not be read. Retry the bounded capture before interpreting market availability; no line or model edge is inferred.";
+    case "capture_blocked":
+      return "The source policy check blocked the connector before any summary request. Retry after the policy is verifiable, or use an authorized line import with exact timing evidence.";
     case "unavailable":
       return "The market metadata read is unavailable. Quote readiness and model-versus-market comparisons remain unverified.";
     case "checking":
