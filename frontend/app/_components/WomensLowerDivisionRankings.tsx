@@ -5,6 +5,7 @@ import { downloadCsv, toCsv } from "../_lib/csv";
 import { parseWomensLowerDivisionEdition, type WomensLowerDivisionEdition, type WomensLowerDivisionStatistic } from "../_lib/womens-lower-division-integrity";
 import { womensLowerRankingRows, womensLowerRankingValueLabel } from "../_lib/womens-lower-division-rankings";
 import { womensLowerIndividualExport } from "../_lib/womens-lower-division-view";
+import { parseWomensLowerStatsMeta, parseWomensLowerStatsResponse, type WomensLowerStatsMeta } from "../_lib/womens-lower-division-api";
 
 const PAGE_SIZE = 50;
 const display = (value: string | number | null) => value == null || value === "" ? "—" : String(value);
@@ -17,6 +18,9 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
   const [minimumGames, setMinimumGames] = useState("0");
   const [page, setPage] = useState(0);
   const [exportMessage, setExportMessage] = useState("");
+  const [liveMeta, setLiveMeta] = useState<WomensLowerStatsMeta | null>(null);
+  const [liveStatistic, setLiveStatistic] = useState<WomensLowerDivisionStatistic | null>(null);
+  const [liveStatus, setLiveStatus] = useState<"loading" | "ready" | "fallback">("loading");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -38,8 +42,44 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/basketball/research/womens-lower-stats?division=${division}&kind=individual&meta=1`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Live women’s lower-division catalog unavailable.")))
+      .then((value: unknown) => {
+        if (controller.signal.aborted) return;
+        setLiveMeta(parseWomensLowerStatsMeta(value, division));
+        setLiveStatus("ready");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setLiveMeta(null);
+          setLiveStatistic(null);
+          setLiveStatus("fallback");
+        }
+      });
+    return () => controller.abort();
+  }, [division]);
+
+  useEffect(() => {
+    if (!liveMeta || !statistic) return;
+    const controller = new AbortController();
+    fetch(`/api/basketball/research/womens-lower-stats?division=${division}&kind=individual&statistic=${encodeURIComponent(statistic)}&limit=200`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Live women’s lower-division statistic unavailable.")))
+      .then((value: unknown) => {
+        if (controller.signal.aborted) return;
+        setLiveStatistic(parseWomensLowerStatsResponse(value, division, statistic));
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLiveStatistic(null);
+      });
+    return () => controller.abort();
+  }, [division, liveMeta, statistic]);
+
   const current = edition?.divisions?.[division];
-  const selected = current?.individual.find((item) => item.statistic === statistic) || current?.individual[0];
+  const selected = liveStatistic?.statistic === statistic
+    ? liveStatistic
+    : current?.individual.find((item) => item.statistic === statistic) || current?.individual[0];
   const rows = useMemo(
     () => selected ? womensLowerRankingRows(selected, query, Number(minimumGames) || 0) : [],
     [selected, query, minimumGames],
@@ -61,10 +101,10 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
     <div className="eyebrow">SOURCE-NATIVE RANKINGS · WOMEN&apos;S D{division}</div>
     <h2 id="womens-lower-ranking-title">Rank players within Division {division}</h2>
     {!edition || !current ? <p className={error ? "status-error" : "muted"} role={error ? "alert" : "status"}>{error || "Loading the receipt-backed leaderboard…"}</p> : <>
-      <p className="note">Each board is the publisher&apos;s exact statistic and source rank. Rows repeat across separate leaderboards, so this desk does not merge names into an invented composite ranking or stable athlete ID. Snapshot through {current.through_games || "date unavailable"}.</p>
+      <p className="note">Each board is the publisher&apos;s exact statistic and source rank. Rows repeat across separate leaderboards, so this desk does not merge names into an invented composite ranking or stable athlete ID. {liveStatus === "ready" && liveStatistic ? "Live receipt-validated release." : "Using the checked-in release while the live endpoint is unavailable."} Snapshot through {selected?.through_games || current.through_games || "date unavailable"}.</p>
       <div className="division-player-controls">
         <label htmlFor="wbb-lower-ranking-stat">STATISTIC</label>
-        <select id="wbb-lower-ranking-stat" value={selected?.statistic || ""} onChange={(event) => setStatistic(event.target.value)}>{current.individual.map((item) => <option key={item.statistic} value={item.statistic}>{item.label}</option>)}</select>
+        <select id="wbb-lower-ranking-stat" value={selected?.statistic || ""} onChange={(event) => { setStatistic(event.target.value); setLiveStatistic(null); }}>{(liveMeta?.statistics || current.individual).map((item) => <option key={item.statistic} value={item.statistic}>{item.label}</option>)}</select>
         <label htmlFor="wbb-lower-ranking-search">SEARCH PLAYERS</label>
         <input id="wbb-lower-ranking-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Player, team, or position" />
         <label htmlFor="wbb-lower-ranking-min-games">MINIMUM GAMES</label>
