@@ -14,6 +14,21 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
+def valid_prediction(**overrides):
+    prediction = {
+        "away_score": 65.0,
+        "home_score": 70.0,
+        "home_margin": 5.0,
+        "total": 135.0,
+        "pace": 68.0,
+        "home_win_probability": 0.62,
+        "margin_low": -9.0,
+        "margin_high": 19.0,
+    }
+    prediction.update(overrides)
+    return prediction
+
+
 class BasketballCoreSyncTests(unittest.TestCase):
     def test_forecast_records_keeps_primary_and_cold_start_estimates(self):
         overview = {
@@ -44,24 +59,41 @@ class BasketballCoreSyncTests(unittest.TestCase):
                 "edges": {key: 0.05 for key in ("efg", "tov", "orb", "ftr")},
             },
         }
-        prediction = {"home_margin": 4.5, "home_win_probability": 0.62}
+        prediction = valid_prediction()
         payload = MODULE.forecast_payload(game, prediction)
-        self.assertEqual(payload["home_margin"], 4.5)
+        self.assertEqual(payload["home_margin"], 5.0)
         self.assertEqual(payload["matchup_factors"], game["matchup_factors"])
         self.assertNotIn("matchup_factors", prediction)
 
     def test_forecast_payload_fails_closed_on_malformed_matchup_factors(self):
         game = {"id": "game-1", "matchup_factors": {"season": 2026, "factors": {}, "edges": {}}}
         with self.assertRaisesRegex(ValueError, "invalid matchup factors"):
-            MODULE.forecast_payload(game, {"home_margin": 4.5})
+            MODULE.forecast_payload(game, valid_prediction())
 
     def test_forecast_payload_allows_cold_start_without_factor_context(self):
         payload = MODULE.forecast_payload(
             {"id": "cold", "matchup_factors": None},
-            {"estimate_type": "cold_start", "home_margin": 1.2},
+            valid_prediction(estimate_type="cold_start", home_margin=1.2, home_score=66.2, total=131.2),
         )
         self.assertEqual(payload["estimate_type"], "cold_start")
         self.assertNotIn("matchup_factors", payload)
+
+    def test_forecast_payload_rejects_score_and_total_mismatches(self):
+        for overrides, message in (
+            ({"home_margin": 4.0}, "score/margin"),
+            ({"total": 136.0}, "score/total"),
+        ):
+            with self.subTest(overrides=overrides), self.assertRaisesRegex(ValueError, message):
+                MODULE.forecast_payload({"id": "game-1", "matchup_factors": None}, valid_prediction(**overrides))
+
+    def test_forecast_payload_rejects_partial_or_inconsistent_total_interval(self):
+        for overrides, message in (
+            ({"total_low": 117.0}, "incomplete"),
+            ({"total_low": 120.0, "total_high": 153.0, "total_half_width": 18.0}, "width mismatch"),
+            ({"total_low": 117.0, "total_high": 153.0, "total_half_width": 17.0}, "width mismatch"),
+        ):
+            with self.subTest(overrides=overrides), self.assertRaisesRegex(ValueError, message):
+                MODULE.forecast_payload({"id": "game-1", "matchup_factors": None}, valid_prediction(**overrides))
 
     def test_published_model_metadata_declares_complete_forecast_count(self):
         model = {

@@ -90,6 +90,52 @@ def forecast_records(overview):
 
 FACTOR_KEYS = ("efg", "tov", "orb", "ftr")
 FACTOR_VALUE_KEYS = ("home_offense", "home_defense", "away_offense", "away_defense")
+PREDICTION_FIELDS = (
+    "away_score",
+    "home_score",
+    "home_margin",
+    "total",
+    "pace",
+    "home_win_probability",
+    "margin_low",
+    "margin_high",
+)
+
+
+def finite_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def validate_forecast_prediction(prediction, label):
+    """Validate the score contract before a forecast can be written to D1."""
+    if not isinstance(prediction, dict):
+        raise ValueError(f"{label} must be an object")
+    for field in PREDICTION_FIELDS:
+        if not finite_number(prediction.get(field)):
+            raise ValueError(f"{label} has a non-numeric {field}")
+    if not 0 <= prediction["home_win_probability"] <= 1:
+        raise ValueError(f"{label} has an invalid home win probability")
+    if prediction["margin_low"] > prediction["margin_high"]:
+        raise ValueError(f"{label} has an inverted margin interval")
+    if prediction["pace"] <= 0:
+        raise ValueError(f"{label} has a non-positive pace")
+    if abs((prediction["home_score"] - prediction["away_score"]) - prediction["home_margin"]) > 0.05:
+        raise ValueError(f"{label} has a score/margin mismatch")
+    if abs((prediction["home_score"] + prediction["away_score"]) - prediction["total"]) > 0.05:
+        raise ValueError(f"{label} has a score/total mismatch")
+
+    interval_fields = ("total_low", "total_high", "total_half_width")
+    present = [field in prediction for field in interval_fields]
+    if any(present):
+        if not all(present) or any(not finite_number(prediction[field]) for field in interval_fields):
+            raise ValueError(f"{label} has an incomplete total interval")
+        if prediction["total_half_width"] <= 0 or not prediction["total_low"] <= prediction["total"] <= prediction["total_high"]:
+            raise ValueError(f"{label} has a malformed total interval")
+        if (
+            abs((prediction["total"] - prediction["total_low"]) - prediction["total_half_width"]) > 0.05
+            or abs((prediction["total_high"] - prediction["total"]) - prediction["total_half_width"]) > 0.05
+        ):
+            raise ValueError(f"{label} has a total interval width mismatch")
 
 
 def forecast_payload(game, prediction):
@@ -101,8 +147,7 @@ def forecast_payload(game, prediction):
     expose context from a different model vintage. A non-null malformed
     factor payload fails the publication rather than being silently dropped.
     """
-    if not isinstance(prediction, dict):
-        raise ValueError("Forecast prediction must be an object")
+    validate_forecast_prediction(prediction, f"Forecast {game.get('id')} prediction")
     payload = dict(prediction)
     factors = game.get("matchup_factors")
     if factors is None:
