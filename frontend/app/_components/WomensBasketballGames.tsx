@@ -75,6 +75,11 @@ export default function WomensBasketballGames() {
   const rows = useMemo(() => sortWomensMatchups(filterWomensMatchups(mergeWomensMatchups(forecast?.forecasts || [], edition?.upcoming || []), { query, month, coverage }), sort), [coverage, edition, forecast, month, query, sort]);
   const visible = useMemo(() => pageWomensMatchups(rows, page), [page, rows]);
   useEffect(() => setPage(0), [coverage, month, query, sort]);
+  useEffect(() => {
+    if (!selectedGameId) return;
+    const index = rows.findIndex((row) => row.game_id === selectedGameId);
+    if (index >= 0) setPage(Math.floor(index / 25));
+  }, [rows, selectedGameId]);
 
   const gameHref = (gameId: string) => {
     const params = new URLSearchParams(searchParams.toString());
