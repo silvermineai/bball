@@ -18,6 +18,16 @@ type RetrospectiveBenchmark = {
   };
 };
 type ForecastCatalog = {
+  resolved_model_id?: string | null;
+  coverage?: {
+    upcoming_games?: number;
+    forecast_games?: number;
+    primary_forecasts?: number;
+    cold_start_forecasts?: number;
+    invalid_forecasts?: number;
+    missing_forecasts?: number;
+    coverage_rate?: number | null;
+  };
   models?: Array<{ model_id?: string; target_season?: number | null }>;
 };
 
@@ -45,6 +55,7 @@ export default function Scorecard() {
   // edition is never presented as current until this immutable ID matches.
   const [liveModelId, setLiveModelId] = useState<string | null | undefined>(undefined);
   const [liveModelSport, setLiveModelSport] = useState<"football" | "basketball" | null>(null);
+  const [liveForecastCoverage, setLiveForecastCoverage] = useState<ForecastCatalog["coverage"] | null>(null);
   const [query, setQuery] = useState(params.get("q") || ""),
     [status, setStatus] = useState(params.get("status") || "all"),
     [page, setPage] = useState(() => {
@@ -130,6 +141,7 @@ export default function Scorecard() {
     const controller = new AbortController();
     setLiveModelId(undefined);
     setLiveModelSport(null);
+    setLiveForecastCoverage(null);
     const season = sport === "basketball" ? 2027 : 2026;
     const endpoint = sport === "basketball"
       ? `/api/basketball/research/forecasts?season=${season}&meta=1`
@@ -146,6 +158,7 @@ export default function Scorecard() {
         if (!controller.signal.aborted) {
           setLiveModelId(model.model_id);
           setLiveModelSport(sport);
+          setLiveForecastCoverage(catalog.coverage || null);
         }
       })
       .catch((reason: unknown) => {
@@ -275,6 +288,11 @@ export default function Scorecard() {
       ) : (
         <p className="note" role="status" style={{ marginTop: 12 }}>Checking the live forecast catalog before labeling a scorecard edition current…</p>
       )}
+      {liveForecastCoverage && liveModelSport === sport ? (
+        <p className="note" role="status" style={{ marginTop: 12 }}>
+          Upcoming model coverage is verified for {Number(liveForecastCoverage.forecast_games || 0).toLocaleString()} of {Number(liveForecastCoverage.upcoming_games || 0).toLocaleString()} scheduled games ({liveForecastCoverage.coverage_rate == null ? "—" : fmt(liveForecastCoverage.coverage_rate * 100) + "%"}). {Number(liveForecastCoverage.primary_forecasts || 0).toLocaleString()} primary · {Number(liveForecastCoverage.cold_start_forecasts || 0).toLocaleString()} cold-start · {Number(liveForecastCoverage.missing_forecasts || 0).toLocaleString()} missing · {Number(liveForecastCoverage.invalid_forecasts || 0).toLocaleString()} invalid. The exact edition is <code>{liveModelId || "unavailable"}</code>.
+        </p>
+      ) : null}
       <div className="ledger-metrics">
         <span>
           Brier score <b>{fmt(m.brier, 4)}</b>

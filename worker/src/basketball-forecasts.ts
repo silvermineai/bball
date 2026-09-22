@@ -399,6 +399,7 @@ async function publishedForecastFallback(
       season: args.season,
       status: args.status,
       model: args.model,
+      resolved_model_id: modelId,
       query: null,
       page: args.page,
       page_size: args.limit,
@@ -482,7 +483,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
 
   if (meta === "1") {
     try {
-    const [seasons, models, modelMeta] = await withTimeout(researchDb(c.env).batch([
+    const [seasons, models, modelMeta, upcoming] = await withTimeout(researchDb(c.env).batch([
       researchDb(c.env).prepare(
         "SELECT DISTINCT g.season FROM bb_forecasts f JOIN bb_games g ON g.id=f.game_id ORDER BY g.season DESC",
       ),
@@ -538,6 +539,14 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
            FROM bb_models
           ORDER BY created_at DESC, id`,
       ),
+      // Keep schedule coverage beside the immutable edition catalog. The
+      // forecast aggregate alone cannot tell a caller whether an absent row
+      // is a missing prediction or simply a game outside the target slate.
+      researchDb(c.env).prepare(
+        `SELECT count(*) AS upcoming_games
+           FROM bb_games
+          WHERE season=? AND completed=0`,
+      ).bind(season),
     ]), META_DB_TIMEOUT_MS);
     const metadataById = new Map(
       modelMeta.results.map((row) => {
@@ -601,8 +610,24 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       if (leftUsable !== rightUsable) return leftUsable - rightUsable;
       return String(rightRecord.last_created_at || "").localeCompare(String(leftRecord.last_created_at || ""));
     });
+    const resolvedModel = modelsWithMetadata[0] as Record<string, unknown> | undefined;
+    const upcomingGames = Number((upcoming.results[0] as Record<string, unknown> | undefined)?.upcoming_games || 0);
+    const forecastGames = Number(resolvedModel?.forecasts || 0);
     const response = c.json({
       seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
+      // `latest` is a query alias; expose the concrete edition selected by
+      // the same completeness ordering so clients can pin later pages and
+      // compare evidence without inspecting an arbitrary row.
+      resolved_model_id: typeof resolvedModel?.model_id === "string" ? resolvedModel.model_id : null,
+      coverage: {
+        upcoming_games: upcomingGames,
+        forecast_games: forecastGames,
+        primary_forecasts: Number(resolvedModel?.primary_forecasts || 0),
+        cold_start_forecasts: Number(resolvedModel?.cold_start_forecasts || 0),
+        invalid_forecasts: Number(resolvedModel?.invalid_forecasts || 0),
+        missing_forecasts: Math.max(0, upcomingGames - forecastGames),
+        coverage_rate: upcomingGames > 0 ? forecastGames / upcomingGames : null,
+      },
       models: modelsWithMetadata,
     });
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
@@ -778,6 +803,9 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
     season,
     status,
     model,
+    // `latest` is a query alias; rows carry the same immutable edition, and
+    // this field lets callers pin it before requesting another page.
+    resolved_model_id: resolvedModelId,
     query: q || null,
     page,
     page_size: limit,

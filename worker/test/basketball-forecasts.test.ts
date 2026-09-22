@@ -297,6 +297,7 @@ describe("basketball forecast availability", () => {
           evaluation_margin_mae: 10.26, evaluation_margin_rmse: 13.1, evaluation_total_mae: 12.4,
           evaluation_brier: 0.21, evaluation_log_loss: 0.61 },
       ] },
+      { results: [{ upcoming_games: 12 }] },
     ]);
 
     const response = await basketballForecasts.request(
@@ -306,7 +307,17 @@ describe("basketball forecast availability", () => {
     );
 
     expect(response.status).toBe(200);
-    const body = await response.json() as { models: Array<Record<string, unknown>> };
+    const body = await response.json() as { models: Array<Record<string, unknown>>; resolved_model_id: string; coverage: Record<string, unknown> };
+    expect(body.resolved_model_id).toBe("complete");
+    expect(body.coverage).toEqual({
+      upcoming_games: 12,
+      forecast_games: 12,
+      primary_forecasts: 10,
+      cold_start_forecasts: 2,
+      invalid_forecasts: 0,
+      missing_forecasts: 0,
+      coverage_rate: 1,
+    });
     expect(body.models).toMatchObject([
       { model_id: "complete", forecasts: 12, expected_forecasts: 12, publication_complete: true,
         fallback_margin_half_width: 23.88, fallback_games: 50,

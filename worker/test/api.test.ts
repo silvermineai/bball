@@ -745,6 +745,7 @@ describe("bball api", () => {
         evaluation_baseline_margin_mae: 12.01,
         evaluation_interval_coverage: 0.79,
       }] },
+      { results: [{ upcoming_games: 12 }] },
     ]);
     const response = await app.request(
       "/api/basketball/research/forecasts?meta=1&season=2027",
@@ -752,7 +753,17 @@ describe("bball api", () => {
       { DB: { prepare, batch } },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { models: Array<Record<string, unknown>> };
+    const body = await response.json() as { models: Array<Record<string, unknown>>; resolved_model_id: string; coverage: Record<string, unknown> };
+    expect(body.resolved_model_id).toBe("basketball-efficiency-v1-test");
+    expect(body.coverage).toEqual({
+      upcoming_games: 12,
+      forecast_games: 12,
+      primary_forecasts: 10,
+      cold_start_forecasts: 2,
+      invalid_forecasts: 0,
+      missing_forecasts: 0,
+      coverage_rate: 1,
+    });
     expect(body.models[0]).toMatchObject({
       model_id: "basketball-efficiency-v1-test",
       primary_forecasts: 10,
