@@ -1682,6 +1682,7 @@ def check_live(
         get_json(base_url, "/data/football/personnel-readiness-2026.json"),
         checked_at,
         max_age_hours,
+        expected_model_id=football_latest.get("model_id"),
     )
 
     schedule_clock_total = schedule_clock_confirmed = 0

@@ -154,7 +154,11 @@ def build(
                 "away_name": game.get("away_name"),
                 "home_division": game.get("home_division"),
                 "away_division": game.get("away_division"),
-                "model_id": (game.get("prediction") or {}).get("model_id"),
+                # The prediction payload intentionally contains only score
+                # outputs. Keep the exact registered edition on every
+                # readiness row so a matchup context can never be mistaken
+                # for evidence from a different forecast model.
+                "model_id": primary_model_id,
                 "status": _status(home, away),
                 "home": home,
                 "away": away,

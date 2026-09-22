@@ -26,6 +26,7 @@ from scripts.check_live_publication import (
     validate_recruiting_destinations,
     validate_coverage_audit,
     validate_reviewed_recruiting_release,
+    football_personnel_readiness_metadata,
     get_json,
 )
 
@@ -908,8 +909,12 @@ class LivePublicationCheckTest(unittest.TestCase):
                 "rows": [{"sport": "basketball", "game_id": "401902275", "revision": "d25ebd383e9b591503777f3fde5bce62e972e57bc0f85f4ae363afda79739f32"}],
             },
         }
-        with patch("scripts.check_live_publication.get_json", side_effect=self.response_for(responses)):
+        with patch("scripts.check_live_publication.get_json", side_effect=self.response_for(responses)), patch(
+            "scripts.check_live_publication.football_personnel_readiness_metadata",
+            wraps=football_personnel_readiness_metadata,
+        ) as readiness_check:
             report = check_live("https://example.test", now=now)
+        self.assertEqual(readiness_check.call_args.kwargs["expected_model_id"], "football-model-1")
         self.assertEqual(report["forecast_model"], "model-1")
         self.assertEqual(report["forecast_upcoming_rows"], 100)
         self.assertEqual(report["forecast_roster_scenario_rows"], 100)

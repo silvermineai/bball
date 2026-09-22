@@ -64,6 +64,7 @@ class FootballPersonnelReadinessTests(unittest.TestCase):
         self.assertEqual(payload["coverage"]["field_side_counts"]["overall_returning"], 2)
         self.assertEqual(payload["games"][0]["home"]["team_id"], "1")
         self.assertEqual(payload["games"][0]["away"]["team_id"], "2")
+        self.assertEqual(payload["games"][0]["model_id"], "football-model-v2")
         self.assertEqual(payload["games"][0]["away"]["overall_returning"], 0.45)
         self.assertEqual(len(payload["source_receipts"]), 2)
         self.assertTrue(payload["id"].startswith("football-personnel-readiness-v1-"))
