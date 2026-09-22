@@ -23,6 +23,17 @@ type RecruitSummaryRow = {
   two_or_less_star: number | null;
   stars_unavailable: number | null;
 };
+type RecruitPositionSummaryRow = {
+  position: string | null;
+  total: number | null;
+  graded: number | null;
+  average_grade: number | null;
+  five_star: number | null;
+  four_star: number | null;
+  three_star: number | null;
+  two_or_less_star: number | null;
+  stars_unavailable: number | null;
+};
 type PublicReceipt = { dataset: Dataset; season: number; fetched_at: string; sha256: string };
 type Division = "all" | "fbs" | "fcs" | "d2" | "d3" | "naia" | "unknown";
 const query = z.object({
@@ -202,8 +213,9 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
   let receipts: { results: Array<{ dataset: Dataset; season: number; receipt_json: string }> };
   let teamDirectoryRows: { results: Array<{ team_id: string; stats_json: string }> } = { results: [] };
   let recruitSummary: RecruitSummaryRow | null = null;
+  let recruitPositionSummaryRows: { results: RecruitPositionSummaryRow[] } = { results: [] };
   try {
-    [count, rows, receipts, recruitSummary, teamDirectoryRows] = await withTimeout(Promise.all([
+    [count, rows, receipts, recruitSummary, recruitPositionSummaryRows, teamDirectoryRows] = await withTimeout(Promise.all([
       db.prepare(`SELECT count(*) AS total FROM football_stats s WHERE ${where}`).bind(...binds).first<{ total: number }>(),
       db.prepare(`SELECT record_key,athlete_id,team_id,stats_json FROM football_stats s WHERE ${where} ORDER BY record_key LIMIT ? OFFSET ?`).bind(...binds, q.limit, q.page * q.limit).all<{ record_key: string; athlete_id: string | null; team_id: string | null; stats_json: string }>(),
       db.prepare("SELECT dataset,season,receipt_json FROM football_sources WHERE dataset=? AND season=?").bind(selected.dataset, q.season).all<{ dataset: Dataset; season: number; receipt_json: string }>(),
@@ -219,6 +231,24 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
                             sum(CASE WHEN json_extract(s.stats_json,'$.stars') IS NULL THEN 1 ELSE 0 END) AS stars_unavailable
                        FROM football_stats s WHERE ${where}`).bind(...binds).first<RecruitSummaryRow>()
         : Promise.resolve(null),
+      selected.dataset === "recruits"
+        ? db.prepare(`SELECT CASE
+                              WHEN trim(CAST(json_extract(s.stats_json,'$.position') AS TEXT)) <> ''
+                              THEN upper(trim(CAST(json_extract(s.stats_json,'$.position') AS TEXT)))
+                              ELSE NULL
+                            END AS position,
+                            count(*) AS total,
+                            sum(CASE WHEN json_extract(s.stats_json,'$.grade') IS NOT NULL AND CAST(json_extract(s.stats_json,'$.grade') AS REAL) > 0 THEN 1 ELSE 0 END) AS graded,
+                            avg(CASE WHEN json_extract(s.stats_json,'$.grade') IS NOT NULL AND CAST(json_extract(s.stats_json,'$.grade') AS REAL) > 0 THEN CAST(json_extract(s.stats_json,'$.grade') AS REAL) END) AS average_grade,
+                            sum(CASE WHEN CAST(json_extract(s.stats_json,'$.stars') AS REAL)=5 THEN 1 ELSE 0 END) AS five_star,
+                            sum(CASE WHEN CAST(json_extract(s.stats_json,'$.stars') AS REAL)=4 THEN 1 ELSE 0 END) AS four_star,
+                            sum(CASE WHEN CAST(json_extract(s.stats_json,'$.stars') AS REAL)=3 THEN 1 ELSE 0 END) AS three_star,
+                            sum(CASE WHEN json_extract(s.stats_json,'$.stars') IS NOT NULL AND CAST(json_extract(s.stats_json,'$.stars') AS REAL) <= 2 THEN 1 ELSE 0 END) AS two_or_less_star,
+                            sum(CASE WHEN json_extract(s.stats_json,'$.stars') IS NULL THEN 1 ELSE 0 END) AS stars_unavailable
+                       FROM football_stats s WHERE ${where}
+                      GROUP BY position
+                      ORDER BY position IS NULL, total DESC, position`).bind(...binds).all<RecruitPositionSummaryRow>()
+        : Promise.resolve({ results: [] as RecruitPositionSummaryRow[] }),
       selected.dataset === "rosters"
         ? Promise.resolve({ results: [] as Array<{ team_id: string; stats_json: string }> })
         : db.prepare("SELECT team_id,stats_json FROM football_stats WHERE dataset='teams' AND season=?").bind(q.season).all<{ team_id: string; stats_json: string }>(),
@@ -235,6 +265,20 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
       conference: text(team, "conference_short_name", "conference_name"),
     });
   }
+  const positionSummaryRows = recruitPositionSummaryRows.results.map((row) => ({
+    position: row.position || null,
+    total: Number(row.total || 0),
+    graded: Number(row.graded || 0),
+    average_grade: row.average_grade == null ? null : Number(row.average_grade),
+    star_counts: {
+      five: Number(row.five_star || 0),
+      four: Number(row.four_star || 0),
+      three: Number(row.three_star || 0),
+      two_or_less: Number(row.two_or_less_star || 0),
+      unavailable: Number(row.stars_unavailable || 0),
+    },
+  }));
+  const positionSummaryTotal = positionSummaryRows.reduce((sum, row) => sum + row.total, 0);
   const response = c.json({
     view: q.view,
     dataset: selected.dataset,
@@ -265,6 +309,11 @@ footballRecruiting.get("/", zValidator("query", query), async (c) => {
         two_or_less: Number(recruitSummary.two_or_less_star || 0),
         unavailable: Number(recruitSummary.stars_unavailable || 0),
       },
+    } : undefined,
+    position_summary: selected.dataset === "recruits" && recruitSummary ? {
+      total: positionSummaryTotal,
+      reconciles: positionSummaryTotal === Number(recruitSummary.total || 0),
+      rows: positionSummaryRows,
     } : undefined,
     rows: rows.results.flatMap((row) => {
       const raw = parseJson(row.stats_json);

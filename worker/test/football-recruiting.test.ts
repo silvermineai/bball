@@ -7,11 +7,16 @@ describe("football recruiting desk", () => {
   it("returns a reconciled recruiting class summary for active filters", async () => {
     const prepare = vi.fn((sql: string) => ({
       bind: () => ({
-        first: async () => sql.includes("json_extract")
+        first: async () => sql.includes("json_extract") && !sql.includes("GROUP BY position")
           ? { total: 5, programs: 2, graded: 4, average_grade: 87.25, five_star: 1, four_star: 1, three_star: 2, two_or_less_star: 0, stars_unavailable: 1 }
           : sql.includes("count(*)") ? { total: 5 } : undefined,
         all: async () => sql.includes("football_sources")
           ? { results: [{ dataset: "recruits", season: 2026, receipt_json: receipt }] }
+          : sql.includes("GROUP BY position")
+            ? { results: [
+              { position: "QB", total: 3, graded: 3, average_grade: 90, five_star: 1, four_star: 1, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 },
+              { position: null, total: 2, graded: 1, average_grade: 79, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 1 },
+            ] }
           : { results: [] },
       }),
     }));
@@ -25,10 +30,39 @@ describe("football recruiting desk", () => {
         average_grade: 87.25,
         star_counts: { five: 1, four: 1, three: 2, two_or_less: 0, unavailable: 1 },
       },
+      position_summary: {
+        total: 5,
+        reconciles: true,
+        rows: [
+          { position: "QB", total: 3, graded: 3, average_grade: 90, star_counts: { five: 1, four: 1, three: 1, two_or_less: 0, unavailable: 0 } },
+          { position: null, total: 2, graded: 1, average_grade: 79, star_counts: { five: 0, four: 0, three: 1, two_or_less: 0, unavailable: 1 } },
+        ],
+      },
     });
-    const summarySql = prepare.mock.calls.find(([sql]) => sql.includes("json_extract"))?.[0] || "";
+    const summarySql = prepare.mock.calls.find(([sql]) => sql.includes("json_extract") && !sql.includes("GROUP BY position"))?.[0] || "";
     expect(summarySql).toContain("s.dataset=? AND s.season=?");
     expect(summarySql).toContain("s.stats_json");
+    const positionSql = prepare.mock.calls.find(([sql]) => sql.includes("GROUP BY position"))?.[0] || "";
+    expect(positionSql).toContain("s.dataset=? AND s.season=?");
+    expect(positionSql).toContain("ELSE NULL");
+  });
+
+  it("marks a position summary unavailable when it does not reconcile to the filtered class", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: () => ({
+        first: async () => sql.includes("json_extract")
+          ? { total: 2, programs: 1, graded: 1, average_grade: 85, five_star: 0, four_star: 1, three_star: 0, two_or_less_star: 0, stars_unavailable: 1 }
+          : sql.includes("count(*)") ? { total: 2 } : undefined,
+        all: async () => sql.includes("football_sources")
+          ? { results: [{ dataset: "recruits", season: 2026, receipt_json: receipt }] }
+          : sql.includes("GROUP BY position")
+            ? { results: [{ position: "QB", total: 1, graded: 1, average_grade: 85, five_star: 0, four_star: 1, three_star: 0, two_or_less_star: 0, stars_unavailable: 0 }] }
+            : { results: [] },
+      }),
+    }));
+    const response = await footballRecruiting.request("/?view=recruits&season=2026", {}, { DB: { prepare } });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ position_summary: { total: 1, reconciles: false } });
   });
 
   it("shapes a source roster row while preserving raw fields", async () => {
@@ -47,6 +81,9 @@ describe("football recruiting desk", () => {
 
   it("adds exact team-directory division context to recruiting rows", async () => {
     const prepare = vi.fn((sql: string) => {
+      if (sql.includes("GROUP BY position")) {
+        return { bind: () => ({ all: async () => ({ results: [{ position: "QB", total: 1, graded: 1, average_grade: 84, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 }] }) }) };
+      }
       if (sql.includes("json_extract(s.stats_json,'$.grade')")) {
         return { bind: () => ({ first: async () => ({ total: 1, programs: 1, graded: 1, average_grade: 84, five_star: 0, four_star: 0, three_star: 1, two_or_less_star: 0, stars_unavailable: 0 }) }) };
       }

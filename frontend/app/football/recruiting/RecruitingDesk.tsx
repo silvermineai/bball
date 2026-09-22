@@ -28,6 +28,17 @@ type Result = {
     average_grade: number | null;
     star_counts: { five: number; four: number; three: number; two_or_less: number; unavailable: number };
   };
+  position_summary?: {
+    total: number;
+    reconciles: boolean;
+    rows: Array<{
+      position: string | null;
+      total: number;
+      graded: number;
+      average_grade: number | null;
+      star_counts: { five: number; four: number; three: number; two_or_less: number; unavailable: number };
+    }>;
+  };
   rows: Row[];
 };
 
@@ -148,6 +159,26 @@ export default function RecruitingDesk() {
           ] as const).map(([label, count]) => <tr key={label}><th scope="row">{label}</th><td className="numeric"><strong>{count.toLocaleString()}</strong></td><td className="numeric">{result.summary!.total > 0 ? `${((count / result.summary!.total) * 100).toFixed(1)}%` : "—"}</td></tr>)}
         </tbody></table></div>
         <p className="note" style={{ marginTop: 12 }}>A record count describes the retained recruiting release. It does not establish enrollment, eligibility, playing time or a program&apos;s future roster strength.</p>
+      </section>}
+      {view === "recruits" && result.position_summary && <section className="paper-panel" aria-label="Recruiting class position summary" style={{ marginBottom: 22 }}>
+        <div className="section-heading" style={{ marginBottom: 12 }}>
+          <div><div className="eyebrow">Position room / active filters</div><h2>See where the class is concentrated.</h2></div>
+          <span className="note">{result.position_summary.total.toLocaleString()} source rows grouped</span>
+        </div>
+        <p className="note">Position labels, grades and stars are grouped exactly as recorded in the same release and filter set as the class summary. Blank positions stay in an unavailable bucket; no role is inferred from a player name or listed size.</p>
+        {result.position_summary.reconciles ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Recorded position</th><th className="numeric">Recruits</th><th className="numeric">Grade coverage</th><th className="numeric">Average grade</th><th className="numeric">5★</th><th className="numeric">4★</th><th className="numeric">3★</th><th className="numeric">Stars unavailable</th></tr></thead><tbody>
+          {result.position_summary.rows.map((row) => <tr key={row.position || "position-unavailable"}>
+            <th scope="row">{row.position || "Position unavailable"}</th>
+            <td className="numeric"><strong>{row.total.toLocaleString()}</strong></td>
+            <td className="numeric">{row.total > 0 ? `${((row.graded / row.total) * 100).toFixed(1)}%` : "—"}</td>
+            <td className="numeric">{row.average_grade == null ? "—" : fmt(row.average_grade, 1)}</td>
+            <td className="numeric">{row.star_counts.five.toLocaleString()}</td>
+            <td className="numeric">{row.star_counts.four.toLocaleString()}</td>
+            <td className="numeric">{row.star_counts.three.toLocaleString()}</td>
+            <td className="numeric">{row.star_counts.unavailable.toLocaleString()}</td>
+          </tr>)}
+        </tbody></table></div> : <p className="empty" role="status">Position groups are withheld because their row count does not reconcile to this class edition.</p>}
+        <p className="note" style={{ marginTop: 12 }}>This is a source distribution, not a depth chart or positional need score. “Position unavailable” means only that the release did not supply a usable label.</p>
       </section>}
       <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching rows · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><div className="button-row"><button className="button secondary" type="button" onClick={downloadCurrentPage}>Download page CSV ↓</button><Link className="hero-link" href={`/football/source-stats/?dataset=${encodeURIComponent(result.dataset)}&season=${result.season}`}>Open raw dataset browser →</Link></div></div>
       <p className="note">{result.division_scope?.note || "Division is shown only when the source row or exact season/team directory supplies it."}</p>
