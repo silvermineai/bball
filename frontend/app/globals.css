@@ -1814,6 +1814,9 @@ th,
 .learning-next-game-header p { margin: 8px 0 0; }
 .learning-next-game-strip { margin: 0 0 22px; }
 .learning-next-game-strip strong { font-size: 1.35rem; }
+.learning-forecast-reading { margin: 0 0 18px; }
+.learning-forecast-reading h3 { margin: 7px 0 9px; }
+.learning-forecast-reading .raw-stat-grid { margin: 14px 0 10px; }
 .learning-next-game-columns { margin-bottom: 18px; }
 .learning-next-game-columns .paper-panel { margin: 0; }
 .learning-next-game-columns h3 { margin: 7px 0 9px; }

@@ -38,7 +38,7 @@ export default function UpcomingGameLesson({
       <div className="section-heading">
         <div>
           <div className="eyebrow">Apply the lesson / next forecast-backed game</div>
-          <h2 id="learning-next-game-title">Read one real matchup in three passes.</h2>
+          <h2 id="learning-next-game-title">Read one real matchup in four passes.</h2>
         </div>
         <span className="note">{date(game.starts_at)}</span>
       </div>
@@ -61,6 +61,19 @@ export default function UpcomingGameLesson({
         <div><strong>{signed(prediction.margin_low)} to {signed(prediction.margin_high)}</strong><span>Nominal 80% home-margin range</span></div>
         <div><strong>{fmt(prediction.pace, 1)}</strong><span>Projected possessions / 40 min</span></div>
       </div>
+      <article className="paper-panel learning-forecast-reading" aria-labelledby="learning-forecast-reading-title">
+        <div className="eyebrow">How to read the numbers</div>
+        <h3 id="learning-forecast-reading-title">A probability is a chance, not a score.</h3>
+        <p>{lesson.learningRead.probabilityReading}</p>
+        <div className="raw-stat-grid">
+          <div><dt>Favorite’s model chance</dt><dd>{fmt(lesson.learningRead.favoriteProbability * 100, 1)}%</dd></div>
+          <div><dt>Other outcome</dt><dd>{fmt(lesson.learningRead.otherProbability * 100, 1)}%</dd></div>
+          <div><dt>Margin span</dt><dd>{fmt(lesson.learningRead.marginWidth, 1)} pts</dd></div>
+          <div><dt>Range status</dt><dd>{lesson.learningRead.intervalReading === "both-outcomes" ? "Both winners" : "One side"}</dd></div>
+        </div>
+        <p className="note">{lesson.learningRead.uncertaintyReading} This is the stored model range, not a sportsbook line.</p>
+        <p className="note"><strong>Study prompt:</strong> {lesson.learningRead.studyPrompt}</p>
+      </article>
       <div className="two-col learning-next-game-columns">
         <article className="paper-panel">
           <div className="eyebrow">Pass 01 / Point estimate</div>
