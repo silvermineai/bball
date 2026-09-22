@@ -37,6 +37,7 @@ describe("program prospect evidence", () => {
     expect(programProspectRankChangeLabel({ rank: 30, previous_rank: 12 })).toBe("▼ 18");
     expect(programProspectRankChangeLabel({ rank: 12, previous_rank: 12 })).toBe("—");
     expect(programProspectRankChangeLabel({ rank: 12, previous_rank: null })).toBe("—");
+    expect(programProspectRankChangeLabel({ rank: 0, previous_rank: 12 })).toBe("—");
   });
 
   it("selects the highest recorded ranks across classes before unranked rows", () => {
@@ -44,6 +45,7 @@ describe("program prospect evidence", () => {
       { ...prospect({ athlete_id: "old-low", name: "Old low", rank: 80 }), season: 2026, evidence: "Recorded commitment" as const },
       { ...prospect({ athlete_id: "new-high", name: "New high", rank: 4 }), season: 2027, evidence: "Listed school" as const },
       { ...prospect({ athlete_id: "mid", name: "Mid", rank: 20 }), season: 2025, evidence: "Committed elsewhere" as const },
+      { ...prospect({ athlete_id: "placeholder", name: "Placeholder", rank: 0 }), season: 2025, evidence: "Listed school" as const },
       { ...prospect({ athlete_id: "missing", name: "Missing", rank: null }), season: 2025, evidence: "Listed school" as const },
     ];
     expect(topProgramProspects(rows, 3).map((row) => row.name)).toEqual(["New high", "Mid", "Old low"]);

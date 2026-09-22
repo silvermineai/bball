@@ -98,7 +98,9 @@ export type ProgramProspectRow = ProgramProspect & {
 };
 
 export function programProspectRankChange(row: Pick<ProgramProspect, "rank" | "previous_rank">): number | null {
-  return row.rank != null && row.previous_rank != null ? row.previous_rank - row.rank : null;
+  const rank = recordedRankValue(row.rank);
+  const previousRank = recordedRankValue(row.previous_rank ?? null);
+  return rank != null && previousRank != null ? previousRank - rank : null;
 }
 
 export function programProspectRankChangeLabel(row: Pick<ProgramProspect, "rank" | "previous_rank">): string {
@@ -207,6 +209,7 @@ export function buildProgramRoleContext(
 }
 
 const recordedRank = (value: number | null): value is number => Number.isInteger(value) && (value ?? 0) > 0;
+const recordedRankValue = (value: number | null): number | null => recordedRank(value) ? value : null;
 
 const rankProfile = (ranks: number[]) => ({
   ranked: ranks.length,
@@ -284,8 +287,8 @@ export function combineProgramProspectClasses(releases: RecruitingClass[], teamI
     } satisfies ProgramProspectRow)))
     .sort((a, b) =>
       a.season - b.season
-      || Number(a.rank == null) - Number(b.rank == null)
-      || (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER)
+      || Number(recordedRankValue(a.rank) == null) - Number(recordedRankValue(b.rank) == null)
+      || (recordedRankValue(a.rank) ?? Number.MAX_SAFE_INTEGER) - (recordedRankValue(b.rank) ?? Number.MAX_SAFE_INTEGER)
       || a.name.localeCompare(b.name),
     );
 }
@@ -295,8 +298,8 @@ export function topProgramProspects(rows: ProgramProspectRow[], limit = 12): Pro
   if (!Number.isSafeInteger(limit) || limit < 1) return [];
   return [...rows]
     .sort((a, b) =>
-      Number(a.rank == null) - Number(b.rank == null)
-      || (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER)
+      Number(recordedRankValue(a.rank) == null) - Number(recordedRankValue(b.rank) == null)
+      || (recordedRankValue(a.rank) ?? Number.MAX_SAFE_INTEGER) - (recordedRankValue(b.rank) ?? Number.MAX_SAFE_INTEGER)
       || a.season - b.season
       || a.name.localeCompare(b.name)
       || a.athlete_id.localeCompare(b.athlete_id),
@@ -405,11 +408,12 @@ export default function ProgramProspects({
           <div className="table-scroll" style={{ marginTop: 20 }}>
             <table className="data-table">
               <thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Movement</th><th className="numeric">Grade</th><th>Program evidence</th><th>Origin</th><th>Record</th></tr></thead>
-              <tbody>{topRows.map((row) => (
-                <tr key={`${row.season}-${row.athlete_id}`}>
+              <tbody>{topRows.map((row) => {
+                const currentRank = recordedRankValue(row.rank);
+                return <tr key={`${row.season}-${row.athlete_id}`}>
                   <td>{row.season}</td>
                   <th scope="row">{row.name}<small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th>
-                  <td className="numeric">{row.rank == null ? "—" : `#${row.rank}`}</td>
+                  <td className="numeric">{currentRank == null ? "—" : `#${currentRank}`}</td>
                   <td className="numeric">{programProspectRankChangeLabel(row)}<small>{row.previous_rank == null ? "Prior rank unavailable" : `prior #${row.previous_rank}`}</small></td>
                   <td className="numeric">{row.grade == null || row.grade <= 0 ? "—" : row.grade.toFixed(0)}</td>
                   <td><strong>{row.evidence}</strong>{row.evidence === "Recorded commitment" && row.committed_team_name
@@ -420,7 +424,7 @@ export default function ProgramProspects({
                   <td>{row.hometown || "—"}</td>
                   <td><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${encodeURIComponent(row.athlete_id)}`}>Open dossier →</Link></td>
                 </tr>
-              ))}</tbody>
+              })}</tbody>
             </table>
           </div>
           {rows.length > 12 && <p className="note">Showing the 12 highest recorded ranks across the matched class rows. {rows.length.toLocaleString()} rows are available in the loaded releases.</p>}
