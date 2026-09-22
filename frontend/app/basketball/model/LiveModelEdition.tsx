@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchJson } from "../../_lib/fetch-json";
+import { selectPublishedForecastModel } from "../../_lib/forecast-lab-view";
 
 type LiveModel = {
   model_id?: string | null;
@@ -12,6 +13,7 @@ type LiveModel = {
   last_created_at?: string | null;
   target_season?: number | null;
   cutoff?: string | null;
+  publication_complete?: boolean;
 };
 
 type Catalog = { models?: LiveModel[] };
@@ -38,7 +40,7 @@ export default function LiveModelEdition({ bundledModelId }: { bundledModelId: s
     const controller = new AbortController();
     fetchJson<Catalog>("/api/basketball/research/forecasts?season=2027&meta=1", { signal: controller.signal })
       .then((payload) => {
-        const next = payload.models?.find((item) => typeof item.model_id === "string" && item.model_id.trim());
+        const next = selectPublishedForecastModel(payload.models, 2027);
         if (!next?.model_id) throw new Error("The live 2026–27 model edition is unavailable.");
         if (!controller.signal.aborted) setModel(next);
       })

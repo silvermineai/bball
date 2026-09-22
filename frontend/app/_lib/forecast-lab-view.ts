@@ -10,7 +10,30 @@ export type ForecastModelOption = {
   invalid_forecasts?: number;
   last_created_at?: string | null;
   target_season?: number | null;
+  expected_forecasts?: number | null;
+  publication_complete?: boolean;
 };
+
+/**
+ * Select only a complete model edition for the requested forecast season.
+ * Catalog rows can include historical editions and an in-flight publication;
+ * neither is safe to label as the live 2026–27 model in the UI.
+ */
+export function selectPublishedForecastModel<T extends {
+  model_id?: string | null;
+  target_season?: number | null;
+  forecasts?: number | null;
+  publication_complete?: boolean;
+}>(models: T[] | null | undefined, targetSeason = 2027): T | null {
+  return models?.find((model) =>
+    typeof model.model_id === "string"
+    && model.model_id.trim().length > 0
+    && model.target_season === targetSeason
+    && model.publication_complete === true
+    && Number.isInteger(model.forecasts)
+    && (model.forecasts ?? 0) > 0,
+  ) || null;
+}
 
 /** Return a held-out baseline delta only when both MAEs are valid. */
 export function baselineMarginDelta(

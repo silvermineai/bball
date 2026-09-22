@@ -32,6 +32,7 @@ import {
 } from "../../_lib/live-basketball-schedule";
 import MatchupPersonnelPanel from "./MatchupPersonnel";
 import { resolveForecastEdition } from "../../_lib/forecast-edition";
+import { selectPublishedForecastModel } from "../../_lib/forecast-lab-view";
 
 type PublisherRating = { id: string; team: string; value: number | null };
 
@@ -74,6 +75,7 @@ export default function Matchups({
         forecasts: number;
         last_created_at: string | null;
         target_season?: number | null;
+        publication_complete?: boolean;
       }>;
     } | null>(null),
     [liveCatalogError, setLiveCatalogError] = useState(""),
@@ -254,8 +256,7 @@ export default function Matchups({
   );
   const rosterByTeam = new Map(rosterSummaries.map((summary) => [summary.team_id, summary]));
   const rosterScenarioByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
-  const latestModelId = liveCatalog?.models?.find((item) => item.target_season === 2027)?.model_id
-    || liveCatalog?.models?.[0]?.model_id
+  const latestModelId = selectPublishedForecastModel(liveCatalog?.models, 2027)?.model_id
     || model.id;
   const liveMarketStatus = liveMarketComparisonStatus({
     modelId: liveForecastModelId,
@@ -417,7 +418,7 @@ export default function Matchups({
       </p>
       <p className="note" role="status">
         {liveCatalog ? (() => {
-          const latest = liveCatalog.models?.find((item) => item.target_season === 2027) || liveCatalog.models?.[0];
+          const latest = selectPublishedForecastModel(liveCatalog.models, 2027);
           if (!latest) return "Live D1 catalog has no registered 2026–27 model; showing the static edition.";
           const matches = latest.model_id === model.id;
           return `Live D1 catalog: ${latest.forecasts.toLocaleString()} rows · ${latest.last_created_at ? `last captured ${latest.last_created_at.slice(0, 10)}` : "capture clock unavailable"} · ${matches ? "matches this page" : `newer than this page (${latest.model_id})`}.`;

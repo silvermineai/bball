@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
-import { baselineMarginDelta } from "../_lib/forecast-lab-view";
+import { baselineMarginDelta, selectPublishedForecastModel } from "../_lib/forecast-lab-view";
 
 type ForecastModel = {
   model_id?: string;
@@ -21,6 +21,7 @@ type ForecastModel = {
   evaluation_interval_coverage?: number | null;
   evaluation_games?: number | null;
   evaluation_unscored_games?: number | null;
+  publication_complete?: boolean;
 };
 type ForecastMeta = { models?: ForecastModel[] };
 type ForecastSlice = { total?: number; status?: string; model?: string };
@@ -81,9 +82,10 @@ export default function LiveBasketballForecastStatus({
     ])
       .then(([payload, slice]) => {
         if (!controller.signal.aborted) {
-          setModel(payload.models?.[0] || null);
+          const next = selectPublishedForecastModel(payload.models, 2027);
+          setModel(next);
           setUpcomingTotal(Number.isInteger(slice.total) && (slice.total ?? 0) >= 0 ? slice.total ?? 0 : null);
-          setStatus(payload.models?.[0] ? "live" : "fallback");
+          setStatus(next ? "live" : "fallback");
         }
       })
       .catch((reason: unknown) => {

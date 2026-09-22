@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { baselineMarginDelta, forecastLabFilterSearch, formatForecastModelOption, parseForecastLabFilters } from "./forecast-lab-view";
+import { baselineMarginDelta, forecastLabFilterSearch, formatForecastModelOption, parseForecastLabFilters, selectPublishedForecastModel } from "./forecast-lab-view";
 
 describe("forecast lab filters", () => {
   it("round-trips a selected market game with the lab view", () => {
@@ -60,6 +60,22 @@ describe("forecast lab filters", () => {
       last_created_at: null,
       target_season: null,
     })).toBe("Unlabeled edition · date unavailable · 1,579 rows · 338f9be0c3b6 · metadata unavailable");
+  });
+
+  it("selects a complete edition for the requested target season", () => {
+    const models = [
+      { model_id: "partial-2027", target_season: 2027, forecasts: 162, publication_complete: false },
+      { model_id: "historical", target_season: 2026, forecasts: 500, publication_complete: true },
+      { model_id: "current-2027", target_season: 2027, forecasts: 1629, publication_complete: true },
+    ];
+    expect(selectPublishedForecastModel(models)?.model_id).toBe("current-2027");
+  });
+
+  it("withholds an unlabeled or incomplete edition", () => {
+    expect(selectPublishedForecastModel([
+      { model_id: "current-2027", target_season: 2027, forecasts: 0, publication_complete: true },
+      { model_id: "missing-completion", target_season: 2027, forecasts: 1629 },
+    ])).toBeNull();
   });
 
 });
