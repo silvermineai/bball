@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { date, fmt } from "../../_lib/format";
 import { downloadCsv, toCsv } from "../../_lib/csv";
-import { buildNcaaRecentForm, gameEvidenceWindowLabel, playerGameExportEvidence, playerGameExportEvidenceHeaders, playerGamePossessionLine } from "../../_lib/ncaa-player-form";
+import { buildNcaaRecentForm, gameEvidenceWindowLabel, gameStatFieldKeys, playerGameExportEvidence, playerGameExportEvidenceHeaders, playerGamePossessionLine } from "../../_lib/ncaa-player-form";
 import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, playerSeasonBoxSummary, safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 import PlayerRankingSnapshot from "./PlayerRankingSnapshot";
 import PlayerShotLocationCourt from "../../_components/PlayerShotLocationCourt";
@@ -123,6 +123,43 @@ function GameArchiveFieldTotals({ coverage }: { coverage?: GameStatCoverage }) {
           <td className="numeric">{field.total == null ? "Rate / share —" : String(field.total)}</td>
         </tr>)}</tbody>
       </table>
+    </div>
+  </section>;
+}
+
+function RawGameFields({ games }: { games: GameRow[] }) {
+  const keys = gameStatFieldKeys(games);
+  if (!games.length || !keys.length) return null;
+  return <section className="section paper-panel" aria-label="Raw game source fields">
+    <div className="section-heading">
+      <div>
+        <div className="eyebrow">Game archive / loaded contests</div>
+        <h2>Open every recorded field.</h2>
+      </div>
+      <span className="note">{keys.length} distinct source fields</span>
+    </div>
+    <p className="note">
+      The box-score table above keeps the common fields readable. Expand a
+      contest below to inspect every field returned for that exact player row,
+      including source fields that are unavailable in another contest. A dash
+      means the source did not record that field for that row.
+    </p>
+    <div style={{ marginTop: 18 }}>
+      {games.map((game, index) => {
+        const observed = keys.filter((key) => game.stats[key] != null).length;
+        return <details key={`${game.contest_id}-${index}`} className="career-coverage-details">
+          <summary>
+            <strong>{game.game_date || "Date unavailable"}</strong>
+            <span>{game.team_name || "Team unavailable"} vs {game.opponent_name || "Opponent unavailable"} · {observed}/{keys.length} fields recorded</span>
+          </summary>
+          <div className="raw-stat-grid" style={{ marginTop: 14 }}>
+            {keys.map((key) => <div key={key}>
+              <dt>{prettySourceField(key)} <code>{key}</code></dt>
+              <dd>{game.stats[key] == null ? "—" : String(game.stats[key])}</dd>
+            </div>)}
+          </div>
+        </details>;
+      })}
     </div>
   </section>;
 }
@@ -321,6 +358,7 @@ export default function NcaaPlayerCard() {
       {selected?.length ? <StatCoveragePanel rows={selected} /> : null}
       {selected?.length ? <SourceTotals rows={selected} /> : null}
       <GameArchiveFieldTotals coverage={card.game_stat_coverage} />
+      <RawGameFields games={visibleGames} />
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Recent form / latest retained contests</div><h2>Read the current rhythm.</h2></div><span className="note">{recentForm.window_games ? `Latest ${recentForm.window_games} of up to 12 rows` : "No recent rows"}</span></div><p className="note">This is a short retained-row window, ordered newest first by the player archive. It is descriptive context for film and preparation, not a projection. Each metric uses only contests where its required fields were recorded; missing values are not treated as zero.</p><div className="strip"><div><strong>{fmt(recentForm.points_per_game)}</strong><span>Recent points / game · {recentForm.points_games} rows</span></div><div><strong>{fmt(recentForm.minutes_per_game)}</strong><span>Recent minutes / game · {recentForm.minutes_games} rows</span></div><div><strong>{pct(recentForm.true_shooting)}</strong><span>Recent pooled TS% · {recentForm.shooting_games} rows</span></div><div><strong>{recentForm.points_delta == null ? "—" : `${recentForm.points_delta > 0 ? "+" : ""}${fmt(recentForm.points_delta)}`}</strong><span>Points / game vs prior five</span></div></div><p className="note">The comparison uses the next five retained rows when available. A blank comparison means the preceding window has no complete points sample.</p></section>
       <section className="section two-col"><div id="shot-profile" className="paper-panel"><div className="eyebrow">Shot profile / {label(season)}</div><div className="section-heading"><h2>Where attempts came from.</h2><button className="button secondary" type="button" onClick={downloadShotCoordinates} disabled={!shotCoordinateRows.length}>Download shot coordinates ↓</button></div>{shootingRows.length ? <><p className="note">The archive publishes {shootingRows.length} team shooting row{shootingRows.length === 1 ? "" : "s"} for this season; each stint stays visible. The coordinate export retains every returned event, including rows without plottable x/y values.</p>{shotLocations.length ? <PlayerShotLocationCourt shots={shotLocations} recordedAttempts={shootingRows.reduce((total, row) => total + (Number.isFinite(row.stats.attempts) ? row.stats.attempts : 0), 0)} playerName={name} title="Recorded shot locations" showEvents /> : <p className="empty">This profile has aggregate shooting totals, but no retained coordinate rows for this season.</p>}{shootingRows.map((row) => <ShotProfile key={`${row.season}-${row.team_id}`} row={row} />)}</> : <p className="empty">No shooting profile is published for this season-team record.</p>}</div><div className="paper-panel"><div className="eyebrow">Roster / recruiting context</div><h2>What the roster release says.</h2>{roster ? <><div className="raw-stat-grid">{[["Class", roster.profile.class], ["Position", roster.profile.position], ["Height", roster.profile.height], ["Hometown", roster.profile.hometown], ["High school", roster.profile.high_school]].map(([key, field]) => <div key={key}><dt>{key}</dt><dd>{field || "—"}</dd></div>)}</div><div className="hero-actions"><Link className="button secondary" href={`/basketball/recruiting/?q=${encodeURIComponent(name)}`}>Search dated school evidence ↗</Link>{rosterFitHref && <Link className="hero-link" href={rosterFitHref}>Compare recorded program role fit →</Link>}{roster.profile.high_school && <Link className="hero-link" href={`/basketball/ncaa-high-schools/?q=${encodeURIComponent(String(roster.profile.high_school))}`}>Trace high-school pipeline →</Link>}</div><p className="note">The role-fit link uses only the retained program ID. Name and school-label searches are research leads; none establishes identity, commitment, transfer, eligibility or current membership.</p></> : <p className="empty">No roster row is published for {label(season)}.</p>}</div></section>
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Impact / player model</div><h2>Read the player in context.</h2></div></div>{card.impact ? <><div className="strip"><div><strong>{fmt(card.impact.rapm_net, 2)}</strong><span>Net RAPM</span></div><div><strong>{fmt(card.impact.orapm, 2)}</strong><span>ORAPM</span></div><div><strong>{fmt(card.impact.drapm, 2)}</strong><span>DRAPM</span></div><div><strong>{card.impact.rank ? `#${card.impact.rank}` : "—"}</strong><span>{card.impact.qualified ? "Qualified league rank" : "Unqualified sample"}</span></div></div><p className="note">Exact NCAA player ID lookup from the Cloudflare research archive · {card.impact.off_poss == null ? "offensive possession sample unavailable" : `${fmt(card.impact.off_poss, 0)} offensive possessions`} · {card.impact.def_poss == null ? "defensive possession sample unavailable" : `${fmt(card.impact.def_poss, 0)} defensive possessions`}.</p></> : <p className="empty">No league-wide RAPM row matches this archive ID and season. Open the <Link href="/basketball/impact/">full impact archive</Link> for the broader impact board.</p>}</section>

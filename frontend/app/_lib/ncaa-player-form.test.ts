@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildNcaaRecentForm,
+  gameStatFieldKeys,
   gameEvidenceWindowLabel,
   playerGameExportEvidence,
   playerGameExportEvidenceHeaders,
@@ -54,6 +55,13 @@ describe("NCAA player recent form", () => {
 });
 
 describe("NCAA player game possession evidence", () => {
+  it("discovers all raw fields across the loaded game window without changing source names", () => {
+    expect(gameStatFieldKeys([
+      game({ pts: 18, usage_pct: 0.24, rim_attempts: 4 }),
+      game({ pts: 12, usage_pct: null, ast: 5 }),
+    ])).toEqual(["ast", "pts", "rim_attempts", "usage_pct"]);
+  });
+
   it("keeps explicit CSV evidence columns aligned with the game table", () => {
     expect(playerGameExportEvidenceHeaders).toEqual([
       "Recorded offensive possessions",

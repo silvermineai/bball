@@ -2,6 +2,11 @@ export type NcaaFormGame = {
   stats: Record<string, number | null | undefined>;
 };
 
+/** Return every raw source field present in a loaded game window once, stably sorted. */
+export function gameStatFieldKeys(games: readonly NcaaFormGame[]): string[] {
+  return [...new Set(games.flatMap((game) => Object.keys(game.stats)))].sort((a, b) => a.localeCompare(b));
+}
+
 export type NcaaRecentForm = {
   window_games: number;
   points_games: number;
