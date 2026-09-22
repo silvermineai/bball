@@ -9,39 +9,22 @@ import {
   womensRankingSampleLabel,
   womensPlayerShotMapHref,
   womensPlayerTableHref,
+  parseWomensRankingPublication,
   type WomensRankingRow,
+  type WomensRankingPublication,
 } from "../_lib/womens-rankings-view";
 import { WOMENS_SOURCE_SCOPE_LABEL, WOMENS_SOURCE_SCOPE_NOTE } from "../_lib/womens-source-scope";
 
-type RankingRow = WomensRankingRow & { position: string; games: number; value: number; sample?: number };
-type Board = { label: string; stat: string; unit: string; description?: string; sample_field?: string; min_sample?: number; sample_unit?: string; rows: RankingRow[] };
-type BoardArchive = {
-  season?: number;
-  generated_at?: string;
-  coverage?: { players?: number; rows?: number; played_rows?: number };
-  min_games: number;
-  qualification?: { field: string; minimum: number; scope: string; schedule_reconciled: boolean; dnp_excluded?: boolean };
-  coverage_by_metric: Record<string, { observed: number; qualified: number }>;
-  leaderboards: Record<string, Board>;
-  receipt?: { sha256?: string | null };
-};
-type Publication = {
-  season: number;
-  min_games: number;
-  qualification?: { field: string; minimum: number; scope: string; schedule_reconciled: boolean };
-  coverage: Record<string, { observed: number; qualified: number }>;
-  leaderboards: Record<string, Board>;
-  limitations: string[];
-  generated_at?: string;
-  source_edition_generated_at?: string;
-  receipts?: Record<string, { sha256?: string | null }>;
-  box_archive?: BoardArchive;
-};
+type RankingRow = WomensRankingRow & { position: string; games: number; value: number; sample?: number; box_rows?: number };
+type Board = WomensRankingPublication["leaderboards"][string];
+type BoardArchive = NonNullable<WomensRankingPublication["box_archive"]>;
+type Publication = WomensRankingPublication;
 
 const formatValue = (value: number, unit: string) => unit.endsWith("%") ? `${value.toFixed(1)}%` : value.toFixed(1);
 
 export default function WomensBasketballRankings() {
   const [publication, setPublication] = useState<Publication | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<"box" | "season">("box");
   const [metric, setMetric] = useState("scoring");
   const [query, setQuery] = useState("");
@@ -49,8 +32,15 @@ export default function WomensBasketballRankings() {
   useEffect(() => {
     fetch("/data/basketball/womens-rankings.json")
       .then((response) => response.ok ? response.json() : null)
-      .then((value: Publication | null) => setPublication(value))
-      .catch(() => setPublication(null));
+      .then((value: unknown) => {
+        if (value == null) throw new Error("Women’s player rankings are unavailable.");
+        setPublication(parseWomensRankingPublication(value));
+        setError(null);
+      })
+      .catch((reason: unknown) => {
+        setPublication(null);
+        setError(reason instanceof Error ? reason.message : "Women’s player rankings failed integrity validation.");
+      });
   }, []);
 
   const archive = source === "box" ? publication?.box_archive : undefined;
@@ -72,7 +62,7 @@ export default function WomensBasketballRankings() {
     <div className="eyebrow">WOMEN&apos;S PLAYER RANKINGS · {WOMENS_SOURCE_SCOPE_LABEL}</div>
     <h2 id="wbb-rankings-title">Rank one stat at a time</h2>
     <p className="muted">These boards keep units separate. Choose the larger game-box cohort to include players absent from the bounded player-season release. {WOMENS_SOURCE_SCOPE_NOTE}</p>
-    {!publication ? <p className="muted">Loading women&apos;s player rankings…</p> : <>
+    {!publication ? <p className={error ? "status-error" : "muted"} role={error ? "alert" : "status"}>{error || "Loading women&apos;s player rankings…"}</p> : <>
       <div className="wbb-ranking-controls">
         <label htmlFor="wbb-ranking-source">Ranking archive</label>
         <select id="wbb-ranking-source" value={source} onChange={(event) => { setSource(event.target.value as "box" | "season"); setMetric("scoring"); }}>

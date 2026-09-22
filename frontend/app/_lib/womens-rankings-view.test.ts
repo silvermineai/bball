@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   filterWomensRankingRows,
+  parseWomensRankingPublication,
   paginateWomensRankingRows,
   womensRankingCountLabel,
   womensRankingSampleLabel,
@@ -16,6 +18,28 @@ const rows: WomensRankingRow[] = [
 ];
 
 describe("women's ranking board view", () => {
+  it("accepts the checked-in women’s D1 release and its box archive", () => {
+    const edition = JSON.parse(readFileSync(new URL("../../public/data/basketball/womens-rankings.json", import.meta.url), "utf8")) as unknown;
+    const parsed = parseWomensRankingPublication(edition);
+    expect(parsed.gender).toBe("women");
+    expect(parsed.leaderboards.scoring.rows.length).toBe(parsed.coverage.scoring.qualified);
+    expect(parsed.box_archive?.leaderboards.true_shooting.rows.length).toBe(parsed.box_archive?.coverage_by_metric.true_shooting.qualified);
+  });
+
+  it("fails closed on cross-scope, duplicate-player, and coverage-corrupt releases", () => {
+    const edition = JSON.parse(readFileSync(new URL("../../public/data/basketball/womens-rankings.json", import.meta.url), "utf8")) as Record<string, any>;
+    expect(() => parseWomensRankingPublication({ ...edition, gender: "men" })).toThrow(/scope or schema version/);
+    const scoring = edition.leaderboards.scoring;
+    expect(() => parseWomensRankingPublication({
+      ...edition,
+      leaderboards: { ...edition.leaderboards, scoring: { ...scoring, rows: [scoring.rows[0], scoring.rows[0]] } },
+    })).toThrow(/row 2 is invalid/);
+    expect(() => parseWomensRankingPublication({
+      ...edition,
+      coverage: { ...edition.coverage, scoring: { ...edition.coverage.scoring, qualified: 1 } },
+    })).toThrow(/row count does not match/);
+  });
+
   it("hands an exact source player ID to the women’s production table", () => {
     expect(womensPlayerTableHref("5239100")).toBe("/basketball/players/?gender=women&division=1&q=5239100");
   });
