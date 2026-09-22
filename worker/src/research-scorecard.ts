@@ -225,6 +225,45 @@ type MarketComparisonReadiness = {
 type GameMarketReadinessStatus = "available" | "no_qualified_line" | "forecast_excluded";
 
 /**
+ * Keep the per-game diagnostic tied to the same fail-closed reasons used by
+ * the scorecard. These are deliberately short phrases so the message remains
+ * useful in a compact matchup row while preserving the exact count in the
+ * rejection map returned beside it.
+ */
+const MARKET_REJECTION_PHRASES: Partial<Record<MarketRejection, string>> = {
+  ambiguous_quote: "with conflicting prices at one capture clock",
+  invalid_payload: "with invalid payload data",
+  missing_market_identity: "missing provider or bookmaker identity",
+  participants_changed: "with changed participants",
+  schedule_changed: "with a schedule mismatch",
+  invalid_clock: "with an invalid forecast or capture clock",
+  captured_before_registration: "captured before forecast registration",
+  captured_after_start: "captured at or after kickoff",
+  updated_after_capture: "updated after capture",
+  captured_in_future: "captured in the future",
+  updated_after_start: "updated at or after kickoff",
+  stale_at_capture: "stale at capture",
+  invalid_prices: "with invalid prices",
+  missing_model_output: "missing model output",
+  unsupported_market: "using an unsupported market",
+};
+
+function marketRejectionDetail(rejectionCounts: Partial<Record<MarketRejection, number>>): string | null {
+  const details = Object.entries(rejectionCounts)
+    .flatMap(([reason, count]) => {
+      const phrase = MARKET_REJECTION_PHRASES[reason as MarketRejection];
+      const amount = Number(count);
+      return phrase && Number.isFinite(amount) && amount > 0
+        ? [{ reason, amount, phrase }]
+        : [];
+    })
+    .sort((left, right) => right.amount - left.amount || left.reason.localeCompare(right.reason))
+    .slice(0, 2)
+    .map(({ amount, phrase }) => `${amount} retained observation${amount === 1 ? "" : "s"} ${phrase}`);
+  return details.length ? details.join("; ") : null;
+}
+
+/**
  * Keep the per-game line state explicit. An empty comparisons array has two
  * materially different meanings to a consumer: no line was retained, or the
  * forecast was excluded before a line could be compared. Publishing the
@@ -244,13 +283,16 @@ function gameMarketReadiness(
     : selected > 0
       ? "available"
       : "no_qualified_line";
+  const rejectionDetail = marketRejectionDetail(rejectionCounts);
   const message = status === "available"
     ? "A qualified pregame line is available for model comparison."
     : status === "forecast_excluded"
       ? "The forecast is excluded from model-versus-line comparison."
       : retained === 0
         ? "No retained pregame line is available for this game."
-        : "Retained market observations did not pass the comparison checks; no line is published.";
+        : rejectionDetail
+          ? `${rejectionDetail}; no line is published.`
+          : "Retained market observations did not pass the comparison checks; no line is published.";
   return {
     status,
     message,

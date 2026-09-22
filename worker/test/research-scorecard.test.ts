@@ -98,6 +98,7 @@ describe("live research scorecard", () => {
     });
     expect(body.games[0].market_readiness).toMatchObject({
       status: "no_qualified_line",
+      message: "1 retained observation missing provider or bookmaker identity; no line is published.",
       retained_observations: 1,
       eligible_observations: 0,
       comparable_observations: 0,
