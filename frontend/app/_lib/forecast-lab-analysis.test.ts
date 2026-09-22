@@ -65,16 +65,39 @@ describe("forecast lab matchup signals", () => {
   it("marks a stored primary row verified only when prediction and lineage checks pass", () => {
     expect(forecastIntegrity({
       prediction: {
+        home_score: 74,
+        away_score: 70,
         home_margin: 4,
+        total: 144,
+        pace: 68,
         home_win_probability: 0.65,
         margin_low: -8,
         margin_high: 16,
-      } as BBGame["prediction"],
+      },
       fallback_prediction: null,
       forecast_model_id: "model-current",
       matchup_factors: factors,
       matchup_factors_same_edition: true,
     })).toEqual({ ok: true, label: "Verified record", missing: [] });
+  });
+
+  it("reviews a row when score and total arithmetic contradict the model margin", () => {
+    expect(forecastIntegrity({
+      prediction: {
+        home_score: 82,
+        away_score: 70,
+        home_margin: 4,
+        total: 152,
+        pace: 68,
+        home_win_probability: 0.65,
+        margin_low: -8,
+        margin_high: 16,
+      },
+      fallback_prediction: null,
+      forecast_model_id: "model-current",
+      matchup_factors: null,
+      matchup_factors_same_edition: null,
+    })).toEqual({ ok: false, label: "Review before prep", missing: ["valid prediction values"] });
   });
 
   it("surfaces integrity blockers without converting context gaps into model errors", () => {

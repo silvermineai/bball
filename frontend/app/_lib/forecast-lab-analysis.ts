@@ -1,5 +1,6 @@
 import type { BBFactorKey, BBGame, BBMatchupFactors, BBPrediction } from "./basketball-types";
 import type { BBOverview } from "./basketball-types";
+import { isUsableBasketballPrediction } from "./basketball-matchups";
 
 const FACTORS: ReadonlyArray<{ key: BBFactorKey; label: string }> = [
   { key: "efg", label: "Shot quality" },
@@ -124,7 +125,11 @@ export function forecastIntegrity(
 ): ForecastIntegrity {
   const prediction = game.prediction || game.fallback_prediction;
   const missing: string[] = [];
-  if (forecastSignalContext(prediction, !!game.prediction).estimate === "unavailable") {
+  // The compact signal context accepts partial values for backwards-compatible
+  // cards. The integrity badge is a stronger claim: require the complete
+  // score/total/pace contract and its arithmetic identities before calling a
+  // forecast safe to use in matchup preparation.
+  if (!isUsableBasketballPrediction(prediction)) {
     missing.push("valid prediction values");
   }
   if (!(game.forecast_model_id || publishedModelId)) {
