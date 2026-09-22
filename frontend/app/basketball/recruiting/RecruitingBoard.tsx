@@ -207,15 +207,15 @@ export type RecruitingDestinationRecurrence = {
 };
 
 /**
- * Keep cross-class movement tied to a complete exact-ID release. The API's
- * movement buckets must reconcile to both its reported total and the class
- * denominator before they can be shown as a recruiting trend.
+ * Keep cross-class movement tied to a complete, receipt-verified exact-ID
+ * release. The API's movement buckets must reconcile to both its reported
+ * total and the class denominator before they can be shown as a trend.
  */
 export function classMovementRows(snapshots: ClassSnapshot[]): RecruitingClassMovement[] {
   return snapshots.flatMap((snapshot) => {
     const movement = snapshot.rank_movement;
     const total = snapshot.total;
-    if (!movement || !Number.isSafeInteger(total) || total <= 0 || movement.total !== total) return [];
+    if (!classSnapshotReceipt(snapshot) || !movement || !Number.isSafeInteger(total) || total <= 0 || movement.total !== total) return [];
     const values = [movement.moved_up, movement.moved_down, movement.unchanged, movement.rank_unavailable, movement.new_to_release];
     if (values.some((value) => !Number.isSafeInteger(value) || value < 0) || values.reduce((sum, value) => sum + value, 0) !== total) return [];
     const measurable = movement.moved_up + movement.moved_down + movement.unchanged;
@@ -1045,10 +1045,10 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
       </section>}
       {movementRows.length > 0 && <section className="paper-panel recruiting-class-table" aria-labelledby="recruiting-movement-comparison-title" style={{ marginBottom: 24 }}>
         <div className="section-heading" style={{ marginBottom: 10 }}>
-          <div><div className="eyebrow">Rank movement / exact athlete IDs</div><h3 id="recruiting-movement-comparison-title">Which classes are actually changing?</h3></div>
-          <span className="note">{movementRows.length} reconciled classes</span>
+          <div><div className="eyebrow">Rank movement / verified class editions</div><h3 id="recruiting-movement-comparison-title">Which classes are actually changing?</h3></div>
+          <span className="note">{movementRows.length} verified classes</span>
         </div>
-        <p className="note">Movement is calculated from the retained prior capture for the same athlete ID. “Measurable” excludes new rows and unavailable ranks; the changed rate is moved up plus moved down divided by measurable rows. A class is withheld if its source buckets do not reconcile to the full release.</p>
+        <p className="note">Movement is calculated from the retained prior capture for the same athlete ID. “Measurable” excludes new rows and unavailable ranks; the changed rate is moved up plus moved down divided by measurable rows. A class is withheld unless its source receipt and movement buckets reconcile to the full release.</p>
         <div className="table-scroll"><table className="data-table">
           <thead><tr><th>Class</th><th className="numeric">Moved up</th><th className="numeric">Moved down</th><th className="numeric">Unchanged</th><th className="numeric">Rank unavailable</th><th className="numeric">New to archive</th><th className="numeric">Measurable</th><th className="numeric">Changed rate</th><th>Open</th></tr></thead>
           <tbody>{movementRows.map((row) => <tr key={`movement-comparison-${row.season}`}>

@@ -406,12 +406,21 @@ describe("recruiting position supply comparison", () => {
 });
 
 describe("recruiting class movement comparison", () => {
+  const edition = "a".repeat(64);
   const snapshot = {
     season: "2027",
     total: 10,
     cohort: { ranked: 10, graded: 10, committed: 2 },
     captured_at: "2026-09-18T00:00:00Z",
-    edition: "edition-1",
+    edition,
+    source_receipt: {
+      dataset: "recruiting_rankings",
+      captured_at: "2026-09-18T00:00:00Z",
+      source_rows: 10,
+      sha256: edition,
+      sha256_scope: "release_edition" as const,
+      integrity: "verified" as const,
+    },
     rank_movement: {
       total: 10,
       new_to_release: 1,
@@ -443,6 +452,12 @@ describe("recruiting class movement comparison", () => {
     expect(classMovementRows([{ ...snapshot, rank_movement: { ...snapshot.rank_movement, moved_up: 99 } }])).toEqual([]);
     expect(classMovementRows([{ ...snapshot, rank_movement: { ...snapshot.rank_movement, total: 9 } }])).toEqual([]);
     expect(classMovementRows([{ ...snapshot, rank_movement: { ...snapshot.rank_movement, new_to_release: -1 } }])).toEqual([]);
+  });
+
+  it("withholds reconciled movement when the class release is not receipt-verified", () => {
+    expect(classMovementRows([{ ...snapshot, source_receipt: null }])).toEqual([]);
+    expect(classMovementRows([{ ...snapshot, edition: "b".repeat(64) }])).toEqual([]);
+    expect(classMovementRows([{ ...snapshot, source_receipt: { ...snapshot.source_receipt, source_rows: 9 } }])).toEqual([]);
   });
 });
 
