@@ -156,13 +156,25 @@ export function rankDivisionPlayers(
     .filter((row): row is { player: DivisionPlayer; value: number } => row.value != null)
     .sort((left, right) => right.value - left.value || left.player.name.localeCompare(right.player.name) || String(left.player.player_id).localeCompare(String(right.player.player_id)));
   const limit = options.limit == null ? qualified.length : Math.max(0, options.limit);
-  return {
-    total: qualified.length,
-    rows: qualified.slice(0, limit).map(({ player, value }, index) => ({
+  // This is a statistical ranking, so equal recorded values must share the
+  // same rank. Use competition ranking (1, 1, 3) and calculate it before the
+  // display limit so a bounded board cannot change a player's rank.
+  let previousValue: number | null = null;
+  let competitionRank = 0;
+  const ranked = qualified.map(({ player, value }, index) => {
+    if (previousValue === null || value !== previousValue) {
+      competitionRank = index + 1;
+      previousValue = value;
+    }
+    return {
       ...player,
       value,
-      rank: index + 1,
+      rank: competitionRank,
       source_rank: divisionSourceRank(player, options.metric),
-    })),
+    };
+  });
+  return {
+    total: qualified.length,
+    rows: ranked.slice(0, limit),
   };
 }

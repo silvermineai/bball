@@ -28,6 +28,22 @@ describe("division player rankings", () => {
     ]);
   });
 
+  it("gives tied recorded values the same competition rank", () => {
+    const result = rankDivisionPlayers([
+      { player_id: 1, division: 2, name: "Alpha", games: 20, ppg: 25 },
+      { player_id: 2, division: 2, name: "Bravo", games: 20, ppg: 25 },
+      { player_id: 3, division: 2, name: "Charlie", games: 20, ppg: 24 },
+      { player_id: 4, division: 2, name: "Delta", games: 20, ppg: 23 },
+    ], { division: "2", metric: "ppg", limit: 3 });
+
+    expect(result.total).toBe(4);
+    expect(result.rows.map((row) => [row.name, row.value, row.rank])).toEqual([
+      ["Alpha", 25, 1],
+      ["Bravo", 25, 1],
+      ["Charlie", 24, 3],
+    ]);
+  });
+
   it("does not turn missing values into zero and applies a bounded search", () => {
     const result = rankDivisionPlayers(players, { division: "2", metric: "ppg", query: "north", minGames: 0, limit: 1 });
     expect(result.total).toBe(2);
