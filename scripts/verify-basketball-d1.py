@@ -208,6 +208,18 @@ def validate_current_edition(
         raise ValueError("Basketball D1 current edition mismatch:\n" + "\n".join(mismatches))
 
 
+def validate_unresolved_ledger(actual: int, source_ceiling: int | None) -> None:
+    """Validate the deduplicated unresolved ledger against its source bound."""
+    if source_ceiling is None:
+        return
+    if not (0 < actual <= source_ceiling):
+        raise ValueError(
+            "Basketball D1 unresolved ledger mismatch: "
+            f"expected a positive deduplicated count <= {source_ceiling:,}, "
+            f"found {actual:,}"
+        )
+
+
 def main() -> None:
     overview = json.loads(
         (ROOT / "frontend/public/data/basketball/overview.json").read_text()
@@ -234,12 +246,10 @@ def main() -> None:
     ]
     if mismatches:
         raise SystemExit("Basketball D1 coverage mismatch:\n" + "\n".join(mismatches))
-    if unresolved_ceiling is not None and not (0 < unresolved_actual <= unresolved_ceiling):
-        raise SystemExit(
-            "Basketball D1 unresolved ledger mismatch: "
-            f"expected a positive deduplicated count <= {unresolved_ceiling:,}, "
-            f"found {unresolved_actual:,}"
-        )
+    try:
+        validate_unresolved_ledger(unresolved_actual, unresolved_ceiling)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     try:
         validate_current_edition(
             edition, remote_current_edition(str(edition["model_id"]))
