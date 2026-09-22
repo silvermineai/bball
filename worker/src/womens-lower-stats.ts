@@ -47,7 +47,7 @@ function validReceipt(value: unknown): value is RecordValue {
     && value.bytes > 0;
 }
 
-function validStatistic(value: unknown, sourceUrls: Set<string>): value is RecordValue & {
+function validStatistic(value: unknown, sourceUrls: Set<string>, availablePaths: Set<string>): value is RecordValue & {
   statistic: string;
   label: string;
   headers: string[];
@@ -63,7 +63,8 @@ function validStatistic(value: unknown, sourceUrls: Set<string>): value is Recor
     || !Array.isArray(value.rows)
     || value.rows.some((row) => !isRecord(row))
     || !isHttps(value.source_url)
-    || !sourceUrls.has(value.source_url)) return false;
+    || !sourceUrls.has(value.source_url)
+    || !availablePaths.has(new URL(value.source_url).pathname)) return false;
   return value.rows.every((row) => isRecord(row.source_fields));
 }
 
@@ -76,6 +77,18 @@ function validateEdition(value: unknown): RecordValue | null {
   if (sourceUrls.size !== receipts.length || !isRecord(value.divisions)) return null;
   for (const division of ["2", "3"] as const) {
     const current = value.divisions[`d${division}`];
+    const available = isRecord(current) && isRecord(current.available_statistics) ? current.available_statistics : null;
+    const availablePaths = new Set<string>();
+    if (available) {
+      for (const kind of ["individual", "team"] as const) {
+        const entries = available[kind];
+        if (!Array.isArray(entries)) return null;
+        for (const entry of entries) {
+          if (!isRecord(entry) || typeof entry.label !== "string" || typeof entry.source_path !== "string" || !entry.source_path.startsWith(`/stats/basketball-women/d${division}/`)) return null;
+          availablePaths.add(entry.source_path);
+        }
+      }
+    }
     if (!isRecord(current)
       || !isRecord(current.source_scope)
       || current.source_scope.sport !== "basketball"
@@ -85,8 +98,9 @@ function validateEdition(value: unknown): RecordValue | null {
       || !sourceUrls.has(current.source_url)
       || !Array.isArray(current.individual)
       || !Array.isArray(current.team)
-      || current.individual.some((stat) => !validStatistic(stat, sourceUrls))
-      || current.team.some((stat) => !validStatistic(stat, sourceUrls))) return null;
+      || !available
+      || current.individual.some((stat) => !validStatistic(stat, sourceUrls, availablePaths))
+      || current.team.some((stat) => !validStatistic(stat, sourceUrls, availablePaths))) return null;
   }
   return value;
 }
