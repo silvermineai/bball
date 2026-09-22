@@ -13,6 +13,31 @@ export type ForecastDelta = {
   total: number | null;
 };
 
+export type ForecastEditionRelation = "same" | "different" | "unavailable";
+
+/** Classify a comparison before showing any numeric change between editions. */
+export function forecastEditionRelation(
+  staticModelId: string | null | undefined,
+  liveModelId: string | null | undefined,
+): ForecastEditionRelation {
+  const staticId = typeof staticModelId === "string" ? staticModelId.trim() : "";
+  const liveId = typeof liveModelId === "string" ? liveModelId.trim() : "";
+  if (!staticId || !liveId) return "unavailable";
+  return staticId === liveId ? "same" : "different";
+}
+
+/** Keep model deltas unavailable when either endpoint has no immutable ID. */
+export function compareForecastEditionsWithIdentity(
+  staticModelId: string | null | undefined,
+  liveModelId: string | null | undefined,
+  staticPrediction: ForecastDeltaInput | null | undefined,
+  livePrediction: ForecastDeltaInput | null | undefined,
+): ForecastDelta {
+  return forecastEditionRelation(staticModelId, liveModelId) === "unavailable"
+    ? { homeMargin: null, homeWinProbabilityPp: null, total: null }
+    : compareForecastEditions(staticPrediction, livePrediction);
+}
+
 function finite(value: number | null | undefined): value is number {
   return value != null && Number.isFinite(value);
 }

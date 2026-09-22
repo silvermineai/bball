@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareForecastEditions, hasForecastDelta } from "./live-forecast-delta";
+import { compareForecastEditions, compareForecastEditionsWithIdentity, forecastEditionRelation, hasForecastDelta } from "./live-forecast-delta";
 
 describe("live forecast edition deltas", () => {
   it("reports margin, probability and total changes in their reader-facing units", () => {
@@ -23,5 +23,23 @@ describe("live forecast edition deltas", () => {
     const delta = compareForecastEditions(null, { home_margin: 5, home_win_probability: 0.6, total: 140 });
     expect(delta).toEqual({ homeMargin: null, homeWinProbabilityPp: null, total: null });
     expect(hasForecastDelta(delta)).toBe(false);
+  });
+
+  it("classifies edition identity and withholds deltas without both IDs", () => {
+    expect(forecastEditionRelation("model-a", "model-a")).toBe("same");
+    expect(forecastEditionRelation("model-a", "model-b")).toBe("different");
+    expect(forecastEditionRelation("model-a", undefined)).toBe("unavailable");
+    expect(compareForecastEditionsWithIdentity(
+      "model-a",
+      undefined,
+      { home_margin: 4, home_win_probability: 0.6, total: 140 },
+      { home_margin: 5, home_win_probability: 0.7, total: 145 },
+    )).toEqual({ homeMargin: null, homeWinProbabilityPp: null, total: null });
+    expect(compareForecastEditionsWithIdentity(
+      "model-a",
+      "model-b",
+      { home_margin: 4, home_win_probability: 0.6, total: 140 },
+      { home_margin: 5, home_win_probability: 0.7, total: 145 },
+    )).toEqual({ homeMargin: 1, homeWinProbabilityPp: 10, total: 5 });
   });
 });

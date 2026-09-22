@@ -464,7 +464,7 @@ export default async function Page({
           </p>
         )}
       </section>
-      <LiveBriefForecastStatus gameId={g.id} staticEdition={d.generated_at} staticPrediction={p} />
+      <LiveBriefForecastStatus gameId={g.id} staticEdition={d.generated_at} staticModelId={d.model.id} staticPrediction={p} />
       <section className="section" aria-labelledby="brief-roster-sensitivity">
         <div className="section-heading">
           <div>
