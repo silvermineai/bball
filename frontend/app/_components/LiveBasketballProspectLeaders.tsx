@@ -205,6 +205,49 @@ export function prospectCsvRows(rows: Prospect[], season: number): CsvCell[][] {
 export const prospectCountLabel = (total: number, season: number) =>
   `${total.toLocaleString()} prospects in the ${season} class`;
 
+export type ProspectCaptureFreshnessState = "current" | "review" | "stale" | "future" | "unavailable";
+
+export type ProspectCaptureFreshness = {
+  state: ProspectCaptureFreshnessState;
+  label: string;
+  detail: string;
+};
+
+/**
+ * Make the release clock visible without upgrading age into source validity.
+ * The thresholds are deliberately conservative: a recent capture is useful
+ * for planning, while older releases stay visible with an explicit review
+ * or stale cue. Invalid and future clocks remain undated evidence.
+ */
+export function prospectCaptureFreshness(capturedAt: string | null | undefined, now = new Date()): ProspectCaptureFreshness {
+  const capturedMs = typeof capturedAt === "string" ? Date.parse(capturedAt) : Number.NaN;
+  const nowMs = now.getTime();
+  if (!Number.isFinite(capturedMs) || !Number.isFinite(nowMs)) {
+    return {
+      state: "unavailable",
+      label: "Capture age unavailable",
+      detail: "No valid release timestamp was returned; treat this board as undated evidence.",
+    };
+  }
+  const ageMs = nowMs - capturedMs;
+  if (ageMs < 0) {
+    return {
+      state: "future",
+      label: "Capture timestamp is in the future",
+      detail: "The release clock is ahead of the dashboard clock; verify the release before using it.",
+    };
+  }
+  const ageDays = Math.floor(ageMs / 86_400_000);
+  const ageLabel = ageDays === 0 ? "Captured today" : `Captured ${ageDays.toLocaleString()} days ago`;
+  if (ageDays <= 7) {
+    return { state: "current", label: ageLabel, detail: "Recent release capture (within 7 days)." };
+  }
+  if (ageDays <= 30) {
+    return { state: "review", label: `${ageLabel} · review`, detail: "Release is older than 7 days; verify freshness before current planning." };
+  }
+  return { state: "stale", label: `${ageLabel} · stale`, detail: "Release is older than 30 days; refresh before treating it as current." };
+}
+
 /**
  * Describe the release and destination rollup without implying that a
  * bounded destination list is complete. The API keeps the full release
@@ -460,7 +503,10 @@ export default function LiveBasketballProspectLeaders() {
               </table>
             </div>
           </div>
-          <p className="dashboard-updated">{prospectCountLabel(data.total, data.season)} · captured {data.captured_at ? date(data.captured_at) : "time unavailable"}</p>
+          {(() => {
+            const freshness = prospectCaptureFreshness(data.captured_at);
+            return <p className="dashboard-updated">{prospectCountLabel(data.total, data.season)} · {data.captured_at ? `captured ${date(data.captured_at)}` : "capture time unavailable"} · <span title={freshness.detail}>{freshness.label}</span></p>;
+          })()}
           <p className="note">Data integrity: {prospectProvenanceLabel(data)}. Destination groups are bounded for the visible table; the class export retains each prospect row.</p>
         </>
       )}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import LiveBasketballProspectLeaders from "./LiveBasketballProspectLeaders";
-import { buildProspectParams, formatProspectRank, formatProspectSize, parseProspectBoardFilters, prospectBoardFilterSearch, prospectBoardResponseState, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, prospectRankBreakdown, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
+import { buildProspectParams, formatProspectRank, formatProspectSize, parseProspectBoardFilters, prospectBoardFilterSearch, prospectBoardResponseState, prospectCaptureFreshness, prospectCountLabel, prospectCsvHeaders, prospectCsvRows, prospectProvenanceLabel, prospectRankBreakdown, validateProspectExportPage } from "./LiveBasketballProspectLeaders";
 
 describe("homepage recruiting section", () => {
   it("renders the prospect board as the fifth dashboard section", () => {
@@ -66,6 +66,29 @@ describe("prospect class labels", () => {
 
   it("omits empty optional filters instead of broadening them into values", () => {
     expect(buildProspectParams({ season: 2028, page: 0 }).toString()).toBe("season=2028&page=0&committed=all");
+  });
+});
+
+describe("prospect release capture freshness", () => {
+  const now = new Date("2026-09-22T12:00:00Z");
+
+  it("marks a release captured within a week as current", () => {
+    expect(prospectCaptureFreshness("2026-09-20T12:00:00Z", now)).toEqual({
+      state: "current",
+      label: "Captured 2 days ago",
+      detail: "Recent release capture (within 7 days).",
+    });
+  });
+
+  it("keeps older releases visible with a review or stale cue", () => {
+    expect(prospectCaptureFreshness("2026-09-10T12:00:00Z", now).state).toBe("review");
+    expect(prospectCaptureFreshness("2026-08-01T12:00:00Z", now)).toMatchObject({ state: "stale", label: "Captured 52 days ago · stale" });
+  });
+
+  it("fails closed for missing, invalid or future clocks", () => {
+    expect(prospectCaptureFreshness(null, now).state).toBe("unavailable");
+    expect(prospectCaptureFreshness("not-a-date", now).state).toBe("unavailable");
+    expect(prospectCaptureFreshness("2026-09-23T12:00:00Z", now).state).toBe("future");
   });
 });
 
