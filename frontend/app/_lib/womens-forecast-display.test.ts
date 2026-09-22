@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { womensForecastLabels, womensForecastValidationLabel } from "./womens-forecast-display";
+import { womensForecastLabels, womensForecastTotal, womensForecastValidationLabel } from "./womens-forecast-display";
 
 describe("womensForecastLabels", () => {
   it("keeps probability, margin, score direction, and estimate type readable", () => {
@@ -9,7 +9,13 @@ describe("womensForecastLabels", () => {
       predicted_home_score: 35.5,
       predicted_away_score: 31.3,
       estimate_type: "primary",
-    })).toEqual({ homeWin: "51%", margin: "+4.2", score: "31.3–35.5", estimate: "Primary" });
+    })).toEqual({ homeWin: "51%", margin: "+4.2", score: "31.3–35.5", total: "66.8", estimate: "Primary" });
+  });
+
+  it("derives a projected total only from finite published scores", () => {
+    expect(womensForecastTotal({ predicted_home_score: 35.5, predicted_away_score: 31.3 })).toBeCloseTo(66.8, 5);
+    expect(womensForecastTotal({ predicted_home_score: Number.NaN, predicted_away_score: 31.3 })).toBeNull();
+    expect(womensForecastTotal(null)).toBeNull();
   });
 
   it("marks non-primary estimates explicitly", () => {

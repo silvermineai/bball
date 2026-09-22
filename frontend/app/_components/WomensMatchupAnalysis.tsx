@@ -3,6 +3,7 @@ import {
   type UpcomingGameAnalysis,
 } from "../_lib/upcoming-game-analysis";
 import type { WomensMatchupRow } from "../_lib/womens-matchups";
+import { womensForecastTotal } from "../_lib/womens-forecast-display";
 
 const title = (value: string) => value.charAt(0).toUpperCase() + value.slice(1).replaceAll("-", " ");
 const percent = (value: number | null) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -40,6 +41,7 @@ export default function WomensMatchupAnalysis({
     // quote join for this exact row. Keep the row-level state unavailable.
     marketQuoteCount: null,
   });
+  const projectedTotal = womensForecastTotal(row.prediction);
   return (
     <div className="analysis-readiness womens-matchup-analysis" aria-label="Upcoming game analysis readout">
       <div className="analysis-readiness-heading">
@@ -54,6 +56,7 @@ export default function WomensMatchupAnalysis({
       </div>
       <dl className="womens-matchup-analysis-grid">
         <div><dt>Projected score</dt><dd>{readout.scoreAway == null || readout.scoreHome == null ? "—" : `${readout.scoreAway.toFixed(1)}–${readout.scoreHome.toFixed(1)}`}</dd></div>
+        <div><dt>Projected total</dt><dd>{projectedTotal == null ? "—" : projectedTotal.toFixed(1)}</dd></div>
         <div><dt>Margin interval</dt><dd>{readout.marginLow == null || readout.marginHigh == null ? "Unavailable" : `${points(readout.marginLow)} to ${points(readout.marginHigh)}`}</dd></div>
         <div><dt>Model edition</dt><dd><code>{modelId || "Unavailable"}</code></dd></div>
         <div><dt>Exact identity</dt><dd>{readout.identity.homeId && readout.identity.awayId ? `${readout.identity.awayId} at ${readout.identity.homeId}` : "Unavailable"}</dd></div>
