@@ -242,7 +242,7 @@ export default function NCAALeaders({ release }: { release: Release }) {
           <div className="eyebrow">Source coverage / every category</div>
           <h2 id="ncaa-source-category-coverage">See what the release actually contains.</h2>
           <p>
-            The coverage ledger includes every category in this retained NCAA
+            The coverage ledger includes every category in this retained
             edition, including rows that cannot support a leaderboard. Fields
             are listed exactly as supplied; a stable athlete ID is never
             inferred from a name, team or contest key.

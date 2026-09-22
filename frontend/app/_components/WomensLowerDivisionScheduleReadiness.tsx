@@ -96,10 +96,10 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
       <div className="scope-snapshot-counts"><strong>0</strong><span>schedule rows</span><strong>—</strong><span>predictions</span></div>
     </> : <>
       <p className="note">Rows are shown only when the retained schedule carries division={division}, a contest ID, and two team records. Team names and slugs are kept as source labels; missing slugs remain missing, and no name-only join creates a prediction.</p>
-      {targetProbe ? <div className="notice" style={{ marginBottom: 14 }}><strong>{targetProbe.season} target-season availability probe</strong><p className="muted" style={{ margin: "4px 0 0" }}>NCAA endpoint checked for months {targetProbe.months.join(", ")}: {targetProbe.contests.toLocaleString()} contests and {targetProbe.calendarDays.toLocaleString()} calendar days returned across {targetProbe.receipts.toLocaleString()} receipt-backed responses ({new Date(targetProbe.generatedAt).toLocaleString()}). Empty responses remain unavailable data; predictions stay gated until a current exact-division schedule is published.</p></div> : null}
+      {targetProbe ? <div className="notice" style={{ marginBottom: 14 }}><strong>{targetProbe.season} target-season availability probe</strong><p className="muted" style={{ margin: "4px 0 0" }}>The schedule endpoint was checked for months {targetProbe.months.join(", ")}: {targetProbe.contests.toLocaleString()} contests and {targetProbe.calendarDays.toLocaleString()} calendar days returned across {targetProbe.receipts.toLocaleString()} receipt-backed responses ({new Date(targetProbe.generatedAt).toLocaleString()}). Empty responses remain unavailable data; predictions stay gated until a current exact-division schedule is published.</p></div> : null}
       {evidence ? <div className="paper-panel" style={{ marginBottom: 16 }} aria-label={"Women’s D" + division + " schedule integrity"}>
         <div className="eyebrow">SCHEDULE INTEGRITY · SOURCE IDs</div>
-        <h4>What the retained NCAA schedule can support</h4>
+        <h4>What the retained schedule can support</h4>
         <div className="scope-snapshot-counts">
           <strong>{evidence.exact_two_team_contests.toLocaleString()}</strong><span>two-team contests</span>
           <strong>{evidence.final_contests.toLocaleString()}</strong><span>finals</span>
@@ -112,7 +112,7 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
       <div className="scope-snapshot-counts"><strong>{contests.length.toLocaleString()}</strong><span>D{division} contests retained</span><strong>{upcoming.length.toLocaleString()}</strong><span>upcoming</span><strong>{asset.receipts?.length?.toLocaleString() || "0"}</strong><span>response receipts</span></div>
       <p className="muted">Calendar index count: {calendarCount.toLocaleString()} · Predictions: unavailable until the women&apos;s lower-division model contract passes.</p>
       <div className="section-heading" style={{ marginTop: 18 }}>
-        <div><div className="eyebrow">DESCRIPTIVE TEAM BOARD · D{division}</div><h4>Recorded records within the exact NCAA scope</h4></div>
+        <div><div className="eyebrow">DESCRIPTIVE TEAM BOARD · D{division}</div><h4>Recorded records within the exact division</h4></div>
         <div className="button-row"><button className="button secondary" type="button" onClick={downloadRecords} disabled={!records.length}>Download team records ↓</button><button className="button secondary" type="button" onClick={downloadSchedule} disabled={!contests.length}>Download schedule CSV ↓</button></div>
       </div>
       <p className="note">Ranks use recorded win percentage, then average scoring margin and points scored. This board is descriptive source evidence; it does not infer opponent strength, roster availability, or a forecast.</p>

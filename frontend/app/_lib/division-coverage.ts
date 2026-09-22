@@ -66,7 +66,7 @@ export function divisionCoverage(
       : sport === "basketball" && gender === "women" && surface === "players"
         ? `Source-native Division ${division} leaderboard rows are published with names and team slugs; stable athlete IDs remain unavailable.`
       : sport === "basketball" && gender === "women" && surface === "rankings"
-        ? `Descriptive within-division record rankings are derived from receipt-backed NCAA contest finals; they are not an opponent-adjusted model.`
+        ? `Descriptive within-division record rankings are derived from receipt-backed contest finals; they are not an opponent-adjusted model.`
       : partial.has(surface)
         ? `Observed exact-ID Division ${division} player production from retained game summaries is published; the canonical national player-stat edition remains separately gated and missing categories are not treated as zero.`
         : `No validated Division ${division} ${surface} release.`,

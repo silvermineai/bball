@@ -538,7 +538,7 @@ export default function BasketballNotebook({
             <Link href="/basketball/shooting/">Open the full shooting lab →</Link>
           </div>
           <p className="note">
-            These links join the historical workload table to the retained NCAA
+            These links join the historical workload table to the retained national
             coordinate archive by exact player and team ID. The questions use
             recorded attempt denominators to choose film; they do not predict a
             current rotation or treat an archived shot map as availability.

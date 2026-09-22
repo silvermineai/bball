@@ -58,7 +58,7 @@ export default function WomensLowerDivisionRatings({ division }: { division: "2"
   return <div id="wbb-lower-ratings" className="paper-panel" style={{ marginTop: 18 }} aria-label={`Women’s D${division} ratings readiness`}>
     <div className="eyebrow">RESEARCH RATINGS · WOMEN&apos;S D{division}</div>
     <h3>{blocked ? "Historical strength board; future forecast gate remains closed" : "Women’s D" + division + " forecast"}</h3>
-    <p className="note">{current.method} These ratings use only the exact NCAA division and source-local team slugs. They do not create a 2026–27 prediction.</p>
+    <p className="note">{current.method} These ratings use only the exact division and source-local team slugs. They do not create a 2026–27 prediction.</p>
     <div className="scope-snapshot-counts">
       <strong>{current.coverage.valid_final_games.toLocaleString()}</strong><span>validated finals</span>
       <strong>{current.coverage.teams.toLocaleString()}</strong><span>source teams</span>

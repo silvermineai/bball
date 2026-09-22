@@ -79,8 +79,8 @@ export default function DivisionArchiveSummary({ division }: { division: LowerBa
       <section id={`mens-lower-player-stats-${division}`} className="paper-panel" aria-labelledby="division-player-evidence-title" style={{ marginTop: 18 }}>
         <div className="eyebrow">PLAYER IDENTITY &amp; STAT COVERAGE</div>
         <h3 id="division-player-evidence-title">What the player release actually contains</h3>
-        <p className="note">Each row below is keyed by the exact NCAA player ID retained in this Division {division} archive. Identity coverage can be complete even when a publisher exposes only a bounded leaderboard for a selected statistic; missing values remain missing.</p>
-        {summary.sourceCoverage ? <p className="note" role="status">The NCAA national individual source publishes qualified leaderboards for these metrics. The source row count and highest published rank are shown below; this release is not presented as a complete game-box player archive.</p> : null}
+        <p className="note">Each row below is keyed by the exact player ID retained in this Division {division} archive. Identity coverage can be complete even when a publisher exposes only a bounded leaderboard for a selected statistic; missing values remain missing.</p>
+        {summary.sourceCoverage ? <p className="note" role="status">The national individual release publishes qualified leaderboards for these metrics. The source row count and highest published rank are shown below; this release is not presented as a complete game-box player archive.</p> : null}
         <div className="table-scroll">
           <table className="data-table">
             <thead><tr><th>Recorded field</th><th className="numeric">Observed / player rows</th><th>Reading</th></tr></thead>
