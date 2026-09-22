@@ -192,6 +192,98 @@ export type SportSummary = {
 
 export type MarketEvidenceState = "none" | "retained_unqualified" | "qualified" | "inconsistent";
 
+export type ModelMarketComparisonState =
+  | "checking"
+  | "unavailable"
+  | "no_active_edition"
+  | "no_capture"
+  | "no_matching_quotes"
+  | "pending_settlement"
+  | "settled_comparisons";
+
+export type ModelMarketComparisonScope = {
+  state: ModelMarketComparisonState;
+  model_id: string | null;
+  retained_observations: number;
+  settled_comparisons: number;
+  pending_comparisons: number;
+};
+
+function nonNegativeCount(value: number | null | undefined): number {
+  return Number.isInteger(value) && (value ?? 0) >= 0 ? value ?? 0 : 0;
+}
+
+function modelMetricMatches(modelId: string, metric: { model_id?: string }): boolean {
+  return typeof metric.model_id === "string" && metric.model_id === modelId;
+}
+
+/**
+ * Classify market evidence for the immutable forecast edition currently shown
+ * by the scorecard. Aggregate archive rows can predate the active model, so a
+ * non-empty archive must not be presented as an active model comparison.
+ */
+export function modelMarketComparisonScope(
+  summary: Pick<SportSummary, "market_observations" | "model_metrics" | "market_metrics" | "pending_market_metrics">,
+  modelId: string | null | undefined,
+): ModelMarketComparisonScope {
+  const retained = nonNegativeCount(summary.market_observations);
+  if (modelId === undefined) {
+    return { state: "checking", model_id: null, retained_observations: retained, settled_comparisons: 0, pending_comparisons: 0 };
+  }
+  if (modelId === null) {
+    return { state: "unavailable", model_id: null, retained_observations: retained, settled_comparisons: 0, pending_comparisons: 0 };
+  }
+  const activeEdition = (summary.model_metrics || []).find((metric) => metric.model_id === modelId);
+  if (!activeEdition) {
+    return { state: "no_active_edition", model_id: modelId, retained_observations: retained, settled_comparisons: 0, pending_comparisons: 0 };
+  }
+  const settled = (summary.market_metrics || [])
+    .filter((metric) => modelMetricMatches(modelId, metric))
+    .reduce((total, metric) => total + nonNegativeCount(metric.games), 0);
+  const pending = (summary.pending_market_metrics || [])
+    .filter((metric) => modelMetricMatches(modelId, metric))
+    .reduce((total, metric) => total + nonNegativeCount(metric.games), 0);
+  const state: ModelMarketComparisonState = settled > 0
+    ? "settled_comparisons"
+    : pending > 0
+      ? "pending_settlement"
+      : retained > 0
+        ? "no_matching_quotes"
+        : "no_capture";
+  return { state, model_id: modelId, retained_observations: retained, settled_comparisons: settled, pending_comparisons: pending };
+}
+
+export function modelMarketComparisonLabel(state: ModelMarketComparisonState): string {
+  switch (state) {
+    case "checking": return "Checking active model";
+    case "unavailable": return "Active model unavailable";
+    case "no_active_edition": return "No matching active edition";
+    case "no_capture": return "No retained market evidence";
+    case "no_matching_quotes": return "No quote matched active model";
+    case "pending_settlement": return "Quotes awaiting finals";
+    case "settled_comparisons": return "Settled comparisons available";
+  }
+}
+
+export function modelMarketComparisonDetail(scope: ModelMarketComparisonScope): string {
+  switch (scope.state) {
+    case "checking":
+      return "The scorecard is waiting for the immutable active model edition before classifying market evidence.";
+    case "unavailable":
+      return "The live forecast catalog could not be verified, so active model-to-market readiness remains unavailable.";
+    case "no_active_edition":
+      return "The live catalog has no matching model edition in the selected scorecard cohort; comparisons remain withheld.";
+    case "no_capture":
+      return "No retained market observation is available for this active model edition. No line or model edge is inferred.";
+    case "no_matching_quotes":
+      return `${scope.retained_observations.toLocaleString()} market observations are retained in the archive, but none passed the exact active-model, game identity, and pregame timing gates.`;
+    case "pending_settlement":
+      return `${scope.pending_comparisons.toLocaleString()} qualifying market observations are attached to the active model and await verified finals; no accuracy claim is made yet.`;
+    case "settled_comparisons":
+      return `${scope.settled_comparisons.toLocaleString()} qualifying market observations are attached to the active model and have settled results${scope.pending_comparisons ? `; ${scope.pending_comparisons.toLocaleString()} more await finals` : ""}.`;
+  }
+}
+
 /**
  * Keep an archived quote distinct from a quote that survived the scorecard's
  * forecast-registration, participant, kickoff, and freshness checks.

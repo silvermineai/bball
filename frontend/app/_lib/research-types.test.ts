@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marketEvidenceState, modelReliabilityScope, type SportSummary } from "./research-types";
+import { marketEvidenceState, modelMarketComparisonDetail, modelMarketComparisonLabel, modelMarketComparisonScope, modelReliabilityScope, type SportSummary } from "./research-types";
 
 const summary = (overrides: Partial<SportSummary> = {}): SportSummary => ({
   games: 3,
@@ -71,5 +71,62 @@ describe("market evidence state", () => {
   it("treats missing or empty counts as no captured evidence", () => {
     expect(marketEvidenceState(undefined, undefined)).toBe("none");
     expect(marketEvidenceState(Number.NaN, 0)).toBe("none");
+  });
+});
+
+describe("active model market comparison scope", () => {
+  const current = {
+    model_id: "current",
+    first_registered_at: "2026-09-19T00:00:00Z",
+    last_registered_at: "2026-09-19T00:00:00Z",
+    selected_forecasts: 10,
+    eligible_forecasts: 0,
+    settled_games: 0,
+    margin_mae: null,
+    total_mae: null,
+    winner_accuracy: null,
+    winner_picks: 0,
+    brier: null,
+    log_loss: null,
+    interval_games: 0,
+    interval_coverage: null,
+  };
+
+  it("does not turn archive rows from an older edition into active comparisons", () => {
+    const scope = modelMarketComparisonScope(summary({
+      market_observations: 12,
+      model_metrics: [current],
+      market_metrics: [{ model_id: "older", provider: "feed", bookmaker: "book", market: "spreads", games: 4, model_mae: 3, market_mae: 4, model_brier: null, market_brier: null, direction_results: {} }],
+    }), "current");
+    expect(scope).toMatchObject({ state: "no_matching_quotes", model_id: "current", retained_observations: 12, settled_comparisons: 0, pending_comparisons: 0 });
+    expect(modelMarketComparisonDetail(scope)).toContain("none passed");
+  });
+
+  it("keeps qualifying pending quotes separate from settled accuracy", () => {
+    const scope = modelMarketComparisonScope(summary({
+      model_metrics: [current],
+      pending_market_metrics: [{ model_id: "current", provider: "feed", bookmaker: "book", market: "h2h", games: 2, model_difference_mean: 0.04, market_overround_mean: 0.05, direction_results: {} }],
+    }), "current");
+    expect(scope).toMatchObject({ state: "pending_settlement", pending_comparisons: 2, settled_comparisons: 0 });
+    expect(modelMarketComparisonLabel(scope.state)).toBe("Quotes awaiting finals");
+    expect(modelMarketComparisonDetail(scope)).toContain("no accuracy claim");
+  });
+
+  it("counts only exact active model IDs when settled comparisons exist", () => {
+    const scope = modelMarketComparisonScope(summary({
+      model_metrics: [current],
+      market_metrics: [
+        { model_id: "current", provider: "feed", bookmaker: "book", market: "spreads", games: 3, model_mae: 3, market_mae: 4, model_brier: null, market_brier: null, direction_results: {} },
+        { model_id: "older", provider: "feed", bookmaker: "book", market: "h2h", games: 9, model_mae: 3, market_mae: 4, model_brier: null, market_brier: null, direction_results: {} },
+      ],
+    }), "current");
+    expect(scope).toMatchObject({ state: "settled_comparisons", settled_comparisons: 3 });
+    expect(modelMarketComparisonDetail(scope)).toContain("3 qualifying market observations");
+  });
+
+  it("fails closed while the active model catalog is unresolved", () => {
+    expect(modelMarketComparisonScope(summary({ market_observations: 4 }), undefined).state).toBe("checking");
+    expect(modelMarketComparisonScope(summary({ market_observations: 4 }), null).state).toBe("unavailable");
+    expect(modelMarketComparisonScope(summary(), "missing").state).toBe("no_active_edition");
   });
 });

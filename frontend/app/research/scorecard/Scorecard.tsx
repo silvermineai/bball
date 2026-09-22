@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
-import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
+import { marketEvidenceState, modelMarketComparisonDetail, modelMarketComparisonLabel, modelMarketComparisonScope, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
 import { marketCaptureCoverageDetail, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccessLabel, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { comparisonGapDirectionLabel, comparisonGapLabel, comparisonTimingLabel } from "../../_lib/market-display";
 import { gameMarketReadinessExport, gameMarketReadinessLabel } from "../../_lib/game-market-readiness";
@@ -208,6 +208,7 @@ export default function Scorecard() {
     marketMetadata,
     marketMetadataStatus === "checking",
   );
+  const activeModelMarket = modelMarketComparisonScope(summary, liveModelId);
   const marketCaptureNote = marketCaptureDiagnostic(marketMetadata);
   const marketCaptureHistoryNote = marketCaptureHistoryDiagnostic(marketMetadata);
   const marketCaptureCoverageNote = marketCaptureCoverageDetail(marketMetadata);
@@ -496,6 +497,21 @@ export default function Scorecard() {
           <span>Latest capture <b>{marketMetadata?.research_capture?.market_status ? "Recorded" : "Not recorded"}</b></span>
           {settledMarketObservations != null && <span>Settled comparisons <b>{settledMarketObservations.toLocaleString()}</b></span>}
           {pendingMarketObservations != null && <span>Awaiting source finals <b>{pendingMarketObservations.toLocaleString()}</b></span>}
+        </div>
+        <div className="analysis-readiness" role="status" aria-label="Active model market comparison readiness" style={{ marginTop: 16 }}>
+          <div className="analysis-readiness-heading">
+            <span>Active model comparison</span>
+            <strong>{modelMarketComparisonLabel(activeModelMarket.state)}</strong>
+          </div>
+          <p style={{ margin: "8px 0 0" }}>
+            {activeModelMarket.model_id ? <>Edition <code>{activeModelMarket.model_id}</code>. </> : null}
+            {modelMarketComparisonDetail(activeModelMarket)}
+          </p>
+          {activeModelMarket.state === "settled_comparisons" || activeModelMarket.state === "pending_settlement" ? (
+            <p className="note" style={{ margin: "6px 0 0" }}>
+              {activeModelMarket.settled_comparisons.toLocaleString()} settled · {activeModelMarket.pending_comparisons.toLocaleString()} awaiting finals. Settled accuracy and pending context stay separate.
+            </p>
+          ) : null}
         </div>
         <p className="note" role="status" style={{ marginTop: 12 }}>
           {marketReadinessScorecardNote(marketReadiness)}
