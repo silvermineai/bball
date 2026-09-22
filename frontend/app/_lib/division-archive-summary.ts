@@ -24,6 +24,12 @@ export type DivisionPlayerEvidenceCoverage = {
   metrics: Record<DivisionSummaryMetric, number>;
 };
 
+export type DivisionSourceMetricCoverage = {
+  rows: number;
+  max_rank: number | null;
+  coverage_kind: "qualified_leaderboard" | string;
+};
+
 export type DivisionArchiveSummary = {
   season: number | null;
   generated_at: string | null;
@@ -32,6 +38,7 @@ export type DivisionArchiveSummary = {
   teams: number;
   metrics: Record<DivisionSummaryMetric, number>;
   playerEvidence: DivisionPlayerEvidenceCoverage;
+  sourceCoverage?: Record<string, DivisionSourceMetricCoverage>;
 };
 
 type ArchiveRow = Record<string, unknown>;
@@ -112,6 +119,14 @@ export function summarizeDivisionArchive(value: unknown, division: LowerBasketba
   ])) as Record<DivisionSummaryMetric, number>;
   const season = finite(value.season) ? value.season as number : null;
   const generated_at = typeof value.generated_at === "string" ? value.generated_at : null;
+  const coverageRoot = isRecord(value.coverage) ? value.coverage : null;
+  const divisionCoverage = coverageRoot && isRecord(coverageRoot.divisions) ? coverageRoot.divisions[division] : null;
+  const sourceCoverageValue = isRecord(divisionCoverage) && isRecord(divisionCoverage.source_coverage)
+    ? Object.fromEntries(Object.entries(divisionCoverage.source_coverage).flatMap(([key, raw]) => {
+      if (!isRecord(raw) || typeof raw.rows !== "number" || !Number.isInteger(raw.rows) || raw.rows < 0 || (raw.max_rank != null && (typeof raw.max_rank !== "number" || !Number.isInteger(raw.max_rank) || raw.max_rank < 0)) || typeof raw.coverage_kind !== "string") return [];
+      return [[key, { rows: raw.rows, max_rank: raw.max_rank == null ? null : raw.max_rank, coverage_kind: raw.coverage_kind } satisfies DivisionSourceMetricCoverage]];
+    })) as Record<string, DivisionSourceMetricCoverage>
+    : undefined;
   return {
     season,
     generated_at,
@@ -120,5 +135,6 @@ export function summarizeDivisionArchive(value: unknown, division: LowerBasketba
     teams: divisionTeams.length,
     metrics,
     playerEvidence: playerEvidenceCoverage(divisionPlayers),
+    ...(sourceCoverageValue && Object.keys(sourceCoverageValue).length ? { sourceCoverage: sourceCoverageValue } : {}),
   };
 }

@@ -81,6 +81,12 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertEqual(release["coverage"]["divisions"]["1"]["team_ncaa_id"], 1)
         self.assertEqual(release["coverage"]["divisions"]["1"]["stl"], 0)
         self.assertEqual(release["coverage"]["divisions"]["2"]["fta"], 0)
+        self.assertEqual(release["coverage"]["divisions"]["2"]["identity_kind"], "publisher_player_identity_rows")
+        self.assertEqual(release["coverage"]["divisions"]["2"]["source_coverage"]["ppg"], {
+            "rows": 0,
+            "max_rank": None,
+            "coverage_kind": "qualified_leaderboard",
+        })
         self.assertEqual(release["coverage"]["teams"], 1)
         self.assertEqual(release["teams"][0]["team_ncaa_id"], 42)
         self.assertEqual(release["players"][0]["name"], "A Player")

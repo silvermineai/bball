@@ -372,9 +372,30 @@ def export_release(conn: sqlite3.Connection) -> dict:
     coverage = {}
     for division in (1, 2, 3):
         rows = [p for p in players if p["division"] == division]
+        source_coverage = {}
+        for slug in INDIVIDUAL_STATS.values():
+            evidence = [
+                p.get("source_stats", {}).get(slug)
+                for p in rows
+                if isinstance(p.get("source_stats"), dict)
+            ]
+            ranks = [
+                item.get("rank")
+                for item in evidence
+                if isinstance(item, dict)
+                and isinstance(item.get("rank"), (int, float))
+                and not isinstance(item.get("rank"), bool)
+            ]
+            source_coverage[slug] = {
+                "rows": sum(isinstance(item, dict) for item in evidence),
+                "max_rank": max((int(rank) for rank in ranks), default=None),
+                "coverage_kind": "qualified_leaderboard",
+            }
         coverage[str(division)] = {
             "players": len(rows),
             "team_ncaa_id": sum(p.get("team_ncaa_id") is not None for p in rows),
+            "identity_kind": "publisher_player_identity_rows",
+            "source_coverage": source_coverage,
             **{
                 field: sum(p.get(field) is not None for p in rows)
                 for field in PLAYER_STAT_FIELDS

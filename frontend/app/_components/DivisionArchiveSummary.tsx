@@ -80,6 +80,7 @@ export default function DivisionArchiveSummary({ division }: { division: LowerBa
         <div className="eyebrow">PLAYER IDENTITY &amp; STAT COVERAGE</div>
         <h3 id="division-player-evidence-title">What the player release actually contains</h3>
         <p className="note">Each row below is keyed by the exact NCAA player ID retained in this Division {division} archive. Identity coverage can be complete even when a publisher exposes only a bounded leaderboard for a selected statistic; missing values remain missing.</p>
+        {summary.sourceCoverage ? <p className="note" role="status">The NCAA national individual source publishes qualified leaderboards for these metrics. The source row count and highest published rank are shown below; this release is not presented as a complete game-box player archive.</p> : null}
         <div className="table-scroll">
           <table className="data-table">
             <thead><tr><th>Recorded field</th><th className="numeric">Observed / player rows</th><th>Reading</th></tr></thead>
@@ -93,7 +94,7 @@ export default function DivisionArchiveSummary({ division }: { division: LowerBa
               <tr><th scope="row">Games played</th><td className="numeric">{coverage(summary.playerEvidence.games, summary.players)}</td><td>Recorded games denominator for rate fields.</td></tr>
               <tr><th scope="row">Rows with source stat snapshots</th><td className="numeric">{coverage(summary.playerEvidence.source_stat_rows, summary.players)}</td><td>At least one publisher leaderboard record is attached.</td></tr>
               <tr><th scope="row">Retained source stat snapshots</th><td className="numeric">{summary.playerEvidence.source_stat_snapshots.toLocaleString()}</td><td>One player can have multiple metric-specific source snapshots.</td></tr>
-              {divisionSummaryMetrics.map(([key, label]) => <tr key={key}><th scope="row">{label}</th><td className="numeric">{coverage(summary.playerEvidence.metrics[key], summary.players)}</td><td>Finite value in the retained player row; this can be lower than the identity denominator when the source leaderboard is bounded.</td></tr>)}
+              {divisionSummaryMetrics.map(([key, label]) => { const source = summary.sourceCoverage?.[key]; return <tr key={key}><th scope="row">{label}</th><td className="numeric">{coverage(summary.playerEvidence.metrics[key], summary.players)}</td><td>{source ? `Qualified leaderboard: ${source.rows.toLocaleString()} source rows${source.max_rank == null ? "" : ` · highest published rank #${source.max_rank.toLocaleString()}`}.` : "Finite value in the retained player row; this can be lower than the identity denominator when the source leaderboard is bounded."}</td></tr>; })}
             </tbody>
           </table>
         </div>
