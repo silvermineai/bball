@@ -20,6 +20,67 @@ export type FootballModelCalibration = {
   margin_half_width: number;
 };
 
+export type FootballReliabilityBand = {
+  lower: number;
+  upper: number;
+  games: number;
+  predicted: number | null;
+  observed: number | null;
+};
+
+export type FootballCalibrationReliability = {
+  side: "Home" | "Away";
+  strongest_probability: number;
+  confidence_lower: number;
+  confidence_upper: number;
+  games: number;
+  predicted: number | null;
+  observed: number | null;
+  observed_gap_pp: number | null;
+};
+
+const validReliabilityBand = (band: FootballReliabilityBand) =>
+  Number.isFinite(band.lower)
+  && Number.isFinite(band.upper)
+  && band.upper > band.lower
+  && band.lower >= 0
+  && band.upper <= 1
+  && Number.isInteger(band.games)
+  && band.games >= 0
+  && (band.predicted == null || (Number.isFinite(band.predicted) && band.predicted >= 0 && band.predicted <= 1))
+  && (band.observed == null || (Number.isFinite(band.observed) && band.observed >= 0 && band.observed <= 1));
+
+/**
+ * Put a football forecast beside the held-out reliability bin that produced
+ * its probability mapping. Away probabilities are inverted so the reader
+ * sees the historical hit rate for the side the model actually favors.
+ * Empty or malformed bins stay unavailable rather than becoming a made-up
+ * confidence claim.
+ */
+export function footballCalibrationReliability(
+  homeWinProbability: number,
+  reliability: FootballReliabilityBand[] | null | undefined,
+): FootballCalibrationReliability | null {
+  if (!Number.isFinite(homeWinProbability) || homeWinProbability < 0 || homeWinProbability > 1 || !Array.isArray(reliability)) return null;
+  const band = reliability.find((candidate) => validReliabilityBand(candidate)
+    && (homeWinProbability >= candidate.lower)
+    && (homeWinProbability < candidate.upper || (homeWinProbability === 1 && candidate.upper === 1)));
+  if (!band || band.games <= 0) return null;
+  const homeSide = homeWinProbability >= 0.5;
+  const predicted = band.predicted == null ? null : homeSide ? band.predicted : 1 - band.predicted;
+  const observed = band.observed == null ? null : homeSide ? band.observed : 1 - band.observed;
+  return {
+    side: homeSide ? "Home" : "Away",
+    strongest_probability: Math.max(homeWinProbability, 1 - homeWinProbability),
+    confidence_lower: homeSide ? band.lower : 1 - band.upper,
+    confidence_upper: homeSide ? band.upper : 1 - band.lower,
+    games: band.games,
+    predicted,
+    observed,
+    observed_gap_pp: predicted == null || observed == null ? null : Number(((observed - predicted) * 100).toFixed(1)),
+  };
+}
+
 /** Explain the registered probability/range mapping without adding a forecast input. */
 export function footballCalibrationSummary(calibration?: FootballModelCalibration | null): string | null {
   if (!calibration || !Number.isFinite(calibration.games) || calibration.games <= 0

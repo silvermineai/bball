@@ -28,6 +28,7 @@ import {
 } from "../../_lib/football-matchup-view";
 import { footballForecastReadiness } from "../../_lib/football-forecast-readiness";
 import { personnelReadinessForGame, type FootballPersonnelReadinessGame } from "../../_lib/football-personnel-readiness";
+import type { FootballReliabilityBand } from "../../_lib/football-model-factors";
 export default function MatchupBrowser({
   games,
   generated,
@@ -48,7 +49,7 @@ export default function MatchupBrowser({
     pregame_market_observations: number;
   };
   modelId?: string;
-  model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
+  model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef"> & { evaluation?: { reliability?: FootballReliabilityBand[] } };
 }) {
   const params = useSearchParams();
   const requestedPicks = params.get("picks") || "";
@@ -503,6 +504,7 @@ export default function MatchupBrowser({
                 home: recruitingContext.get(g.home_id),
               } : undefined}
               model={model}
+              calibrationReliability={model?.evaluation?.reliability}
               expectedModelId={modelId}
             />
             <button className="button secondary matchup-prep-toggle" type="button" aria-pressed={prepIds.includes(g.id)} onClick={() => togglePrep(g.id)}>

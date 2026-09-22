@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { FootballEfficiencyScenario, Game, Overview } from "../_lib/data";
 import type { FootballCardIntel } from "../_lib/football-brief";
-import { footballModelFactors } from "../_lib/football-model-factors";
+import { footballCalibrationReliability, footballModelFactors, type FootballReliabilityBand } from "../_lib/football-model-factors";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
@@ -33,6 +33,7 @@ export default function MatchCard({
   recruiting,
   personnelReadiness,
   model,
+  calibrationReliability,
   expectedModelId,
 }: {
   game: Game;
@@ -41,10 +42,12 @@ export default function MatchCard({
   recruiting?: { home?: FootballRecruitingTeam; away?: FootballRecruitingTeam };
   personnelReadiness?: FootballPersonnelReadinessGame;
   model?: Pick<Overview["model"], "teams" | "margin_coef" | "total_coef">;
+  calibrationReliability?: FootballReliabilityBand[];
   expectedModelId?: string | null;
 }) {
   const p = g.prediction;
   const modelFactors = p && model ? footballModelFactors(model, g) : null;
+  const reliability = p ? footballCalibrationReliability(p.home_win_probability, calibrationReliability) : null;
   const forecastEvidence = footballForecastEvidence(g, model, expectedModelId);
   return (
     <article className="match-card">
@@ -85,6 +88,19 @@ export default function MatchCard({
             <span>
               {fmt(p.margin_low)} to {fmt(p.margin_high)}
             </span>
+          </div>
+          <div className="forecast-confidence-panel" aria-label="Held-out probability calibration context">
+            <div className="forecast-confidence-heading">
+              <strong>Held-out calibration context</strong>
+              <span>{reliability ? `${reliability.games.toLocaleString()} games` : "Unavailable"}</span>
+            </div>
+            {reliability ? (
+              <div className="forecast-confidence-values">
+                <span><b>{reliability.side}</b> {fmt(reliability.confidence_lower * 100, 0)}–{fmt(reliability.confidence_upper * 100, 0)}% probability band</span>
+                <span>{reliability.observed == null ? "—" : `${fmt(reliability.observed * 100, 1)}%`} observed win rate</span>
+              </div>
+            ) : <p className="note">No populated held-out reliability bin matches this probability.</p>}
+            {reliability && <small>Historical holdout context for the model&apos;s probability band; it is not a guarantee for this game.{reliability.observed_gap_pp == null ? " Observed rate unavailable." : ` Observed minus binned predicted rate: ${reliability.observed_gap_pp >= 0 ? "+" : ""}${fmt(reliability.observed_gap_pp, 1)} percentage points.`}</small>}
           </div>
           <small className="factor-source">
             Model edition <code>{p.model_id || "unlabeled"}</code>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { footballCalibrationSummary, footballModelFactors } from "./football-model-factors";
+import { footballCalibrationReliability, footballCalibrationSummary, footballModelFactors } from "./football-model-factors";
 
 const model = {
   teams: ["away", "home", "other"],
@@ -8,6 +8,42 @@ const model = {
 };
 
 describe("football model factor decomposition", () => {
+  it("maps home probabilities to the held-out reliability band", () => {
+    expect(footballCalibrationReliability(0.72, [
+      { lower: 0.7, upper: 0.8, games: 137, predicted: 0.7439, observed: 0.7226 },
+    ])).toEqual({
+      side: "Home",
+      strongest_probability: 0.72,
+      confidence_lower: 0.7,
+      confidence_upper: 0.8,
+      games: 137,
+      predicted: 0.7439,
+      observed: 0.7226,
+      observed_gap_pp: -2.1,
+    });
+  });
+
+  it("inverts the home bin for an away-favored forecast", () => {
+    expect(footballCalibrationReliability(0.28, [
+      { lower: 0.2, upper: 0.3, games: 25, predicted: 0.2599, observed: 0.16 },
+    ])).toMatchObject({
+      side: "Away",
+      strongest_probability: 0.72,
+      confidence_lower: 0.7,
+      confidence_upper: 0.8,
+      games: 25,
+      predicted: 0.7401,
+      observed: 0.84,
+      observed_gap_pp: 10,
+    });
+  });
+
+  it("fails closed for empty, malformed, or unobserved bins", () => {
+    expect(footballCalibrationReliability(0.72, [{ lower: 0.7, upper: 0.8, games: 0, predicted: 0.74, observed: 0.72 }])).toBeNull();
+    expect(footballCalibrationReliability(Number.NaN, [])).toBeNull();
+    expect(footballCalibrationReliability(0.72, [{ lower: 0.8, upper: 0.7, games: 10, predicted: 0.8, observed: 0.8 }])).toBeNull();
+  });
+
   it("explains the registered probability and range calibration", () => {
     expect(footballCalibrationSummary({ games: 120, binary_games: 118, logistic_coefficients: [-0.2, 0.08], margin_half_width: 14.25 }))
       .toBe("Home-win probability is a logistic mapping of modeled margin, calibrated on 118 binary games; the published 80% margin range uses a 14.3-point half-width.");
