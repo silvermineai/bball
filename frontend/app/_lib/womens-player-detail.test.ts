@@ -20,7 +20,7 @@ describe("women's player retained detail", () => {
     const keys = womensPlayerDetailGroups.flatMap((group) => group.fields.map(([key]) => key));
     expect(keys).toEqual(expect.arrayContaining([
       "points", "totalRebounds", "avgTurnovers", "fieldGoalPct",
-      "assistTurnoverRatio", "doubleDouble", "technicalFouls",
+      "assistTurnoverRatio", "doubleDouble", "technicalFouls", "fieldGoalsMade",
     ]));
   });
 
@@ -108,6 +108,36 @@ describe("women's player retained detail", () => {
       threePointFieldGoalPct: null,
       freeThrowPct: 80,
     });
+  });
+
+  it("retains game-box shooting totals instead of exposing only percentages", () => {
+    const stats = womensBoxDisplayStats({
+      games_played: 12,
+      starts: 8,
+      totals: {
+        points: 120,
+        rebounds: 48,
+        field_goals_made: 42,
+        field_goals_attempted: 91,
+        three_point_field_goals_made: 14,
+        three_point_field_goals_attempted: 38,
+        free_throws_made: 22,
+        free_throws_attempted: 29,
+      },
+      per_game: {},
+      shooting: { field_goal_pct: 46.2, three_point_pct: 36.8, free_throw_pct: 75.9 },
+    });
+    expect(stats).toMatchObject({
+      fieldGoalsMade: 42,
+      fieldGoalsAttempted: 91,
+      threePointFieldGoalsMade: 14,
+      threePointFieldGoalsAttempted: 38,
+      freeThrowsMade: 22,
+      freeThrowsAttempted: 29,
+    });
+    expect(womensPlayerDetailGroups.find((group) => group.label === "Shooting totals")?.fields.map(([key]) => key)).toEqual([
+      "fieldGoalsMade", "fieldGoalsAttempted", "threePointFieldGoalsMade", "threePointFieldGoalsAttempted", "freeThrowsMade", "freeThrowsAttempted",
+    ]);
   });
 
   it("counts source cohorts by exact player ID without deduplicating names", () => {
