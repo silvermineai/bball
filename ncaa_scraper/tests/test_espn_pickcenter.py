@@ -99,6 +99,16 @@ class EspnPickcenterTests(unittest.TestCase):
         self.assertEqual([game["id"] for game in selected], ["0", "1", "2", "3", "4", "9"])
         self.assertEqual(len({game["id"] for game in selected}), 6)
 
+    def test_bounded_capture_prioritizes_confirmed_starts_for_qualification(self):
+        games = [
+            {**GAME, "id": "tbd-near", "time_tbd": 1},
+            {**GAME, "id": "confirmed-near", "time_tbd": 0},
+            {**GAME, "id": "tbd-late", "time_tbd": 1},
+            {**GAME, "id": "confirmed-late", "time_tbd": 0},
+        ]
+        selected = select_capture_games(games, 2)
+        self.assertEqual([game["id"] for game in selected], ["confirmed-near", "confirmed-late"])
+
     def test_capture_selection_keeps_all_games_when_under_bound(self):
         games = [{**GAME, "id": str(index)} for index in range(3)]
         self.assertEqual(select_capture_games(games, 6), games)

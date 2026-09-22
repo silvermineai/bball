@@ -277,31 +277,50 @@ def _future_games(games: list[dict], season: int, horizon_days: int, now: dateti
 def select_capture_games(candidate_games: list[dict], limit: int) -> list[dict]:
     """Choose a bounded, deterministic slice of the upcoming slate.
 
-    Keep most requests on the nearest games, where a provider is most likely
-    to have published a line, while reserving a uniform sample for the rest of
-    the requested horizon.  A chronological prefix alone can silently miss
-    later games whenever the candidate slate is larger than the request cap.
+    Prioritize games with a confirmed canonical start because their quote can
+    qualify immediately after the exact event and participant checks. Keep
+    date-only/TBD games in the candidate pool so a source-confirmed clock can
+    still promote them, but do not let them consume the entire bounded request
+    budget before the scorecard can compare a line. Within each group, keep
+    most requests on the nearest games and reserve a uniform sample for the
+    rest of the requested horizon. A chronological prefix alone can silently
+    miss later games whenever the candidate slate is larger than the request
+    cap.
     The returned rows are still canonical schedule rows; this function only
     selects which exact event IDs the collector will request.
     """
     if limit < 1 or limit > 300:
         raise ValueError("limit must be between 1 and 300")
-    if len(candidate_games) <= limit:
-        return list(candidate_games)
+    # Confirmed starts are the only rows that can qualify without a separate
+    # source-clock promotion. Preserve the original order inside each group so
+    # the selection remains deterministic and the nearest games still win.
+    confirmed = [game for game in candidate_games if not bool(game.get("time_tbd"))]
+    unconfirmed = [game for game in candidate_games if bool(game.get("time_tbd"))]
+    def bounded_slice(games: list[dict], budget: int) -> list[dict]:
+        if budget <= 0 or not games:
+            return []
+        if len(games) <= budget:
+            return list(games)
+        # Two thirds of the bounded budget stays on the nearest games. The
+        # remaining third is distributed over the rest of the horizon,
+        # including its final candidate, so a fixed cap does not create a
+        # blind spot.
+        near_count = max(1, (budget * 2) // 3)
+        tail_count = budget - near_count
+        tail = len(games) - near_count
+        indexes = list(range(near_count))
+        if tail_count == 1:
+            indexes.append(near_count + tail - 1)
+        else:
+            for offset in range(tail_count):
+                indexes.append(near_count + (offset * (tail - 1)) // (tail_count - 1))
+        return [games[index] for index in indexes]
 
-    # Two thirds of the bounded budget stays on the nearest games. The
-    # remaining third is distributed over the rest of the horizon, including
-    # its final candidate, so a fixed cap does not create a blind spot.
-    near_count = max(1, (limit * 2) // 3)
-    tail_count = limit - near_count
-    tail = len(candidate_games) - near_count
-    indexes = list(range(near_count))
-    if tail_count == 1:
-        indexes.append(near_count + tail - 1)
-    else:
-        for offset in range(tail_count):
-            indexes.append(near_count + (offset * (tail - 1)) // (tail_count - 1))
-    return [candidate_games[index] for index in indexes]
+    # Spend the bounded budget on confirmed games first. If fewer confirmed
+    # games exist than the limit, use the remaining requests to sample the
+    # date-only/TBD group without displacing a directly comparable event.
+    selected_confirmed = bounded_slice(confirmed, limit)
+    return selected_confirmed + bounded_slice(unconfirmed, limit - len(selected_confirmed))
 
 
 def summary_capture_counts(summaries: list[dict]) -> tuple[int, int]:
