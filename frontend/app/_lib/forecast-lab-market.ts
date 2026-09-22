@@ -9,6 +9,14 @@ export type ForecastLabQuoteIdentity = {
   marketGameId: string | null;
 };
 
+export type ForecastLabMarketEvidence = {
+  /** A complete quote can be displayed as a model-versus-market comparison. */
+  state: "verified" | "retained_incomplete" | "none";
+  retained: number;
+  complete: number;
+  incomplete: number;
+};
+
 function retainedId(value: string | null | undefined): string | null {
   const normalized = typeof value === "string" ? value.trim() : "";
   return normalized || null;
@@ -61,6 +69,22 @@ function completeQuote(quote: Comparison, market: ForecastLabMarket) {
  */
 export function completeForecastLabMarketQuotes(comparisons: Comparison[]): Comparison[] {
   return comparisons.filter((quote) => completeQuote(quote, quote.market));
+}
+
+/**
+ * Keep an absent line distinct from a retained but unusable market row. The
+ * latter is a source-quality issue and should remain visible without making a
+ * model edge or a zero quote out of incomplete evidence.
+ */
+export function forecastLabMarketEvidence(comparisons: Comparison[]): ForecastLabMarketEvidence {
+  const complete = completeForecastLabMarketQuotes(comparisons).length;
+  const retained = comparisons.length;
+  return {
+    state: complete > 0 ? "verified" : retained > 0 ? "retained_incomplete" : "none",
+    retained,
+    complete,
+    incomplete: Math.max(0, retained - complete),
+  };
 }
 
 /** Keep market filters and evidence counts aligned with the quote display. */

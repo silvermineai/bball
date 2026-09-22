@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Comparison } from "./research-types";
-import { completeForecastLabMarketQuotes, forecastLabQuoteIdentity, hasCompleteForecastLabMarket, latestForecastLabMarketQuote } from "./forecast-lab-market";
+import { completeForecastLabMarketQuotes, forecastLabMarketEvidence, forecastLabQuoteIdentity, hasCompleteForecastLabMarket, latestForecastLabMarketQuote } from "./forecast-lab-market";
 
 const quote = (overrides: Partial<Comparison> = {}): Comparison => ({
   provider: "licensed-feed",
@@ -46,6 +46,12 @@ describe("Forecast Lab market quote selection", () => {
     expect(completeForecastLabMarketQuotes([incomplete, invalidTotal, invalidMoneyline, complete])).toEqual([complete]);
     expect(hasCompleteForecastLabMarket([incomplete, invalidTotal, invalidMoneyline])).toBe(false);
     expect(hasCompleteForecastLabMarket([incomplete, complete])).toBe(true);
+  });
+
+  it("distinguishes no line from retained incomplete market evidence", () => {
+    expect(forecastLabMarketEvidence([])).toEqual({ state: "none", retained: 0, complete: 0, incomplete: 0 });
+    expect(forecastLabMarketEvidence([quote({ line: null })])).toEqual({ state: "retained_incomplete", retained: 1, complete: 0, incomplete: 1 });
+    expect(forecastLabMarketEvidence([quote({ line: null }), quote({ market: "totals", line: 146.5 })])).toEqual({ state: "verified", retained: 2, complete: 1, incomplete: 1 });
   });
 
   it("reports retained market identity without upgrading missing IDs", () => {
