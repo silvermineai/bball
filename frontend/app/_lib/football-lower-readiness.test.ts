@@ -90,4 +90,22 @@ describe("lower football readiness", () => {
     expect(lowerFootballReadiness(edition)[0].predictions).toBe("unavailable");
     expect(lowerFootballReadiness(edition)[0].forecastCoverage).toBeNull();
   });
+
+  it("reports observed lower-division player evidence as partial without promoting it to a complete release", () => {
+    const evidence = {
+      status: "partial" as const,
+      rowsByDivision: { d2: 1680, d3: 95 },
+      playersByDivision: { d2: 1246, d3: 72 },
+    };
+    expect(lowerFootballReadiness(archive(), evidence).map((row) => row.playerStats)).toEqual(["partial", "partial"]);
+  });
+
+  it("fails closed when observed player counts are missing or zero", () => {
+    const evidence = {
+      status: "recorded" as const,
+      rowsByDivision: { d2: 100, d3: 1 },
+      playersByDivision: { d2: 0 },
+    };
+    expect(lowerFootballReadiness(archive(), evidence).map((row) => row.playerStats)).toEqual(["unavailable", "unavailable"]);
+  });
 });

@@ -56,7 +56,11 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
   }, [archive, division, query]);
   const teams = archive?.teams[division] || [];
   const coverage = archive?.coverage[division];
-  const readiness = archive ? lowerFootballReadiness(archive) : [];
+  const readiness = archive ? lowerFootballReadiness(archive, playerReadiness?.event_archive ? {
+    status: playerReadiness.event_archive.status === "partial" ? "partial" : "recorded",
+    rowsByDivision: playerReadiness.event_archive.rows_by_division,
+    playersByDivision: playerReadiness.event_archive.players_by_division,
+  } : undefined) : [];
   const forecasts = archive ? lowerForecastsForDivision(archive, division, forecastQuery, forecastSort) : [];
   const model = archive?.models[division];
   const forecastCoverage = coverage && coverage.upcoming_games ? (coverage.forecast_games || 0) / coverage.upcoming_games : null;
@@ -87,7 +91,7 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
               <td className="numeric">{row.completeScoreRows.toLocaleString()}</td>
               <td className="numeric">{row.scoreCoverage == null ? "—" : `${Math.round(row.scoreCoverage * 100)}%`}</td>
               <td className="numeric">{row.teamRows.toLocaleString()}</td>
-              <td>{playerReadiness?.event_archive ? `Partial · ${playerReadiness.event_archive.players_by_division[row.division]?.toLocaleString() || 0} players` : row.playerStats === "unavailable" ? "Unavailable" : "Recorded"}</td>
+              <td>{row.playerStats === "unavailable" ? "Unavailable" : `${row.playerStats === "partial" ? "Partial" : "Recorded"} · ${(playerReadiness?.event_archive?.players_by_division[row.division] || 0).toLocaleString()} players`}</td>
               <td>{row.predictions === "unavailable"
                 ? "Unavailable"
                 : <>{row.predictions === "partial" ? "Partial" : "Recorded"}<small>{row.forecastRows.toLocaleString()} of {row.upcomingForecastRows.toLocaleString()} upcoming rows</small></>}</td>

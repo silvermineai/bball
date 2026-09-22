@@ -1,6 +1,18 @@
 import type { LowerFootballResults } from "./football-lower-results";
 
 export type LowerFootballReceiptStatus = "valid" | "unavailable";
+export type LowerFootballPlayerStatsStatus = "recorded" | "partial" | "unavailable";
+
+/**
+ * Observed player evidence is passed in separately from the schedule edition.
+ * The optional contract keeps a partial event archive visible without making
+ * it look like a complete national-stat release.
+ */
+export type LowerFootballPlayerEvidence = {
+  status: "recorded" | "partial";
+  rowsByDivision: Partial<Record<"d2" | "d3", number>>;
+  playersByDivision: Partial<Record<"d2" | "d3", number>>;
+};
 
 export type LowerFootballReadinessRow = {
   division: "d2" | "d3";
@@ -8,7 +20,7 @@ export type LowerFootballReadinessRow = {
   completeScoreRows: number;
   scoreCoverage: number | null;
   teamRows: number;
-  playerStats: "unavailable";
+  playerStats: LowerFootballPlayerStatsStatus;
   upcomingForecastRows: number;
   forecastRows: number;
   forecastCoverage: number | null;
@@ -18,6 +30,8 @@ export type LowerFootballReadinessRow = {
 
 const validSha256 = (value: unknown) =>
   typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
+const positiveCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
 
 /**
  * Validate the archive receipt independently of row counts. A schedule can be
@@ -41,6 +55,7 @@ export function lowerFootballReceiptStatus(
  */
 export function lowerFootballReadiness(
   archive: LowerFootballResults,
+  playerEvidence?: LowerFootballPlayerEvidence,
 ): LowerFootballReadinessRow[] {
   const receipt = lowerFootballReceiptStatus(archive);
   return (["d2", "d3"] as const).map((division) => {
@@ -51,13 +66,20 @@ export function lowerFootballReadiness(
     const rawForecastRows = archive.coverage[division]?.forecast_games ?? 0;
     const forecastRows = Number.isFinite(rawForecastRows) && rawForecastRows >= 0 ? rawForecastRows : 0;
     const forecastCoverage = upcomingForecastRows > 0 && forecastRows <= upcomingForecastRows ? forecastRows / upcomingForecastRows : null;
+    const playerRows = playerEvidence?.rowsByDivision[division];
+    const playerCount = playerEvidence?.playersByDivision[division];
+    const playerStats = playerEvidence
+      && positiveCount(playerRows)
+      && positiveCount(playerCount)
+      ? playerEvidence.status
+      : "unavailable";
     return {
       division,
       scheduleRows,
       completeScoreRows,
       scoreCoverage: scheduleRows > 0 ? completeScoreRows / scheduleRows : null,
       teamRows: archive.teams[division]?.length ?? 0,
-      playerStats: "unavailable",
+      playerStats,
       upcomingForecastRows,
       forecastRows,
       forecastCoverage,
