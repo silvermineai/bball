@@ -17,6 +17,18 @@ export type NotebookIndexGame = {
   };
 };
 
+/** Read the notebook finder query without consuming sport or division scope. */
+export function readNotebookSearch(params: Pick<URLSearchParams, "get">) {
+  return (params.get("notebookQ") || "").slice(0, 120);
+}
+
+/** Keep a searched team or matchup notebook easy to hand to another reader. */
+export function notebookSearchParams(query: string) {
+  const params = new URLSearchParams();
+  if (query.trim()) params.set("notebookQ", query.trim().slice(0, 120));
+  return params;
+}
+
 const normalized = (value: string) =>
   value
     .normalize("NFKD")

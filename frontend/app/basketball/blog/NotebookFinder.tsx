@@ -5,6 +5,8 @@ import { useDeferredValue, useEffect, useState } from "react";
 import { date, fmt, signed } from "../../_lib/format";
 import { loadLiveBasketballForecasts } from "../../_lib/live-basketball-forecasts";
 import {
+  notebookSearchParams,
+  readNotebookSearch,
   searchNotebookGames,
   type NotebookIndexGame,
 } from "./notebook-index";
@@ -19,11 +21,25 @@ export default function NotebookFinder({
   const [query, setQuery] = useState("");
   const [liveGames, setLiveGames] = useState<NotebookIndexGame[] | null>(null);
   const [lookupStatus, setLookupStatus] = useState<"idle" | "loading" | "live" | "error">("idle");
+  const [hydrated, setHydrated] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const isSearching = deferredQuery.trim().length > 0;
   const results = isSearching && !liveGames
     ? lookupStatus === "error" ? games : []
     : searchNotebookGames(liveGames || games, deferredQuery, 8);
+
+  useEffect(() => {
+    setQuery(readNotebookSearch(new URLSearchParams(window.location.search)));
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("notebookQ");
+    notebookSearchParams(query).forEach((value, key) => url.searchParams.set(key, value));
+    window.history.replaceState(window.history.state, "", url);
+  }, [hydrated, query]);
 
   useEffect(() => {
     if (!query.trim() || liveGames) return;
@@ -105,7 +121,7 @@ export default function NotebookFinder({
               : results.length
             ? `Showing the next ${results.length} matching game${results.length === 1 ? "" : "s"}.`
             : "No forecast-backed notebooks match this search."
-          : "Showing the next eight games. Search any program to move through the full slate."}
+          : "Showing the next eight games. Search any program to move through the full slate. This search is preserved in the URL for staff handoff."}
       </p>
       <div className="notebook-finder-results">
         {results.map((game) => {
