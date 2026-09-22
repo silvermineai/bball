@@ -45,7 +45,7 @@ export default function Page() {
       .filter((team) => team.predicted_net != null)
       .sort((a, b) => (b.predicted_net ?? -Infinity) - (a.predicted_net ?? -Infinity))
       .slice(0, 20);
-  const calibrationBuckets = readPublishedCalibration();
+  const calibrationBuckets = readPublishedCalibration(d.model.id);
   return (
     <>
       <div className="page-title">

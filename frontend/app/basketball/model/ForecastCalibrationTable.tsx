@@ -23,6 +23,18 @@ export type CalibrationBucket = {
   interval_coverage: number;
 };
 
+/** Keep a calibration replay attached to the production forecast edition. */
+export function calibrationEditionMatches(
+  productionModelId: unknown,
+  expectedModelId: unknown,
+) {
+  return typeof productionModelId === "string"
+    && productionModelId.trim().length > 0
+    && typeof expectedModelId === "string"
+    && expectedModelId.trim().length > 0
+    && productionModelId === expectedModelId;
+}
+
 const bands = [
   { label: "0–49%", min: 0, max: 0.5 },
   { label: "50–59%", min: 0.5, max: 0.6 },
@@ -65,12 +77,14 @@ export function buildCalibrationBuckets(
   }).filter((bucket) => bucket.games > 0);
 }
 
-export function readPublishedCalibration(): CalibrationBucket[] {
+export function readPublishedCalibration(expectedModelId?: string): CalibrationBucket[] {
   try {
     const root = path.join(process.cwd(), "public/data/basketball/evaluation");
     const summary = JSON.parse(fs.readFileSync(path.join(root, "summary.json"), "utf8")) as {
+      production_model_id?: unknown;
       calibration?: { weekly?: { logistic_coefficients?: number[]; margin_half_width?: number } };
     };
+    if (expectedModelId && !calibrationEditionMatches(summary.production_model_id, expectedModelId)) return [];
     const games = JSON.parse(fs.readFileSync(path.join(root, "calibration-games.json"), "utf8")) as { games?: CalibrationGame[] };
     const coefficients = summary.calibration?.weekly?.logistic_coefficients;
     const width = summary.calibration?.weekly?.margin_half_width;

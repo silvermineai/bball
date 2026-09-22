@@ -51,7 +51,7 @@ export default function Page() {
         markets={getBasketballMarketComparisons()}
         factorSignals={compactMatchupSignals(overview.upcoming)}
         factorSignalModelId={overview.model.id}
-        calibrationBuckets={readPublishedCalibration()}
+        calibrationBuckets={readPublishedCalibration(overview.model.id)}
       />
     </Suspense>
   </>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCalibrationBuckets } from "./ForecastCalibrationTable";
+import { buildCalibrationBuckets, calibrationEditionMatches, readPublishedCalibration } from "./ForecastCalibrationTable";
 
 describe("forecast calibration bands", () => {
   it("groups calibrated probabilities and reports observed rates and range coverage", () => {
@@ -15,5 +15,13 @@ describe("forecast calibration bands", () => {
 
   it("withholds malformed replay rows instead of treating them as losses", () => {
     expect(buildCalibrationBuckets([{ raw_prediction: { home_margin: null }, game: { home_score: 80, away_score: 70 } }], [0, 0.1], 10)).toEqual([]);
+  });
+
+  it("requires the calibration replay to name the exact production edition", () => {
+    expect(calibrationEditionMatches("model-a", "model-a")).toBe(true);
+    expect(calibrationEditionMatches("model-a", "model-b")).toBe(false);
+    expect(calibrationEditionMatches("", "model-a")).toBe(false);
+    expect(calibrationEditionMatches("model-a", "")).toBe(false);
+    expect(readPublishedCalibration("model-that-is-not-published")).toEqual([]);
   });
 });

@@ -34,6 +34,8 @@ import BriefLineupEvidence from "../BriefLineupEvidence";
 import { buildFactorPersonnelQuestions } from "../../../_lib/factor-personnel-questions";
 import { buildPreparationChecklist } from "../../../_lib/preparation-checklist";
 import { explainBasketballPrediction } from "../../../_lib/basketball-prediction-explanation";
+import { basketballCalibrationContext } from "../../../_lib/basketball-calibration";
+import { readPublishedCalibration } from "../../model/ForecastCalibrationTable";
 import { buildBriefAnalysisPacket } from "../../../_lib/brief-analysis-packet";
 import MatchupRecruitingContext from "./MatchupRecruitingContext";
 import RotationWatchPanel from "../../../_components/RotationWatchPanel";
@@ -194,6 +196,10 @@ export default async function Page({
     headToHead = headToHeadSummary(home, away),
     favorite = p.home_margin >= 0 ? g.home_name : g.away_name;
   const predictionExplanation = explainBasketballPrediction(d.model, g, p);
+  const calibrationContext = basketballCalibrationContext(
+    p.home_win_probability,
+    readPublishedCalibration(d.model.id),
+  );
   const rosterScenario = matchingBriefRosterScenario(g, p, rosterModel, d.model.id);
   const shotSeason = d.season - 1;
   const shotProfiles = getBasketballShootingSeason(shotSeason)?.players || [];
@@ -366,6 +372,26 @@ export default async function Page({
           and may change. Model edition: {date(d.generated_at)}.
         </p>
       </div>
+      <section className="section paper-panel brief-calibration-panel" aria-labelledby="brief-calibration-context">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Held-out calibration / exact edition</div>
+            <h2 id="brief-calibration-context">How often does this probability band land?</h2>
+          </div>
+          <span className="note">Model {d.model.id}</span>
+        </div>
+        {calibrationContext ? (
+          <>
+            <div className="strip" aria-label="Held-out probability context">
+              <div><strong>{calibrationContext.side} {fmt(calibrationContext.confidence_lower * 100, 0)}–{fmt(calibrationContext.confidence_upper * 100, 0)}%</strong><span>Historical probability band</span></div>
+              <div><strong>{calibrationContext.games.toLocaleString()}</strong><span>Held-out games</span></div>
+              <div><strong>{calibrationContext.observed == null ? "—" : `${fmt(calibrationContext.observed * 100, 1)}%`}</strong><span>Observed win rate</span></div>
+              <div><strong>{calibrationContext.observed_gap_pp == null ? "—" : `${calibrationContext.observed_gap_pp >= 0 ? "+" : ""}${fmt(calibrationContext.observed_gap_pp, 1)} pp`}</strong><span>Observed minus predicted</span></div>
+            </div>
+            <p className="note" style={{ marginTop: 14 }}>This is chronological holdout context for the model&apos;s probability band, not a game-specific confidence guarantee. The panel is shown only when the evaluation replay names the same production model edition as this brief.</p>
+          </>
+        ) : <p className="empty">The exact-edition held-out calibration replay is unavailable, so no historical hit rate is attached to this forecast.</p>}
+      </section>
       <section className="section" aria-labelledby="brief-model-equation">
         <div className="section-heading">
           <div>
