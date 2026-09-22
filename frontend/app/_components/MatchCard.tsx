@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { FootballEfficiencyScenario, Game, Overview } from "../_lib/data";
 import type { FootballCardIntel } from "../_lib/football-brief";
-import { footballCalibrationReliability, footballModelFactors, type FootballReliabilityBand } from "../_lib/football-model-factors";
+import { exactFootballCalibrationReliability, footballModelFactors, type FootballReliabilityBand } from "../_lib/football-model-factors";
 import { date, fmt, kick } from "../_lib/format";
 import { comparisonGapDirection, comparisonGapLabel } from "../_lib/market-display";
 import type { FootballRecruitingTeam } from "../_lib/football-recruiting-context";
@@ -47,7 +47,7 @@ export default function MatchCard({
 }) {
   const p = g.prediction;
   const modelFactors = p && model ? footballModelFactors(model, g) : null;
-  const reliability = p ? footballCalibrationReliability(p.home_win_probability, calibrationReliability) : null;
+  const reliability = p ? exactFootballCalibrationReliability(p, calibrationReliability, expectedModelId) : null;
   const forecastEvidence = footballForecastEvidence(g, model, expectedModelId);
   return (
     <article className="match-card">

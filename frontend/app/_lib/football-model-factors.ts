@@ -39,6 +39,20 @@ export type FootballCalibrationReliability = {
   observed_gap_pp: number | null;
 };
 
+/**
+ * Attach reliability bins only when the forecast row and calibration payload
+ * identify the same model edition. Probability bands alone are insufficient:
+ * a new edition can produce a similar probability with different calibration.
+ */
+export function exactFootballCalibrationReliability(
+  prediction: Pick<{ home_win_probability: number; model_id?: string | null }, "home_win_probability" | "model_id">,
+  reliability: FootballReliabilityBand[] | null | undefined,
+  expectedModelId: string | null | undefined,
+): FootballCalibrationReliability | null {
+  if (!expectedModelId || prediction.model_id !== expectedModelId) return null;
+  return footballCalibrationReliability(prediction.home_win_probability, reliability);
+}
+
 const validReliabilityBand = (band: FootballReliabilityBand) =>
   Number.isFinite(band.lower)
   && Number.isFinite(band.upper)
