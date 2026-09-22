@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-type Metric = { key: string; label: string; unit: "points per 100 possessions" | "possessions per 40 minutes" | "rank" | "value" | "minutes" };
+type Metric = { key: string; label: string; unit: "points per 100 possessions" | "possessions per 40 minutes" | "rank" | "minutes" };
 const ratingMetrics: Metric[] = [
   { key: "rank", label: "Publisher rank", unit: "rank" },
   { key: "adj_em", label: "Adjusted efficiency margin", unit: "points per 100 possessions" },
@@ -14,9 +14,12 @@ const ratingMetrics: Metric[] = [
   { key: "adj_tempo", label: "Adjusted tempo", unit: "possessions per 40 minutes" },
 ];
 const playerMetrics: Metric[] = [
-  { key: "box_bpm", label: "Box Plus/Minus", unit: "value" },
-  { key: "box_obpm", label: "Offensive BPM", unit: "value" },
-  { key: "box_dbpm", label: "Defensive BPM", unit: "value" },
+  // BPM is a rate, not an untyped score. Keeping the unit in the public
+  // catalog prevents the archive UI and CSV export from presenting these
+  // source-attributed player values as arbitrary numbers.
+  { key: "box_bpm", label: "Box Plus/Minus", unit: "points per 100 possessions" },
+  { key: "box_obpm", label: "Offensive BPM", unit: "points per 100 possessions" },
+  { key: "box_dbpm", label: "Defensive BPM", unit: "points per 100 possessions" },
   { key: "min", label: "Recorded minutes", unit: "minutes" },
 ];
 const querySchema = z.object({

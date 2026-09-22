@@ -1806,6 +1806,28 @@ describe("bball api", () => {
     });
   });
 
+  it("publishes the units for source-attributed player value metrics", async () => {
+    const prepare = vi.fn(() => ({ bind: vi.fn(() => ({})) }));
+    const batch = vi.fn().mockResolvedValue([
+      { results: [{ season: 2026 }] },
+      { results: [] },
+    ]);
+    const response = await app.request(
+      "/api/basketball/research/boutique?kind=players&meta=1",
+      {},
+      { DB: { prepare, batch } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      metrics: expect.arrayContaining([
+        expect.objectContaining({ key: "box_bpm", unit: "points per 100 possessions" }),
+        expect.objectContaining({ key: "box_obpm", unit: "points per 100 possessions" }),
+        expect.objectContaining({ key: "box_dbpm", unit: "points per 100 possessions" }),
+        expect.objectContaining({ key: "min", unit: "minutes" }),
+      ]),
+    });
+  });
+
   it("supports exact team-ID batches for matchup model comparisons", async () => {
     const prepare = vi.fn((sql: string) => {
       if (sql.includes("count(*) AS total")) {
