@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, lowerFootballGameContext, lowerFootballPlayerRankValue, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballPlayerRankValue, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -66,6 +66,13 @@ describe("lower football player aggregation", () => {
   it("fails closed across divisions and categories", () => {
     expect(aggregateLowerFootballPlayers([row({ division: "d3" })], "d2", "passing")).toEqual([]);
     expect(aggregateLowerFootballPlayers([row()], "d2", "rushing")).toEqual([]);
+  });
+
+  it("keeps provider team-total rows out of player rankings", () => {
+    const teamRow = row({ athlete_id: "-12291", athlete: " Team", stats: ["1", "999", "999.0", "9", "0"] });
+    expect(isRankableLowerFootballPlayer(teamRow)).toBe(false);
+    expect(isRankableLowerFootballPlayer(row())).toBe(true);
+    expect(aggregateLowerFootballPlayers([teamRow, row()], "d2", "passing").map((player) => player.athlete_id)).toEqual(["a1"]);
   });
 
   it("returns only the exact player, team, division, and category source rows", () => {

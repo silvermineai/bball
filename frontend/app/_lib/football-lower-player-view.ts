@@ -211,6 +211,24 @@ export type LowerFootballRankingBasis = "total" | "per_game";
 
 const finite = (value: number) => Number.isFinite(value);
 
+/**
+ * ESPN lower-division boxes can contain a synthetic ``Team`` row with a
+ * negative ID for team totals. Keep that row in the raw archive for audit and
+ * export, but never let it become a player in a ranking cohort.
+ */
+export function isRankableLowerFootballPlayer(
+  row: Pick<LowerFootballRawRow, "athlete_id" | "athlete">,
+): boolean {
+  const name = String(row.athlete || "").trim().toLowerCase();
+  const id = String(row.athlete_id || "").trim();
+  return id.length > 0
+    && id !== "0"
+    && !/^-[0-9]+$/.test(id)
+    && name !== "team"
+    && name !== "team total"
+    && name !== "total";
+}
+
 function numberValue(value: unknown): number | null {
   if (typeof value === "number" && finite(value)) return value;
   if (typeof value !== "string") return null;
@@ -238,6 +256,7 @@ export function aggregateLowerFootballPlayers(
   const grouped = new Map<string, LowerFootballPlayer & { game_ids: Set<string> }>();
   for (const row of rows) {
     if (row.division !== division || row.category !== category) continue;
+    if (!isRankableLowerFootballPlayer(row)) continue;
     const name = String(row.athlete || "").trim();
     const team = String(row.team || "").trim();
     if (!row.athlete_id || !name || (needle && !`${name} ${team} ${row.team_id}`.toLowerCase().includes(needle))) continue;

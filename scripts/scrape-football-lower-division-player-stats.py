@@ -14,6 +14,7 @@ import concurrent.futures
 import datetime as dt
 import hashlib
 import json
+import re
 import time
 import urllib.request
 from pathlib import Path
@@ -22,6 +23,25 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football"
 UA = "SilvermineResearch/1.0 (+https://bball.silvermine.dev)"
+
+
+def is_rankable_athlete_id(value: object) -> bool:
+    """Reject ESPN's synthetic negative-ID team rows from player intake."""
+
+    return bool(re.fullmatch(r"[1-9][0-9]*", str(value or "").strip()))
+
+
+def align_provider_values(keys: list[object], values: list[object]) -> list[str]:
+    """Keep provider values aligned to keys when a trailing field is omitted.
+
+    ESPN occasionally omits a trailing value (for example adjusted QBR in a
+    passing box). Padding with an empty string preserves that field as
+    unavailable and prevents any later value from shifting columns. Unkeyed
+    values are discarded because they cannot be safely labeled.
+    """
+
+    aligned = ["" if value is None else str(value) for value in values[: len(keys)]]
+    return aligned + [""] * (len(keys) - len(aligned))
 
 
 def get_json(url: str, attempts: int = 3) -> tuple[dict[str, Any], str, str]:
@@ -104,6 +124,9 @@ def capture(start: dt.date, end: dt.date, workers: int) -> dict[str, Any]:
                     values = athlete_row.get("stats") or []
                     if not athlete.get("id") or not athlete.get("displayName") or not values:
                         continue
+                    if not is_rankable_athlete_id(athlete.get("id")):
+                        continue
+                    aligned_values = align_provider_values(keys, values)
                     rows.append({
                         "season": start.year,
                         "division": division,
@@ -116,7 +139,7 @@ def capture(start: dt.date, end: dt.date, workers: int) -> dict[str, Any]:
                         "position": athlete.get("position"),
                         "category": statistic.get("name"),
                         "keys": keys,
-                        "stats": values,
+                        "stats": aligned_values,
                     })
     digest = hashlib.sha256("".join(sorted(item["sha256"] for item in receipts)).encode()).hexdigest()
     return {
