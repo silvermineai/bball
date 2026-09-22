@@ -3,6 +3,8 @@ import { basketballForecasts, parseForecastMatchupFactors, parseForecastPredicti
 
 describe("basketball forecast availability", () => {
   it("withholds forecast objects with invalid known numeric fields", () => {
+    expect(parseForecastPrediction({})).toEqual({ prediction: null, integrity: "invalid" });
+    expect(parseForecastPrediction({ total: 140, pace: 68 })).toEqual({ prediction: null, integrity: "invalid" });
     expect(parseForecastPrediction({
       home_margin: 4,
       home_win_probability: 1.01,
@@ -31,6 +33,30 @@ describe("basketball forecast availability", () => {
       },
       integrity: "valid",
     });
+    expect(parseForecastPrediction({
+      home_score: 80,
+      away_score: 65,
+      home_margin: 12,
+      total: 145,
+      pace: 70,
+      home_efficiency: 114.29,
+      away_efficiency: 92.86,
+      home_win_probability: 0.62,
+      margin_low: -4,
+      margin_high: 20,
+    })).toEqual({ prediction: null, integrity: "invalid" });
+    expect(parseForecastPrediction({
+      home_score: 80,
+      away_score: 65,
+      home_margin: 15,
+      total: 145,
+      pace: 70,
+      home_efficiency: 114.29,
+      away_efficiency: 92.86,
+      home_win_probability: 0.62,
+      margin_low: -4,
+      margin_high: 20,
+    })).toMatchObject({ integrity: "valid" });
   });
 
   it("validates four-factor matchup context and keeps malformed context unavailable", () => {
@@ -59,9 +85,9 @@ describe("basketball forecast availability", () => {
       prediction: { home_score: 80, away_score: 64, pace: 70, home_margin: 16, home_efficiency: 114.29, away_efficiency: 91.43 },
       integrity: "valid",
     });
-    expect(parseForecastPrediction({ home_score: 80, away_score: 64, pace: 0 })).toEqual({
-      prediction: { home_score: 80, away_score: 64, pace: 0 },
-      integrity: "valid",
+    expect(parseForecastPrediction({ home_score: 80, away_score: 64, home_margin: 16, pace: 0 })).toEqual({
+      prediction: null,
+      integrity: "invalid",
     });
   });
 

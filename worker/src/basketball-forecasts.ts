@@ -248,6 +248,14 @@ export function parseForecastPrediction(value: unknown): { prediction: Record<st
     return { prediction: null, integrity: "invalid" };
   }
   const row = value as Record<string, unknown>;
+  // A JSON object by itself is not a forecast. Require the margin field that
+  // every registered basketball edition uses to identify the estimate. This
+  // keeps an empty/truncated payload from being counted as a usable model row
+  // by the upcoming board while preserving older editions that predate score,
+  // probability, pace, and efficiency fields.
+  if (typeof row.home_margin !== "number" || !Number.isFinite(row.home_margin)) {
+    return { prediction: null, integrity: "invalid" };
+  }
   for (const field of predictionNumericFields) {
     if (field in row && (typeof row[field] !== "number" || !Number.isFinite(row[field] as number))) {
       return { prediction: null, integrity: "invalid" };
@@ -266,6 +274,34 @@ export function parseForecastPrediction(value: unknown): { prediction: Record<st
   if (typeof margin === "number" && typeof low === "number" && typeof high === "number" && (margin < low || margin > high)) {
     return { prediction: null, integrity: "invalid" };
   }
+  // Published score fields are rounded for display, so use a small tolerance
+  // when checking the arithmetic identities the model publishes. A broken
+  // row must be withheld rather than allowing the UI to show contradictory
+  // score, margin, total, or efficiency values.
+  const homeScore = row.home_score;
+  const awayScore = row.away_score;
+  const total = row.total;
+  const pace = row.pace;
+  const homeEfficiency = row.home_efficiency;
+  const awayEfficiency = row.away_efficiency;
+  const close = (left: number, right: number) => Math.abs(left - right) <= 0.1;
+  if (
+    typeof homeScore === "number" && typeof awayScore === "number"
+    && !close(homeScore - awayScore, row.home_margin)
+  ) return { prediction: null, integrity: "invalid" };
+  if (
+    typeof homeScore === "number" && typeof awayScore === "number"
+    && typeof total === "number" && !close(homeScore + awayScore, total)
+  ) return { prediction: null, integrity: "invalid" };
+  if (typeof pace === "number" && pace <= 0) return { prediction: null, integrity: "invalid" };
+  if (
+    typeof pace === "number" && pace > 0 && typeof homeScore === "number"
+    && typeof homeEfficiency === "number" && !close(homeEfficiency, 100 * homeScore / pace)
+  ) return { prediction: null, integrity: "invalid" };
+  if (
+    typeof pace === "number" && pace > 0 && typeof awayScore === "number"
+    && typeof awayEfficiency === "number" && !close(awayEfficiency, 100 * awayScore / pace)
+  ) return { prediction: null, integrity: "invalid" };
   if ("estimate_type" in row && row.estimate_type !== "primary" && row.estimate_type !== "cold_start") {
     return { prediction: null, integrity: "invalid" };
   }
@@ -274,19 +310,19 @@ export function parseForecastPrediction(value: unknown): { prediction: Record<st
   // and pace so the response remains useful without changing the model score
   // or pretending this is an observed stat.
   const normalized = { ...row };
-  const pace = normalized.pace;
-  const homeScore = normalized.home_score;
-  const awayScore = normalized.away_score;
+  const normalizedPace = normalized.pace;
+  const normalizedHomeScore = normalized.home_score;
+  const normalizedAwayScore = normalized.away_score;
   if (
-    typeof pace === "number" && Number.isFinite(pace) && pace > 0
-    && typeof homeScore === "number" && Number.isFinite(homeScore)
-    && typeof awayScore === "number" && Number.isFinite(awayScore)
+    typeof normalizedPace === "number" && Number.isFinite(normalizedPace) && normalizedPace > 0
+    && typeof normalizedHomeScore === "number" && Number.isFinite(normalizedHomeScore)
+    && typeof normalizedAwayScore === "number" && Number.isFinite(normalizedAwayScore)
   ) {
     if (!(typeof normalized.home_efficiency === "number" && Number.isFinite(normalized.home_efficiency))) {
-      normalized.home_efficiency = Math.round((100 * homeScore / pace) * 100) / 100;
+      normalized.home_efficiency = Math.round((100 * normalizedHomeScore / normalizedPace) * 100) / 100;
     }
     if (!(typeof normalized.away_efficiency === "number" && Number.isFinite(normalized.away_efficiency))) {
-      normalized.away_efficiency = Math.round((100 * awayScore / pace) * 100) / 100;
+      normalized.away_efficiency = Math.round((100 * normalizedAwayScore / normalizedPace) * 100) / 100;
     }
   }
   return { prediction: normalized, integrity: "valid" };
