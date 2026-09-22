@@ -394,6 +394,46 @@ def forecast_coverage(payload: dict, expected_season: int, expected_rows: int) -
     return total
 
 
+def forecast_scorecard_coverage(
+    payload: dict,
+    sport: str,
+    expected_model_id: str,
+) -> tuple[int, int]:
+    """Require the live scorecard to expose the catalog's exact model edition.
+
+    Forecast catalogs and the append-only research ledger are published from
+    separate stores. A stale ledger can therefore leave the forecast board
+    healthy while an exact model scorecard request returns no rows, silently
+    removing model-versus-market evidence from matchup pages. Keep this gate
+    model-scoped and count only comparisons on rows that repeat that model ID.
+    A zero comparison count remains valid when no licensed/public quote passed
+    the timing gates; a zero forecast-row count is a publication failure.
+    """
+    if not isinstance(expected_model_id, str) or not expected_model_id.strip():
+        raise ValueError(f"{sport} forecast catalog has no model ID for scorecard check")
+    total = payload.get("total")
+    rows = payload.get("games")
+    if (
+        not isinstance(total, int)
+        or isinstance(total, bool)
+        or total <= 0
+        or not isinstance(rows, list)
+        or not rows
+        or len(rows) > total
+    ):
+        raise ValueError(f"{sport} scorecard has no rows for the active forecast edition")
+    for row in rows:
+        if not isinstance(row, dict) or row.get("model_id") != expected_model_id:
+            raise ValueError(f"{sport} scorecard returned a stale or unlabeled forecast edition")
+    comparisons = 0
+    for row in rows:
+        value = row.get("comparisons")
+        if value is not None and (not isinstance(value, list)):
+            raise ValueError(f"{sport} scorecard has malformed market comparisons")
+        comparisons += len(value or [])
+    return total, comparisons
+
+
 def validate_forecast_prediction(row: dict) -> dict:
     """Require the published game estimate to reconcile to its model fields.
 
@@ -1713,17 +1753,29 @@ def check_live(
     football_latest = football_models[0]
     if not isinstance(football_latest.get("forecasts"), int) or football_latest["forecasts"] <= 0:
         raise ValueError("football forecast catalog has no usable forecasts")
+    football_model_id = football_latest.get("model_id")
+    if not isinstance(football_model_id, str) or not football_model_id.strip():
+        raise ValueError("football forecast catalog has no model ID")
     football_last_created = football_latest.get("last_created_at")
     if not isinstance(football_last_created, str):
         raise ValueError("football forecast catalog has no model clock")
     football_model_age = (checked_at - timestamp(football_last_created)).total_seconds() / 3600
     if football_model_age < -24 or football_model_age > max_age_hours:
         raise ValueError(f"latest football model is {max(football_model_age, 0):.1f} hours old")
+    football_scorecard = get_json(
+        base_url,
+        f"/api/research/scorecard?sport=football&season=2026&model={quote(football_model_id, safe='')}&status=all&limit=1&publication_check={probe_key}",
+    )
+    football_scorecard_rows, football_scorecard_comparisons = forecast_scorecard_coverage(
+        football_scorecard,
+        "football",
+        football_model_id,
+    )
     football_personnel_readiness, football_personnel_readiness_age = football_personnel_readiness_metadata(
         get_json(base_url, "/data/football/personnel-readiness-2026.json"),
         checked_at,
         max_age_hours,
-        expected_model_id=football_latest.get("model_id"),
+        expected_model_id=football_model_id,
     )
 
     schedule_clock_total = schedule_clock_confirmed = 0
@@ -1901,8 +1953,10 @@ def check_live(
         "matchup_personnel_source_max_age_hours": round(max(matchup_personnel_summary["source_max_age_hours"], 0), 2),
         "forecast_age_hours": round(max(model_age, 0), 2),
         "scorecard_excluded_rows": scorecard.get("total", 0),
-        "football_forecast_model": football_latest.get("model_id"),
+        "football_forecast_model": football_model_id,
         "football_forecast_rows": football_latest["forecasts"],
+        "football_scorecard_rows": football_scorecard_rows,
+        "football_scorecard_comparisons": football_scorecard_comparisons,
         "football_forecast_age_hours": round(max(football_model_age, 0), 2),
         "football_personnel_readiness_games": football_personnel_readiness["forecast_games"],
         "football_personnel_readiness_complete_games": football_personnel_readiness["complete_games"],

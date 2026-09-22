@@ -9,6 +9,7 @@ from scripts.check_live_publication import (
     DAILY_PUBLICATION_MAX_AGE_HOURS,
     check_live,
     forecast_coverage,
+    forecast_scorecard_coverage,
     validate_forecast_prediction,
     validate_forecast_matchup_context,
     roster_forecast_alignment,
@@ -257,6 +258,21 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(forecast_coverage({"season": 2027, "status": "upcoming", "total": 12}, 2027, 12), 12)
         with self.assertRaisesRegex(ValueError, "every upcoming game"):
             forecast_coverage({"season": 2027, "status": "upcoming", "total": 11}, 2027, 12)
+
+    def test_forecast_scorecard_coverage_requires_the_active_model_edition(self):
+        payload = {
+            "total": 2,
+            "games": [
+                {"model_id": "football-current", "comparisons": [{"market": "spreads"}]},
+            ],
+        }
+        self.assertEqual(forecast_scorecard_coverage(payload, "football", "football-current"), (2, 1))
+        with self.assertRaisesRegex(ValueError, "stale or unlabeled"):
+            forecast_scorecard_coverage(payload, "football", "football-old")
+        with self.assertRaisesRegex(ValueError, "no rows"):
+            forecast_scorecard_coverage({"total": 0, "games": []}, "football", "football-current")
+        with self.assertRaisesRegex(ValueError, "malformed market comparisons"):
+            forecast_scorecard_coverage({"total": 1, "games": [{"model_id": "football-current", "comparisons": {}}]}, "football", "football-current")
 
     def test_forecast_prediction_requires_reconciled_efficiency_fields(self):
         row = {
@@ -565,6 +581,15 @@ class LivePublicationCheckTest(unittest.TestCase):
                 }
             if path.startswith("/api/basketball/research/matchup-personnel?"):
                 return LivePublicationCheckTest.matchup_personnel_payload()
+            if path.startswith("/api/research/scorecard?sport=football&"):
+                model = responses.get("/api/football/research/forecasts?meta=1", {}).get("models", [{}])[0]
+                return {
+                    "season": 2026,
+                    "sport": "football",
+                    "model": model.get("model_id"),
+                    "total": model.get("forecasts", 0),
+                    "games": [{"model_id": model.get("model_id"), "comparisons": []}],
+                }
             if path == "/data/basketball/womens-forecast.json":
                 return LivePublicationCheckTest.womens_forecast_payload()
             if path == "/data/basketball/womens-lower-division-stats.json":
@@ -1012,6 +1037,8 @@ class LivePublicationCheckTest(unittest.TestCase):
         self.assertEqual(report["football_personnel_rows"], 40)
         self.assertEqual(report["football_personnel_source_max_age_hours"], 2.0)
         self.assertEqual(report["football_forecast_rows"], 100)
+        self.assertEqual(report["football_scorecard_rows"], 100)
+        self.assertEqual(report["football_scorecard_comparisons"], 0)
         self.assertEqual(report["basketball_player_identified_rows"], 196865)
         self.assertEqual(report["basketball_player_team_entries"], 9990)
         self.assertEqual(report["ncaa_d1_apg_values"], 1791)
