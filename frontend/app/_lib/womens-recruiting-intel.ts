@@ -56,6 +56,40 @@ export type WomensRecruitingRelease = {
   records: WomensRecruitingProspect[];
 };
 
+export const womensRecruitingProspectCsvHeaders = [
+  "athlete_id",
+  "name",
+  "recruiting_class",
+  "position",
+  "national_rank",
+  "grade",
+  "status",
+  "committed_team_id",
+  "committed_team_name",
+  "high_school",
+  "hometown",
+] as const;
+
+/** Export only fields present in the validated prospect release. */
+export function womensRecruitingProspectCsvRows(
+  records: readonly WomensRecruitingProspect[],
+  recruitingClass: number,
+): Array<Array<string | number | null>> {
+  return records.map((record) => [
+    record.athlete_id,
+    record.name,
+    recruitingClass,
+    record.position ?? null,
+    record.rank ?? null,
+    record.grade ?? null,
+    record.status ?? null,
+    record.committed_team_id ?? null,
+    record.committed_team_name ?? null,
+    record.high_school ?? null,
+    record.hometown ?? null,
+  ]);
+}
+
 const releaseDigest = /^[a-f0-9]{64}$/i;
 const sourceId = /^\d{1,15}$/;
 const httpsUrl = /^https:\/\/[^\s]+$/i;

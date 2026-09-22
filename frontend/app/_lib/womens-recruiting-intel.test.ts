@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import release from "../../public/data/basketball/womens-recruiting.json";
-import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingRelease } from "./womens-recruiting-intel";
+import { rankWomensObservedPlayers, rankWomensRecruitingProspects, summarizeWomensRecruitingProspects, validateWomensRecruitingRelease, womensRecruitingProspectCsvHeaders, womensRecruitingProspectCsvRows } from "./womens-recruiting-intel";
 
 const player = (overrides: Partial<Parameters<typeof rankWomensObservedPlayers>[0][number]> = {}) => ({
   player_id: "p-1",
@@ -68,6 +68,22 @@ describe("women's recruiting prospect cohort", () => {
     ], "north", 5);
     expect(rows.map((row) => row.athlete_id)).toEqual(["2", "3"]);
     expect(rows[1].grade).toBeNull();
+  });
+
+  it("exports validated prospect fields without filling missing ranks or destinations", () => {
+    const records = [{
+      athlete_id: "17",
+      name: "A Prospect",
+      grade: 92,
+      rank: null,
+      status: "Undecided",
+      committed_team_id: null,
+      high_school: "North High",
+    }];
+    expect(womensRecruitingProspectCsvHeaders).toContain("national_rank");
+    expect(womensRecruitingProspectCsvRows(records, 2027)[0]).toEqual([
+      "17", "A Prospect", 2027, null, null, 92, "Undecided", null, null, "North High", null,
+    ]);
   });
 
   it("summarizes source statuses without turning verbal labels into destinations", () => {
