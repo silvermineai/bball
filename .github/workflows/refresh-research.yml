@@ -235,6 +235,10 @@ jobs:
               raise SystemExit("schedule release has no robots policy receipt")
           if not payload.get("calendar") or not payload.get("contests"):
               raise SystemExit("schedule release is empty; retaining the prior archive")
+          calendar_divisions = {row.get("division") for row in payload["calendar"] if isinstance(row, dict)}
+          contest_divisions = {row.get("division") for row in payload["contests"] if isinstance(row, dict)}
+          if calendar_divisions != {2, 3} or contest_divisions != {2, 3}:
+              raise SystemExit("schedule release is missing an exact D2 or D3 cohort; retaining the prior archive")
           PY
             mkdir -p "$(dirname "$destination")"
             mv "$staged" "$destination"
