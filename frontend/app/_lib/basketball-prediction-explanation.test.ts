@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { explainBasketballPrediction } from "./basketball-prediction-explanation";
+import { explainBasketballPrediction, publishedScoreArithmetic } from "./basketball-prediction-explanation";
 
 const model = {
   teams: ["away", "home"],
@@ -31,5 +31,28 @@ describe("explainBasketballPrediction", () => {
   it("withholds a stale or malformed explanation", () => {
     expect(explainBasketballPrediction(model, game, { home_score: 80, away_score: 65.8, pace: 69 })).toBeNull();
     expect(explainBasketballPrediction({ ...model, teams: ["away"] }, game, { home_score: 66.93, away_score: 71.76, pace: 69 })).toBeNull();
+  });
+
+  it("reconciles a live row from its published efficiency and pace fields", () => {
+    const explanation = publishedScoreArithmetic({
+      home_score: 76.98,
+      away_score: 59.33,
+      home_efficiency: 116.52,
+      away_efficiency: 89.8,
+      pace: 66.07,
+    });
+    expect(explanation).toMatchObject({ pace: 66.07, homeEfficiency: 116.52, awayEfficiency: 89.8 });
+    expect(explanation?.homeScore).toBeCloseTo(76.98, 1);
+    expect(explanation?.awayScore).toBeCloseTo(59.33, 1);
+  });
+
+  it("withholds arithmetic when efficiency fields do not reconcile", () => {
+    expect(publishedScoreArithmetic({
+      home_score: 80,
+      away_score: 65,
+      home_efficiency: 100,
+      away_efficiency: 90,
+      pace: 70,
+    })).toBeNull();
   });
 });

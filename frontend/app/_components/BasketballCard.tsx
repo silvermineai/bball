@@ -12,7 +12,7 @@ import { comparisonGapDirection, comparisonGapDirectionLabel, comparisonGapLabel
 import { forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDetail, forecastEvidenceLabel, forecastIntegrity, forecastSignalContext, forecastUnknownTeams, matchupFactorStudyQuestion, strongestMatchupSignal } from "../_lib/forecast-lab-analysis";
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
-import { explainBasketballPrediction } from "../_lib/basketball-prediction-explanation";
+import { explainBasketballPrediction, publishedScoreArithmetic } from "../_lib/basketball-prediction-explanation";
 import RotationWatchPanel from "./RotationWatchPanel";
 
 export default function BasketballCard({
@@ -47,6 +47,7 @@ export default function BasketballCard({
   });
   const coldStart = !g.prediction && !!g.fallback_prediction;
   const scoreExplanation = p ? explainBasketballPrediction(model, g, p) : null;
+  const publishedArithmetic = p ? publishedScoreArithmetic(p) : null;
   const signalContext = forecastSignalContext(p, !!g.prediction);
   const confidence = forecastConfidenceSummary(p, !!g.prediction);
   const strongestFactor = strongestMatchupSignal(g.matchup_factors, g.matchup_factors_same_edition !== false);
@@ -191,29 +192,46 @@ export default function BasketballCard({
             <span>Projected efficiency · A / H</span>
             <span>{p.away_efficiency == null || p.home_efficiency == null ? "—" : `${fmt(p.away_efficiency, 1)} / ${fmt(p.home_efficiency, 1)} pts per 100`}</span>
           </div>
-          {scoreExplanation && (
+          {(scoreExplanation || publishedArithmetic) && (
             <details className="match-card-details matchup-model-equation">
               <summary>How the model got there</summary>
-              <p className="factor-source">
-                Exact coefficient reconstruction for this forecast edition. Each term is points per 100 possessions; score equals projected efficiency × pace ÷ 100.
-              </p>
-              <div className="table-scroll">
-                <table className="data-table">
-                  <thead>
-                    <tr><th>Term</th><th className="numeric">{scoreExplanation.away.team}</th><th className="numeric">{scoreExplanation.home.team}</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr><th scope="row">League baseline</th><td className="numeric">{fmt(scoreExplanation.away.league, 2)}</td><td className="numeric">{fmt(scoreExplanation.home.league, 2)}</td></tr>
-                    <tr><th scope="row">Own offense effect</th><td className="numeric">{scoreExplanation.away.ownOffense >= 0 ? "+" : ""}{fmt(scoreExplanation.away.ownOffense, 2)}</td><td className="numeric">{scoreExplanation.home.ownOffense >= 0 ? "+" : ""}{fmt(scoreExplanation.home.ownOffense, 2)}</td></tr>
-                    <tr><th scope="row">Opponent defense effect</th><td className="numeric">{scoreExplanation.away.opponentDefense >= 0 ? "+" : ""}{fmt(scoreExplanation.away.opponentDefense, 2)}</td><td className="numeric">{scoreExplanation.home.opponentDefense >= 0 ? "+" : ""}{fmt(scoreExplanation.home.opponentDefense, 2)}</td></tr>
-                    <tr><th scope="row">Venue effect</th><td className="numeric">{scoreExplanation.away.venue >= 0 ? "+" : ""}{fmt(scoreExplanation.away.venue, 2)}</td><td className="numeric">{scoreExplanation.home.venue >= 0 ? "+" : ""}{fmt(scoreExplanation.home.venue, 2)}</td></tr>
-                    <tr><th scope="row"><strong>Projected efficiency</strong></th><td className="numeric"><strong>{fmt(scoreExplanation.away.efficiency, 2)}</strong></td><td className="numeric"><strong>{fmt(scoreExplanation.home.efficiency, 2)}</strong></td></tr>
-                    <tr><th scope="row">Projected pace</th><td className="numeric">{fmt(scoreExplanation.paceBaseline, 2)}</td><td className="numeric">{fmt(scoreExplanation.paceBaseline, 2)}</td></tr>
-                    <tr><th scope="row"><strong>Score from equation</strong></th><td className="numeric"><strong>{fmt(scoreExplanation.away.projectedScore, 2)}</strong></td><td className="numeric"><strong>{fmt(scoreExplanation.home.projectedScore, 2)}</strong></td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <small className="factor-source">A missing or edition-mismatched coefficient set suppresses this reconstruction rather than showing stale arithmetic.</small>
+              {scoreExplanation ? <>
+                <p className="factor-source">
+                  Exact coefficient reconstruction for this forecast edition. Each term is points per 100 possessions; score equals projected efficiency × pace ÷ 100.
+                </p>
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr><th>Term</th><th className="numeric">{scoreExplanation.away.team}</th><th className="numeric">{scoreExplanation.home.team}</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">League baseline</th><td className="numeric">{fmt(scoreExplanation.away.league, 2)}</td><td className="numeric">{fmt(scoreExplanation.home.league, 2)}</td></tr>
+                      <tr><th scope="row">Own offense effect</th><td className="numeric">{scoreExplanation.away.ownOffense >= 0 ? "+" : ""}{fmt(scoreExplanation.away.ownOffense, 2)}</td><td className="numeric">{scoreExplanation.home.ownOffense >= 0 ? "+" : ""}{fmt(scoreExplanation.home.ownOffense, 2)}</td></tr>
+                      <tr><th scope="row">Opponent defense effect</th><td className="numeric">{scoreExplanation.away.opponentDefense >= 0 ? "+" : ""}{fmt(scoreExplanation.away.opponentDefense, 2)}</td><td className="numeric">{scoreExplanation.home.opponentDefense >= 0 ? "+" : ""}{fmt(scoreExplanation.home.opponentDefense, 2)}</td></tr>
+                      <tr><th scope="row">Venue effect</th><td className="numeric">{scoreExplanation.away.venue >= 0 ? "+" : ""}{fmt(scoreExplanation.away.venue, 2)}</td><td className="numeric">{scoreExplanation.home.venue >= 0 ? "+" : ""}{fmt(scoreExplanation.home.venue, 2)}</td></tr>
+                      <tr><th scope="row"><strong>Projected efficiency</strong></th><td className="numeric"><strong>{fmt(scoreExplanation.away.efficiency, 2)}</strong></td><td className="numeric"><strong>{fmt(scoreExplanation.home.efficiency, 2)}</strong></td></tr>
+                      <tr><th scope="row">Projected pace</th><td className="numeric">{fmt(scoreExplanation.paceBaseline, 2)}</td><td className="numeric">{fmt(scoreExplanation.paceBaseline, 2)}</td></tr>
+                      <tr><th scope="row"><strong>Score from equation</strong></th><td className="numeric"><strong>{fmt(scoreExplanation.away.projectedScore, 2)}</strong></td><td className="numeric"><strong>{fmt(scoreExplanation.home.projectedScore, 2)}</strong></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <small className="factor-source">A missing or edition-mismatched coefficient set suppresses this reconstruction rather than showing stale arithmetic.</small>
+              </> : <>
+                <p className="factor-source">
+                  The live forecast edition does not expose its coefficient terms in the browser bundle. The published score arithmetic still reconciles exactly from the live row&apos;s efficiency and pace fields.
+                </p>
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead><tr><th>Published field</th><th className="numeric">{g.away_name}</th><th className="numeric">{g.home_name}</th></tr></thead>
+                    <tbody>
+                      <tr><th scope="row">Projected efficiency</th><td className="numeric">{fmt(publishedArithmetic!.awayEfficiency, 2)}</td><td className="numeric">{fmt(publishedArithmetic!.homeEfficiency, 2)}</td></tr>
+                      <tr><th scope="row">Projected pace</th><td className="numeric">{fmt(publishedArithmetic!.pace, 2)}</td><td className="numeric">{fmt(publishedArithmetic!.pace, 2)}</td></tr>
+                      <tr><th scope="row"><strong>Efficiency × pace ÷ 100</strong></th><td className="numeric"><strong>{fmt(publishedArithmetic!.awayScore, 2)}</strong></td><td className="numeric"><strong>{fmt(publishedArithmetic!.homeScore, 2)}</strong></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <small className="factor-source">This is a reconciliation of published model fields, not a new forecast or a substitute for the registered coefficient artifact.</small>
+              </>}
             </details>
           )}
           <div className="match-detail muted">

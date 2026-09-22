@@ -17,10 +17,47 @@ export type PredictionExplanation = {
   away: PredictionExplanationSide;
 };
 
+export type PublishedScoreArithmetic = {
+  pace: number;
+  homeEfficiency: number;
+  awayEfficiency: number;
+  homeScore: number;
+  awayScore: number;
+};
+
 type ExplanationModel = Pick<BBOverview["model"], "teams" | "efficiency" | "tempo">;
 
 function finite(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+/**
+ * Reconcile the score fields published on a live forecast row when the
+ * bundled coefficient artifact is from an older edition. This is deliberately
+ * arithmetic only: it never labels implied efficiency as a coefficient term
+ * or claims that a stale artifact explains the current row.
+ */
+export function publishedScoreArithmetic(
+  prediction: Pick<BBPrediction, "home_score" | "away_score" | "pace" | "home_efficiency" | "away_efficiency">,
+): PublishedScoreArithmetic | null {
+  const values = [
+    prediction.home_score,
+    prediction.away_score,
+    prediction.pace,
+    prediction.home_efficiency,
+    prediction.away_efficiency,
+  ];
+  if (values.some((value) => !finite(value)) || prediction.pace <= 0) return null;
+  const homeScore = prediction.home_efficiency! * prediction.pace / 100;
+  const awayScore = prediction.away_efficiency! * prediction.pace / 100;
+  if (Math.abs(homeScore - prediction.home_score) > 0.06 || Math.abs(awayScore - prediction.away_score) > 0.06) return null;
+  return {
+    pace: prediction.pace,
+    homeEfficiency: prediction.home_efficiency!,
+    awayEfficiency: prediction.away_efficiency!,
+    homeScore,
+    awayScore,
+  };
 }
 
 /**
