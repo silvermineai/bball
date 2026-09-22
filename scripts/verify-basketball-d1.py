@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -21,26 +20,6 @@ ENV = {**os.environ, "PYTHONPATH": str(ROOT / "ncaa_scraper")}
 D1_DB_NAME = os.getenv("BASKETBALL_D1_DATABASE", "bball-research-v2")
 NCAA_BOX_D1_DATABASE = os.getenv("NCAA_BOX_D1_DATABASE", "bball-ncaa-box-v1")
 MODEL_ID_PATTERN = re.compile(r"basketball-efficiency-v2-[0-9a-f]{12}")
-
-
-def local_table_count(database: Path, table: str) -> int | None:
-    """Read a local count when a complete rebuild warehouse is available.
-
-    Incremental maintenance can be run from cached publication artifacts after
-    a local warehouse cleanup.  In that case the zero-byte placeholder must not
-    turn a valid D1 verification into a misleading ``no such table`` error.
-    """
-    try:
-        with sqlite3.connect(f"file:{database}?mode=ro", uri=True) as conn:
-            present = conn.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-                (table,),
-            ).fetchone()
-            if not present:
-                return None
-            return int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
-    except (OSError, sqlite3.DatabaseError):
-        return None
 
 
 def dataset_rows(overview: dict) -> dict[str, int]:
@@ -72,43 +51,12 @@ def dataset_rows(overview: dict) -> dict[str, int]:
         # unresolved records) is published in the dedicated NCAA context D1.
         "bb_unresolved": int(coverage["unresolved_rows"]),
     }
-    local_path = ROOT / ".local/basketball.sqlite3"
-    # Prefer exact counts from a rebuilt local warehouse, while retaining the
-    # published catalog values when maintenance is running from artifacts.
-    for table, key in (
-        ("bb_impact", "bb_impact"),
-        ("bb_ncaa_player_box", "bb_ncaa_player_box"),
-        ("bb_ncaa_player_season", "bb_ncaa_player_season"),
-    ):
-        count = local_table_count(local_path, table)
-        if count is not None:
-            expected[key] = count
-    local_unresolved_checked = False
-    try:
-        with sqlite3.connect(f"file:{local_path}?mode=ro", uri=True) as database:
-            present = database.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='bb_unresolved'"
-            ).fetchone()
-            if present:
-                local_unresolved_checked = True
-                latest_context = database.execute(
-                    "SELECT MAX(season) FROM bb_unresolved WHERE dataset='ncaa_game_rosters'"
-                ).fetchone()[0]
-                if latest_context is not None:
-                    expected["bb_unresolved"] = int(database.execute(
-                        "SELECT COUNT(*) FROM bb_unresolved "
-                        "WHERE dataset <> 'ncaa_game_rosters' OR season >= ?",
-                        (int(latest_context) - 1,),
-                    ).fetchone()[0])
-    except (OSError, sqlite3.DatabaseError):
-        pass
-    if not local_unresolved_checked:
-        # This table intentionally keeps only the newest two game-context
-        # seasons in the incremental D1 import. Without the rebuilt warehouse
-        # there is no trustworthy expected count, so omit this one comparison
-        # instead of comparing the full static unresolved total to a scoped D1
-        # table and reporting a false publication failure.
-        expected.pop("bb_unresolved", None)
+    # The published overview is the contract for the remote edition. A local
+    # SQLite file may be an incremental import, an older rebuild, or a partial
+    # maintenance artifact; using its row counts here can make a correct D1
+    # release fail verification (or let a stale count pass). Keep those local
+    # files available for diagnostics, but never replace the content-addressed
+    # publication counts with them.
     return expected
 
 
@@ -269,10 +217,15 @@ def main() -> None:
     )
     edition = current_edition_expectation(overview, roster)
     expected = dataset_rows(overview)
+    # ``bb_unresolved`` is an audit ledger whose INSERT OR IGNORE import can
+    # deduplicate rows. Its published source count is therefore a ceiling,
+    # rather than an exact remote row-count contract.
+    unresolved_ceiling = expected.pop("bb_unresolved", None)
     game_expected = {"bb_ncaa_player_box": expected.pop("bb_ncaa_player_box")}
     game_expected.update({key: expected.pop(key) for key in ("bb_ncaa_game_rosters", "bb_ncaa_officials")})
     actual = remote_counts(list(expected), D1_DB_NAME)
     actual.update(remote_counts(list(game_expected), NCAA_BOX_D1_DATABASE))
+    unresolved_actual = remote_counts(["bb_unresolved"], D1_DB_NAME)["bb_unresolved"]
     expected.update(game_expected)
     mismatches = [
         f"{table}: expected {expected[table]:,}, found {actual[table]:,}"
@@ -281,6 +234,12 @@ def main() -> None:
     ]
     if mismatches:
         raise SystemExit("Basketball D1 coverage mismatch:\n" + "\n".join(mismatches))
+    if unresolved_ceiling is not None and not (0 < unresolved_actual <= unresolved_ceiling):
+        raise SystemExit(
+            "Basketball D1 unresolved ledger mismatch: "
+            f"expected a positive deduplicated count <= {unresolved_ceiling:,}, "
+            f"found {unresolved_actual:,}"
+        )
     try:
         validate_current_edition(
             edition, remote_current_edition(str(edition["model_id"]))
@@ -291,6 +250,7 @@ def main() -> None:
         f"Basketball D1 coverage verified: {len(expected)} tables, "
         f"{sum(actual.values()):,} rows across the published edition "
         "(all retained NCAA game rows plus historical season summaries); "
+        f"unresolved ledger {unresolved_actual:,} rows (source ceiling {unresolved_ceiling:,}); "
         f"model {edition['model_id']} has {edition['forecasts']:,} forecasts and "
         f"{edition['roster_scenarios']:,} matching roster scenarios."
     )
