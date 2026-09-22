@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditRecruitingDestinationRoster, rankRecruitingProduction, summarizeRecruitingDestinationProduction } from "./recruiting-production-rank";
+import { auditRecruitingDestinationRoster, recruitingProductionProfile, rankRecruitingProduction, summarizeRecruitingDestinationProduction } from "./recruiting-production-rank";
 import type { RecruitingPerson } from "./recruiting";
 import release from "../../public/data/basketball/recruiting.json";
 
@@ -36,6 +36,21 @@ const person = (overrides: Partial<RecruitingPerson> = {}): RecruitingPerson => 
 });
 
 describe("recruiting production rank", () => {
+  it("exposes retained raw profile fields without turning missing values into zeroes", () => {
+    const profile = recruitingProductionProfile(person().stats!);
+    expect(profile.map(({ key, value }) => [key, value])).toEqual([
+      ["topg", 2],
+      ["tov_rate", 0.14],
+      ["three_pct", 0.35],
+      ["ft_pct", 0.75],
+      ["three_rate", 0.4],
+      ["ft_rate", 0.25],
+    ]);
+    const missing = recruitingProductionProfile({ ...person().stats!, topg: null, three_pct: null });
+    expect(missing.find(({ key }) => key === "topg")?.value).toBeNull();
+    expect(missing.find(({ key }) => key === "three_pct")?.value).toBeNull();
+  });
+
   it("admits the retained release only through its exact numeric source IDs", () => {
     const rows = rankRecruitingProduction(release.people as RecruitingPerson[]);
     expect(rows.length).toBeGreaterThan(0);

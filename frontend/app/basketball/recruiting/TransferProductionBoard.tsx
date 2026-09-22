@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { auditRecruitingDestinationRoster, rankRecruitingProduction, summarizeRecruitingDestinationProduction, type RecruitingProductionRankRow } from "../../_lib/recruiting-production-rank";
+import { auditRecruitingDestinationRoster, recruitingProductionProfile, rankRecruitingProduction, summarizeRecruitingDestinationProduction, type RecruitingProductionRankRow } from "../../_lib/recruiting-production-rank";
 import type { ProspectProgram } from "../../_lib/prospect-schools";
 import type { RecruitingPerson } from "../../_lib/recruiting";
 import type { BBRosters } from "../../_lib/basketball-types";
@@ -14,6 +14,10 @@ function destinationName(teamId: string, programs: ProspectProgram[]) {
 function ProductionRow({ row, rank, programs }: { row: RecruitingProductionRankRow; rank: number; programs: ProspectProgram[] }) {
   const { person, stats } = row;
   const destination = destinationName(person.team_id, programs);
+  const profile = recruitingProductionProfile(stats);
+  const profileValue = (entry: typeof profile[number]) => entry.format === "percent"
+    ? percent(entry.value)
+    : number(entry.value);
   return <tr>
     <td className="numeric"><strong>#{rank}</strong></td>
     <th scope="row"><Link href={`/basketball/player/?id=${encodeURIComponent(stats.id)}&season=${stats.season}`}><strong>{person.name}</strong></Link><small>{person.category} · exact source player ID {stats.id}</small></th>
@@ -25,6 +29,7 @@ function ProductionRow({ row, rank, programs }: { row: RecruitingProductionRankR
     <td className="numeric">{number(stats.rpg)}</td>
     <td className="numeric">{number(stats.apg)}</td>
     <td className="numeric">{percent(stats.ts)}</td>
+    <td><span>{profile.slice(0, 2).map((entry) => `${entry.label} ${profileValue(entry)}`).join(" · ")}</span><small>{profile.slice(2, 4).map((entry) => `${entry.label} ${profileValue(entry)}`).join(" · ")}</small><small>{profile.slice(4).map((entry) => `${entry.label} ${profileValue(entry)}`).join(" · ")}</small></td>
     <td className="numeric">{row.score == null ? "—" : row.score.toFixed(2)}<small>{row.scoredFields}/{row.availableFields} fields</small></td>
   </tr>;
 }
@@ -42,7 +47,7 @@ export default function TransferProductionBoard({ people, programs, rosters, edi
       <div><div className="eyebrow">Transfer production / exact prior player IDs</div><h2 id="transfer-production-board">Which incoming players carried prior workload?</h2></div>
       <span className="note">{ranked.length.toLocaleString()} ranked · {eligible.toLocaleString()} eligible</span>
     </div>
-    <p className="note">The index standardizes every eligible retained transfer row&apos;s prior MPG, scoring, rebounding, playmaking, steals, blocks, true shooting and effective field-goal rate. Each row links to its exact source player file. It is a transparent comparison aid; missing fields stay missing and it does not project a new-school role, eligibility or future performance.</p>
+    <p className="note">The index standardizes every eligible retained transfer row&apos;s prior MPG, scoring, rebounding, playmaking, steals, blocks, true shooting and effective field-goal rate. Each row also shows retained raw turnover, shooting and free-throw rate context. Each row links to its exact source player file. It is a transparent comparison aid; missing fields stay missing and it does not project a new-school role, eligibility or future performance.</p>
     <div className="strip" aria-label="Transfer production coverage" style={{ marginBottom: 16 }}>
       <div><strong>{eligible.toLocaleString()}</strong><span>Transfers with stats</span></div>
       <div><strong>{ranked.length.toLocaleString()}</strong><span>With ≥4 scored fields</span></div>
@@ -50,7 +55,7 @@ export default function TransferProductionBoard({ people, programs, rosters, edi
       <div><strong>{new Date(reviewedAt).toLocaleDateString("en-US", { timeZone: "UTC" })}</strong><span>Reviewed UTC</span></div>
     </div>
     <div className="table-scroll"><table className="data-table">
-      <thead><tr><th>Rank</th><th>Player</th><th>Recorded destination</th><th>Prior program</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th><th className="numeric">Index</th></tr></thead>
+      <thead><tr><th>Rank</th><th>Player</th><th>Recorded destination</th><th>Prior program</th><th className="numeric">GP</th><th className="numeric">MPG</th><th className="numeric">PPG</th><th className="numeric">RPG</th><th className="numeric">APG</th><th className="numeric">TS%</th><th>Raw profile</th><th className="numeric">Index</th></tr></thead>
       <tbody>{ranked.map((row, index) => <ProductionRow key={row.stats.id} row={row} rank={index + 1} programs={programs} />)}</tbody>
     </table></div>
     {destinations.length > 0 && <section style={{ marginTop: 24 }} aria-labelledby="transfer-destination-summary">

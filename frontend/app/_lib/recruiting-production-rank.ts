@@ -20,6 +20,35 @@ export const recruitingProductionMetrics = [
 export type RecruitingProductionMetric = (typeof recruitingProductionMetrics)[number];
 export type RecruitingProductionStats = NonNullable<RecruitingPerson["stats"]>;
 
+/**
+ * Additional source fields shown beside the production index. These values
+ * are descriptive context only; they are deliberately excluded from the
+ * index because turnover rate and shot/FT rates are not interchangeable
+ * measures of production.
+ */
+export const recruitingProductionProfileMetrics = [
+  { key: "topg", label: "TO/G", format: "number" },
+  { key: "tov_rate", label: "TO%", format: "percent" },
+  { key: "three_pct", label: "3P%", format: "percent" },
+  { key: "ft_pct", label: "FT%", format: "percent" },
+  { key: "three_rate", label: "3PA rate", format: "percent" },
+  { key: "ft_rate", label: "FT rate", format: "percent" },
+] as const;
+
+export type RecruitingProductionProfileMetric = (typeof recruitingProductionProfileMetrics)[number];
+
+/**
+ * Return retained prior-season context without filling missing source values.
+ * Keeping this as a typed projection makes the UI easy to audit against the
+ * release schema and prevents a display-only fallback from becoming a stat.
+ */
+export function recruitingProductionProfile(stats: RecruitingProductionStats) {
+  return recruitingProductionProfileMetrics.map((metric) => ({
+    ...metric,
+    value: stats[metric.key],
+  }));
+}
+
 export type RecruitingProductionRankRow = {
   person: RecruitingPerson;
   stats: RecruitingProductionStats;
