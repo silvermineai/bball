@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { downloadCsv, toCsv } from "../_lib/csv";
 import { parseWomensLowerDivisionEdition, type WomensLowerDivisionEdition, type WomensLowerDivisionStatistic } from "../_lib/womens-lower-division-integrity";
 import { womensLowerRankingRows, womensLowerRankingValueLabel } from "../_lib/womens-lower-division-rankings";
+import { womensLowerIndividualExport } from "../_lib/womens-lower-division-view";
 
 const PAGE_SIZE = 50;
 const display = (value: string | number | null) => value == null || value === "" ? "—" : String(value);
@@ -14,6 +16,7 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
   const [query, setQuery] = useState("");
   const [minimumGames, setMinimumGames] = useState("0");
   const [page, setPage] = useState(0);
+  const [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -45,7 +48,14 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
     if (current?.individual.length && !current.individual.some((item) => item.statistic === statistic)) setStatistic(current.individual[0].statistic);
   }, [current, statistic]);
   useEffect(() => setPage(0), [division, statistic, query, minimumGames]);
+  useEffect(() => setExportMessage(""), [division, statistic, query, minimumGames]);
   const visibleRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const download = () => {
+    if (!current || !edition) return;
+    const exported = womensLowerIndividualExport(current.individual, query, Number(minimumGames) || 0);
+    downloadCsv(`womens-d${division}-individual-source-${current.season}.csv`, toCsv(exported.headers, exported.rows));
+    setExportMessage(`Downloaded ${exported.rows.length.toLocaleString()} source rows across ${current.individual.length.toLocaleString()} individual statistics.`);
+  };
 
   return <section id="wbb-lower-ranking" className="field-card womens-lower-ranking-card" aria-labelledby="womens-lower-ranking-title">
     <div className="eyebrow">SOURCE-NATIVE RANKINGS · WOMEN&apos;S D{division}</div>
@@ -60,7 +70,8 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
         <label htmlFor="wbb-lower-ranking-min-games">MINIMUM GAMES</label>
         <select id="wbb-lower-ranking-min-games" value={minimumGames} onChange={(event) => setMinimumGames(event.target.value)}><option value="0">Any recorded games</option><option value="5">5+</option><option value="10">10+</option><option value="20">20+</option></select>
       </div>
-      <p className="note">Showing {visibleRows.length ? `${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + visibleRows.length}` : "0"} of {rows.length.toLocaleString()} matching source rows · value field <code>{selected ? womensLowerRankingValueLabel(selected) : "—"}</code> · {edition.receipts.length.toLocaleString()} receipt-backed responses.</p>
+      <div className="section-heading" style={{ marginBottom: 12 }}><p className="note">Showing {visibleRows.length ? `${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + visibleRows.length}` : "0"} of {rows.length.toLocaleString()} matching source rows · value field <code>{selected ? womensLowerRankingValueLabel(selected) : "—"}</code> · {edition.receipts.length.toLocaleString()} receipt-backed responses.</p><button className="button secondary" type="button" onClick={download} disabled={!rows.length}>Download filtered source CSV ↓</button></div>
+      {exportMessage ? <p className="note" role="status">{exportMessage}</p> : null}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Source rank</th><th>Player</th><th>Team</th><th>Pos.</th><th className="numeric">Games</th><th className="numeric">{selected ? womensLowerRankingValueLabel(selected) : "Value"}</th><th>Team source path</th></tr></thead><tbody>{visibleRows.map((row, index) => <tr key={`${selected?.statistic}-${row.rank ?? "na"}-${row.name}-${row.team}-${index}`}><td className="rank-number">{row.rank == null ? "—" : `#${row.rank}`}</td><th scope="row">{row.name || "Name unavailable"}<small>{row.position || "Position unavailable"}</small></th><td>{row.team || "Team unavailable"}</td><td>{row.position || "—"}</td><td className="numeric">{display(row.games)}</td><td className="numeric"><strong>{display(row.value)}</strong></td><td><code>{row.teamSourcePath || "unavailable"}</code></td></tr>)}</tbody></table></div>
       {!visibleRows.length ? <p className="empty">No source rows match this search and threshold.</p> : null}
       {rows.length > PAGE_SIZE ? <div className="pagination" aria-label={`Women’s D${division} ranking pages`}><span>Page {page + 1} of {Math.ceil(rows.length / PAGE_SIZE)}</span><div><button className="button secondary" type="button" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>← Previous</button><button className="button secondary" type="button" disabled={(page + 1) * PAGE_SIZE >= rows.length} onClick={() => setPage((value) => value + 1)}>Next →</button></div></div> : null}

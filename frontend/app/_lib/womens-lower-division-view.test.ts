@@ -125,6 +125,21 @@ describe("women's lower-division source row view", () => {
     ]);
   });
 
+  it("applies the ranking search and minimum-games filter to source exports", () => {
+    const result = womensLowerIndividualExport([{
+      statistic: "scoring",
+      label: "Scoring",
+      source_url: "https://www.ncaa.com/stats/basketball-women/d2/current/individual/101",
+      rows: [
+        { rank: 1, name: "Ari Jones", g: 18, source_fields: { Name: "Ari Jones", G: "18", PPG: "20.0" } },
+        { rank: 2, name: "Bea Smith", g: 4, source_fields: { Name: "Bea Smith", G: "4", PPG: "19.0" } },
+      ],
+    }], "Ari", 10);
+    expect(result.rows).toEqual([[
+      "scoring", "Scoring", "https://www.ncaa.com/stats/basketball-women/d2/current/individual/101", 1, null, "Ari Jones", "18", "20.0",
+    ]]);
+  });
+
   it("builds a source-label player coverage index without joining names across teams", () => {
     const summary = summarizeWomensLowerDivisionPlayers([
       {
