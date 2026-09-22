@@ -68,6 +68,10 @@ const fields: TeamField[] = ([
 
 const querySchema = z.object({
   season: z.coerce.number().int().min(2024).max(2026).default(2026),
+  // The publisher team-season release does not carry an explicit division.
+  // Division I can be scoped by exact ESPN IDs from the retained team index;
+  // lower divisions must fail closed until a source-native release exists.
+  division: z.enum(["1", "2", "3", "all"]).default("all"),
   category: z.enum(["general", "offensive", "defensive"]).default("offensive"),
   stat: z.string().regex(/^[A-Za-z0-9]{1,80}$/).default("avgPoints"),
   q: z.string().trim().max(120).optional(),
@@ -80,6 +84,32 @@ const querySchema = z.object({
 
 const CACHE_TTL = 300;
 const DB_TIMEOUT_MS = 5000;
+const DIVISION_INDEX_TIMEOUT_MS = 2500;
+
+type DivisionIndex = { ids: Set<string>; season: string | null };
+
+async function readDivisionIndex(c: { env: Bindings; req: { url: string } }, division: "1"): Promise<DivisionIndex | null> {
+  if (!c.env.ASSETS) return null;
+  try {
+    const response = await withTimeout(
+      c.env.ASSETS.fetch(new Request(new URL("/data/teams.json", c.req.url))),
+      DIVISION_INDEX_TIMEOUT_MS,
+    );
+    if (!response.ok) return null;
+    const payload = await response.json() as { season?: unknown; teams?: unknown };
+    if (!Array.isArray(payload.teams)) return null;
+    const ids = new Set<string>();
+    for (const value of payload.teams) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const id = (value as Record<string, unknown>).id;
+      if (typeof id === "string" && /^\d+$/.test(id)) ids.add(id);
+      else if (typeof id === "number" && Number.isSafeInteger(id) && id >= 0) ids.add(String(id));
+    }
+    return ids.size ? { ids, season: typeof payload.season === "string" ? payload.season : null } : null;
+  } catch {
+    return null;
+  }
+}
 
 function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -110,7 +140,25 @@ function sourceReceipt(season: number, receiptJson: string | null | undefined): 
 
 export const teamStats = new Hono<{ Bindings: Bindings }>();
 teamStats.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, category, stat, q, ids: idsQuery, page, limit, direction, meta } = c.req.valid("query");
+  const { season, division, category, stat, q, ids: idsQuery, page, limit, direction, meta } = c.req.valid("query");
+  if (division === "2" || division === "3") {
+    return c.json({
+      error: `The team-season archive is not published for Division ${division}.`,
+      code: "division_not_published",
+      division,
+      available_divisions: ["1", "all"],
+      alternative: `/basketball/division-archive/?division=${division}`,
+      limitation: "The retained team-season rows do not carry an explicit division, so no division is inferred from team names or publisher IDs.",
+    }, 409, { "Cache-Control": "no-store" });
+  }
+  const divisionIndex = division === "1" ? await readDivisionIndex(c, "1") : null;
+  if (division === "1" && !divisionIndex) {
+    return c.json({
+      error: "The exact Division I team index is temporarily unavailable.",
+      code: "division_index_unavailable",
+      division,
+    }, 503, { "Cache-Control": "no-store" });
+  }
   const db = researchDb(c.env);
   const cache = edgeCache();
   const cacheKey = new Request(c.req.url, { method: "GET" });
@@ -125,7 +173,15 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
   if (meta === "1") {
     try {
       const seasons = await withTimeout(db.prepare("SELECT DISTINCT season FROM bb_team_season ORDER BY season DESC").all<{ season: number }>(), DB_TIMEOUT_MS);
-      const response = c.json({ seasons: seasons.results.map((row) => row.season), fields });
+      const response = c.json({
+        seasons: seasons.results.map((row) => row.season),
+        fields,
+        division,
+        available_divisions: ["1", "all"],
+        division_scope: division === "1"
+          ? { basis: "exact ESPN IDs from the retained D1 team index", team_count: divisionIndex?.ids.size ?? 0, season: divisionIndex?.season }
+          : { basis: "all rows in the publisher team-season release; division is not source-labeled" },
+      });
       response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
       if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
       return response;
@@ -142,6 +198,11 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
   if (ids.length > 500) return c.json({ error: "At most 500 team IDs may be requested." }, 400);
   const whereParts = ["season=?"];
   const binds: Array<string | number> = [season];
+  if (divisionIndex) {
+    const scopedIds = [...divisionIndex.ids];
+    whereParts.push(`team_id IN (${scopedIds.map(() => "?").join(",")})`);
+    binds.push(...scopedIds);
+  }
   if (search) {
     whereParts.push("(team_name LIKE ? OR team_id LIKE ?)");
     binds.push(search, search);
@@ -182,7 +243,7 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
       source = null;
     }
     const response = c.json({
-    season, field, page, page_size: limit,
+    season, division, field, page, page_size: limit,
     total: count?.total ?? 0, non_null: count?.non_null ?? 0,
     ranking: {
       direction,
@@ -190,6 +251,9 @@ teamStats.get("/", zValidator("query", querySchema), async (c) => {
       ranked_count: count?.non_null ?? 0,
       ties: "competition_rank",
     },
+    division_scope: division === "1"
+      ? { basis: "exact ESPN IDs from the retained D1 team index", team_count: divisionIndex?.ids.size ?? 0, season: divisionIndex?.season }
+      : { basis: "all rows in the publisher team-season release; division is not source-labeled" },
     source,
     rows: rows.results.map((row) => ({
       id: row.team_id, team: row.team_name || row.team_id, abbreviation: row.team_abbreviation,

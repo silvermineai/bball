@@ -8,7 +8,8 @@ import { teamStatCohortPercentile, teamStatCohortRank } from "../../_lib/team-st
 type Field = { category: "general" | "offensive" | "defensive"; key: string; label: string; unit: "per game" | "percent" | "count" | "ratio" };
 type Row = { id: string; team: string; abbreviation: string | null; value: number | null; display: string | null; rank?: number | null };
 type SourceReceipt = { dataset: "team_season"; season: number; url: string | null; fetched_at: string | null; sha256: string | null };
-type Result = { season: number; field: Field; page: number; page_size: number; total: number; non_null: number; ranking?: { direction: "desc" | "asc"; population: string; ranked_count: number; ties?: "competition_rank" }; source: SourceReceipt | null; rows: Row[] };
+type Division = "1" | "2" | "3" | "all";
+type Result = { season: number; division: Division; field: Field; page: number; page_size: number; total: number; non_null: number; ranking?: { direction: "desc" | "asc"; population: string; ranked_count: number; ties?: "competition_rank" }; source: SourceReceipt | null; rows: Row[] };
 const labels = { general: "General", offensive: "Offensive", defensive: "Defensive" };
 function shown(row: Row, field: Field) {
   if (row.value == null && row.display == null) return "—";
@@ -19,7 +20,7 @@ function shown(row: Row, field: Field) {
 
 export default function TeamStats() {
   const [fields, setFields] = useState<Field[]>([]), [seasons, setSeasons] = useState<number[]>([]);
-  const [season, setSeason] = useState("2026"), [fieldKey, setFieldKey] = useState("offensive:avgPoints");
+  const [season, setSeason] = useState("2026"), [division, setDivision] = useState<Division>("1"), [fieldKey, setFieldKey] = useState("offensive:avgPoints");
   const [query, setQuery] = useState(""), [direction, setDirection] = useState<"desc" | "asc">("desc"), [page, setPage] = useState(0);
   const [result, setResult] = useState<Result | null>(null), [error, setError] = useState(""), [copied, setCopied] = useState(""), [hydrated, setHydrated] = useState(false), [exporting, setExporting] = useState(false), [exportMessage, setExportMessage] = useState(""), [retryNonce, setRetryNonce] = useState(0);
   const field = useMemo(() => fields.find((f) => `${f.category}:${f.key}` === fieldKey) || null, [fields, fieldKey]);
@@ -29,6 +30,7 @@ export default function TeamStats() {
     const stat = params.get("stat");
     if (category && stat) setFieldKey(`${category}:${stat}`);
     if (params.get("season")) setSeason(params.get("season")!);
+    if (["1", "2", "3", "all"].includes(params.get("division") || "")) setDivision(params.get("division") as Division);
     setQuery(params.get("q") || "");
     setDirection(params.get("direction") === "asc" ? "asc" : "desc");
     const requestedPage = Number(params.get("page"));
@@ -37,9 +39,9 @@ export default function TeamStats() {
   }, []);
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/basketball/research/team-stats?meta=1", { signal: controller.signal }).then((r) => { if (!r.ok) throw new Error("The team-field catalog is unavailable."); return r.json() as Promise<{ seasons: number[]; fields: Field[] }>; }).then((p) => { setFields(p.fields); setSeasons(p.seasons); if (p.seasons.length && !p.seasons.includes(Number(season))) setSeason(String(p.seasons[0])); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); });
+    fetch(`/api/basketball/research/team-stats?meta=1&division=${division}`, { signal: controller.signal }).then(async (r) => { const payload = await r.json().catch(() => null) as { error?: string; seasons?: number[]; fields?: Field[] } | null; if (!r.ok || !payload?.fields || !payload.seasons) throw new Error(payload?.error || "The team-field catalog is unavailable."); return payload; }).then((p) => { setFields(p.fields!); setSeasons(p.seasons!); if (p.seasons!.length && !p.seasons!.includes(Number(season))) setSeason(String(p.seasons![0])); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [retryNonce]);
+  }, [division, retryNonce]);
   useEffect(() => {
     if (!fields.length || fields.some((candidate) => `${candidate.category}:${candidate.key}` === fieldKey)) return;
     setFieldKey(`${fields[0].category}:${fields[0].key}`);
@@ -48,20 +50,21 @@ export default function TeamStats() {
     if (!hydrated || !field) return;
     const url = new URL(window.location.href);
     url.searchParams.set("season", season);
+    url.searchParams.set("division", division);
     url.searchParams.set("category", field.category);
     url.searchParams.set("stat", field.key);
     if (query.trim()) url.searchParams.set("q", query.trim()); else url.searchParams.delete("q");
     if (direction === "asc") url.searchParams.set("direction", direction); else url.searchParams.delete("direction");
     if (page) url.searchParams.set("page", String(page)); else url.searchParams.delete("page");
     window.history.replaceState(window.history.state, "", url);
-  }, [direction, field, hydrated, page, query, season]);
+  }, [direction, division, field, hydrated, page, query, season]);
   useEffect(() => {
     if (!field) return;
     const controller = new AbortController(); setResult(null); setError("");
-    const params = new URLSearchParams({ season, category: field.category, stat: field.key, page: String(page), direction }); if (query.trim()) params.set("q", query.trim());
-    fetch(`/api/basketball/research/team-stats?${params}`, { signal: controller.signal }).then((r) => { if (!r.ok) throw new Error("The team statistics could not be loaded. Please reload."); return r.json() as Promise<Result>; }).then(setResult).catch((e) => { if (e.name !== "AbortError") setError(e.message); });
+    const params = new URLSearchParams({ season, division, category: field.category, stat: field.key, page: String(page), direction }); if (query.trim()) params.set("q", query.trim());
+    fetch(`/api/basketball/research/team-stats?${params}`, { signal: controller.signal }).then(async (r) => { const payload = await r.json().catch(() => null) as { error?: string } | null; if (!r.ok) throw new Error(payload?.error || "The team statistics could not be loaded. Please reload."); return payload as Result; }).then(setResult).catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
-  }, [direction, field, page, query, retryNonce, season]);
+  }, [direction, division, field, page, query, retryNonce, season]);
   const grouped = useMemo(() => fields.reduce<Record<string, Field[]>>((g, f) => { (g[f.category] ||= []).push(f); return g; }, {}), [fields]);
   const reset = (fn: () => void) => { setPage(0); fn(); };
   const retryArchive = () => { setError(""); setRetryNonce((value) => value + 1); };
@@ -90,7 +93,7 @@ export default function TeamStats() {
     try {
       const rows: Row[] = [];
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
-        const params = new URLSearchParams({ season, category: field.category, stat: field.key, page: String(requestedPage), direction });
+        const params = new URLSearchParams({ season, division, category: field.category, stat: field.key, page: String(requestedPage), direction });
         if (query.trim()) params.set("q", query.trim());
         const response = await fetch(`/api/basketball/research/team-stats?${params}`);
         if (!response.ok) throw new Error("The complete team-stat export could not be loaded.");
@@ -109,8 +112,11 @@ export default function TeamStats() {
   return <>
     <div className="page-title"><div className="eyebrow">Team-stat archive / season records</div><h1>See how every<br /><em>program plays.</em></h1><p>Search the aggregate team-season fields retained in the archive. Use the archive for context and scouting; Silvermine ratings and forecasts remain separate model artifacts.</p></div>
     <div className="strip"><div><strong>{result?.total.toLocaleString() ?? "—"}</strong><span>Team records in view</span></div><div><strong>{result?.non_null.toLocaleString() ?? "—"}</strong><span>Records with this field</span></div><div><strong>{fields.length || "—"}</strong><span>Retained fields</span></div><div><strong>{seasons.length || "—"}</strong><span>Available seasons</span></div></div>
-    <div className="toolbar"><label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => setSeason(e.target.value))}>{!seasons.length && <option value={season}>{season}</option>}{seasons.map((s) => <option key={s} value={s}>{s - 1}–{String(s).slice(-2)}</option>)}</select></label><label className="control"><span>FIELD</span><select value={fieldKey} onChange={(e) => reset(() => setFieldKey(e.target.value))}>{Object.entries(grouped).map(([category, candidates]) => <optgroup key={category} label={labels[category as keyof typeof labels]}>{candidates.map((f) => <option key={`${f.category}:${f.key}`} value={`${f.category}:${f.key}`}>{f.label}</option>)}</optgroup>)}</select></label><label className="control"><span>PROGRAM</span><input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} placeholder="Search programs" /></label><label className="control"><span>ORDER</span><select value={direction} onChange={(e) => reset(() => setDirection(e.target.value as "desc" | "asc"))}><option value="desc">Highest first</option><option value="asc">Lowest first</option></select></label><button className="button secondary" type="button" onClick={share}>Copy stat link</button></div>
+    <div className="toolbar"><label className="control"><span>DIVISION</span><select value={division} onChange={(e) => reset(() => setDivision(e.target.value as Division))}><option value="1">Division I · exact index</option><option value="2">Division II</option><option value="3">Division III</option><option value="all">Publisher rows · unlabeled</option></select></label><label className="control"><span>SEASON</span><select value={season} onChange={(e) => reset(() => setSeason(e.target.value))}>{!seasons.length && <option value={season}>{season}</option>}{seasons.map((s) => <option key={s} value={s}>{s - 1}–{String(s).slice(-2)}</option>)}</select></label><label className="control"><span>FIELD</span><select value={fieldKey} onChange={(e) => reset(() => setFieldKey(e.target.value))}>{Object.entries(grouped).map(([category, candidates]) => <optgroup key={category} label={labels[category as keyof typeof labels]}>{candidates.map((f) => <option key={`${f.category}:${f.key}`} value={`${f.category}:${f.key}`}>{f.label}</option>)}</optgroup>)}</select></label><label className="control"><span>PROGRAM</span><input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} placeholder="Search programs" /></label><label className="control"><span>ORDER</span><select value={direction} onChange={(e) => reset(() => setDirection(e.target.value as "desc" | "asc"))}><option value="desc">Highest first</option><option value="asc">Lowest first</option></select></label><button className="button secondary" type="button" onClick={share}>Copy stat link</button></div>
     {(copied || exportMessage) && <p className="note" role="status">{copied || exportMessage}</p>}
+    <p className="note" style={{ marginBottom: 20 }}>
+      {division === "1" ? "Division I rows are scoped by exact ESPN team IDs from the retained D1 index." : division === "all" ? "Publisher rows are shown without a division label; no division is inferred from team names." : `Division ${division} requires a source-native team-season release and remains unavailable when the publisher does not label rows.`}
+    </p>
     {field && <p className="note" style={{ marginBottom: 20 }}><strong>{field.label}</strong> · {field.unit}. Values and display strings are preserved exactly in the archive.{result?.source ? <> Data edition captured {result.source.fetched_at ? new Date(result.source.fetched_at).toLocaleDateString("en-US", { timeZone: "UTC" }) : "date unavailable"} · internal receipt <code>{result.source.sha256}</code>.</> : " The internal data receipt is unavailable for this response."}</p>}
     {error ? <div role="alert" className="status-error"><span>{error}</span><button className="button secondary" type="button" onClick={retryArchive}>Retry team archive</button></div> : !result ? <p role="status" className="empty">Loading team statistics…</p> : <><div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching teams · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><div className="button-row"><button className="button secondary" type="button" onClick={download}>Download page CSV ↓</button><button className="button secondary" type="button" onClick={downloadAll} disabled={exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV ↓"}</button></div></div><p className="note">Ranks use the API&apos;s competition rank within the matching season, field, direction, and program cohort; tied values share a rank. A dash means the response metadata cannot support a defensible position.</p><div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Program</th><th>Team ID</th><th>Abbr.</th><th className="numeric">{result.field.label}</th><th className="numeric">Percentile</th></tr></thead><tbody>{result.rows.map((r, index) => { const rank = teamStatCohortRank(result.page, result.page_size, result.total, index, r.rank); const percentile = teamStatCohortPercentile(rank, result.total); return <tr key={r.id}><td className="rank-number">{rank == null ? "—" : `#${rank}`}</td><td><Link href={`/basketball/programs/${r.id}/`}>{r.team}</Link></td><td><small>{r.id}</small></td><td>{r.abbreviation || "—"}</td><td className="numeric"><strong>{shown(r, result.field)}</strong></td><td className="numeric">{percentile == null ? "—" : `${fmt(percentile, 1)}%`}</td></tr>; })}</tbody></table></div>{!result.rows.length && <p className="empty">No teams match these filters.</p>}<div className="pagination"><span>{result.total.toLocaleString()} records · recorded values remain available</span><div><button className="button secondary" disabled={!page} onClick={() => setPage(page - 1)}>← Previous</button><button className="button secondary" disabled={(page + 1) * result.page_size >= result.total} onClick={() => setPage(page + 1)}>Next →</button></div></div></>}
   </>;

@@ -1690,6 +1690,52 @@ describe("bball api", () => {
     expect(binds.some((args) => args.includes(500) && args.includes(0))).toBe(true);
   });
 
+  it("scopes team statistics to the exact retained Division I index", async () => {
+    const binds: unknown[][] = [];
+    const prepare = vi.fn((sql: string) => ({
+      bind: (...args: unknown[]) => {
+        binds.push(args);
+        return sql.includes("count(*) AS total")
+          ? { first: async () => ({ total: 2, non_null: 2 }) }
+          : sql.includes("receipt_json")
+            ? { first: async () => null }
+            : { all: async () => ({ results: [{ team_id: "150", team_name: "Duke", team_abbreviation: "DUK", value: 82.1, display: "82.1", rank: 1 }] }) };
+      },
+    }));
+    const response = await app.request(
+      "/api/basketball/research/team-stats?season=2026&division=1&category=offensive&stat=avgPoints",
+      {},
+      {
+        DB: { prepare },
+        ASSETS: { fetch: vi.fn(async () => new Response(JSON.stringify({ season: "2025-26", teams: [{ id: 150 }, { id: "248" }] }))) },
+      },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      division: "1",
+      division_scope: { basis: "exact ESPN IDs from the retained D1 team index", team_count: 2 },
+      rows: [{ id: "150", rank: 1 }],
+    });
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("team_id IN (?,?)"))).toBe(true);
+    expect(binds.some((args) => args.includes("150") && args.includes("248"))).toBe(true);
+  });
+
+  it("fails closed when a lower-division team-season release is not published", async () => {
+    const prepare = vi.fn();
+    const response = await app.request(
+      "/api/basketball/research/team-stats?season=2026&division=2&category=offensive&stat=avgPoints",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      code: "division_not_published",
+      division: "2",
+      available_divisions: ["1", "all"],
+    });
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it("attaches the verified team-season source receipt to aggregate rows", async () => {
     const receipt = {
       url: "https://example.test/team-season-2026.parquet",
