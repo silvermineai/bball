@@ -14,6 +14,17 @@ describe("football source statistics", () => {
           }),
         };
       }
+      if (sql.includes("GROUP BY division")) {
+        return {
+          bind: () => ({
+            all: async () => ({ results: [
+              { division: "d2", rows: 0, teams: 0 },
+              { division: "d3", rows: 12, teams: 2 },
+              { division: "unknown", rows: 1, teams: 1 },
+            ] }),
+          }),
+        };
+      }
       return {
         bind: () => ({
           all: async () => ({
@@ -59,6 +70,15 @@ describe("football source statistics", () => {
       filters: { division: "d3" },
       field_catalog: [{ key: "athlete_name", observed_rows: 1, share: 1 }, { key: "yards", observed_rows: 1, share: 1 }],
       field_catalog_scope: "returned_page",
+      division_coverage: {
+        status: "exact",
+        scope: "season_and_dataset",
+        rows: [
+          { division: "d2", rows: 0, teams: 0 },
+          { division: "d3", rows: 12, teams: 2 },
+          { division: "unknown", rows: 1, teams: 1 },
+        ],
+      },
       rows: [{
         athlete_id: "123",
         stats: { athlete_name: "Example Player", yards: "91" },

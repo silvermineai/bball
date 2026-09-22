@@ -25,6 +25,12 @@ type Row = {
   stats: Record<string, unknown>;
   game: { id: string; kickoff: string; home_name: string | null; away_name: string | null; home_score: number | null; away_score: number | null } | null;
 };
+type DivisionKey = "fbs" | "fcs" | "d2" | "d3" | "naia" | "unknown";
+type DivisionCoverageResult = {
+  status: "exact" | "unavailable";
+  scope: "season_and_dataset";
+  rows: Array<{ division: DivisionKey; rows: number; teams: number }>;
+};
 type Result = {
   dataset: Dataset;
   season: number;
@@ -33,6 +39,7 @@ type Result = {
   total: number;
   field_catalog?: Array<{ key: string; observed_rows: number; share: number | null }>;
   field_catalog_scope?: "returned_page";
+  division_coverage?: DivisionCoverageResult;
   source_receipts: Array<{ dataset: Exclude<Dataset, "all">; season: number; fetched_at: string; sha256: string }>;
   rows: Row[];
 };
@@ -47,6 +54,14 @@ const exportRow = (result: Result, row: Row) => {
   const receipt = result.source_receipts.find((item) => item.dataset === row.dataset && item.season === row.season);
   return [row.dataset, row.season, row.record_key, row.athlete_id, row.team_id, row.game_id, row.category, row.kickoff, JSON.stringify(row.stats), receipt?.fetched_at, receipt?.sha256];
 };
+const divisionLabel = (division: DivisionKey) => ({
+  fbs: "FBS · Division I",
+  fcs: "FCS · Division I",
+  d2: "Division II",
+  d3: "Division III",
+  naia: "NAIA",
+  unknown: "Unavailable / unrecognised",
+}[division]);
 
 export default function SourceStats() {
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -206,6 +221,7 @@ export default function SourceStats() {
       {!result ? <p className="empty" role="status">{meta ? "Loading source records…" : "Loading source catalog…"}</p> : <>
         {result.source_receipts.length > 0 && <details className="paper-panel" style={{ marginBottom: 22 }}><summary><strong>Edition receipts for the {result.season} edition</strong> · {result.source_receipts.length} release{result.source_receipts.length === 1 ? "" : "s"}</summary><div className="table-scroll" style={{ marginTop: 16 }}><table className="data-table"><thead><tr><th>Dataset</th><th>Retrieved</th><th>SHA-256</th><th>Status</th></tr></thead><tbody>{result.source_receipts.map((receipt) => <tr key={`${receipt.dataset}-${receipt.season}`}><td>{labels[receipt.dataset]}</td><td>{date(receipt.fetched_at)}</td><td className="mono">{receipt.sha256.slice(0, 16)}…</td><td>Retained</td></tr>)}</tbody></table></div></details>}
         {result.field_catalog && <section className="paper-panel" style={{ marginBottom: 22 }} aria-labelledby="observed-source-fields"><div className="eyebrow">Source field catalog</div><h2 id="observed-source-fields">Fields observed in this page.</h2><p>These are the original top-level keys present in the returned source rows. Counts show how many rows on this page supplied each key; a missing key remains missing rather than being inferred.</p>{result.field_catalog.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Source field</th><th className="numeric">Rows with field</th><th className="numeric">Page share</th></tr></thead><tbody>{result.field_catalog.map((field) => <tr key={field.key}><th scope="row" className="mono">{field.key}</th><td className="numeric">{field.observed_rows}</td><td className="numeric">{field.share == null ? "—" : `${Math.round(field.share * 100)}%`}</td></tr>)}</tbody></table></div> : <p className="empty">No structured source fields were returned for this page.</p>}</section>}
+        {result.division_coverage && <section className="paper-panel" style={{ marginBottom: 22 }} aria-labelledby="division-source-coverage"><div className="eyebrow">Exact division coverage</div><h2 id="division-source-coverage">See where player rows exist.</h2><p>Counts below cover the selected season and dataset. Division labels come only from an exact season and team-ID join to the retained team directory; a zero is a verified empty slice, while unavailable means the coverage query timed out.</p>{result.division_coverage.status === "exact" ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Division</th><th className="numeric">Source rows</th><th className="numeric">Teams represented</th><th>Status</th></tr></thead><tbody>{["fbs", "fcs", "d2", "d3", "naia", "unknown"].map((division) => { const row = result.division_coverage?.rows.find((candidate) => candidate.division === division); return <tr key={division}><th scope="row">{divisionLabel(division as DivisionKey)}</th><td className="numeric">{(row?.rows || 0).toLocaleString()}</td><td className="numeric">{(row?.teams || 0).toLocaleString()}</td><td>{row?.rows ? "Retained" : "No retained rows"}</td></tr>; })}</tbody></table></div> : <p className="empty">Division coverage is temporarily unavailable. The filtered rows remain independently bounded and exact.</p>}</section>}
         <div className="section-heading" style={{ marginBottom: 20 }}><p>{result.total.toLocaleString()} matching records · page {page + 1} of {Math.max(1, Math.ceil(result.total / result.page_size))}</p><Link className="hero-link" href="/football/players/">Open identified player rankings →</Link></div>
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Source row</th><th>Dataset / category</th><th>Game context</th><th>Retained fields</th></tr></thead><tbody>{result.rows.map((row) => <tr key={`${row.dataset}-${row.season}-${row.record_key}`}><td><strong>{row.athlete_id ? <Link href={`/football/player/?id=${encodeURIComponent(row.athlete_id)}&season=${row.season}`}>{String(row.stats.athlete_name || row.stats.player_name || row.athlete_id)}</Link> : String(row.stats.athlete_name || row.stats.player_name || "Name-only source row")}</strong><small>{row.athlete_id ? `Athlete ${row.athlete_id}` : "No stable athlete ID supplied"}</small><small>{row.team_id ? `Team ${row.team_id}` : "Team unavailable"}{row.game_id ? ` · Game ${row.game_id}` : ""}</small></td><td>{labels[row.dataset]}<small>{row.category || "Uncategorized"} · {row.season}</small></td><td>{row.game ? <><span>{row.game.away_name || "Away"} at {row.game.home_name || "Home"}</span><small>{date(row.game.kickoff)} · {row.game.away_score ?? "—"}–{row.game.home_score ?? "—"}</small></> : <span>Season or team aggregate</span>}</td><td><details><summary>Inspect {Object.keys(row.stats).length} source fields</summary><dl className="raw-stat-grid">{Object.entries(row.stats).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => <div key={key}><dt>{pretty(key)}</dt><dd>{display(value)}</dd></div>)}</dl></details></td></tr>)}</tbody></table></div>
         {!result.rows.length && <p className="empty">No source records match these filters.</p>}

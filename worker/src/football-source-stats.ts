@@ -6,6 +6,12 @@ import { footballDb } from "./football-db";
 const DATASETS = ["box", "passing", "rushing", "receiving", "defense", "specialists", "team_advanced", "teams", "betting", "ncaa_player_stats", "rosters", "recruits", "team_talent", "returning_production"] as const;
 type Dataset = (typeof DATASETS)[number];
 
+type DivisionCoverage = {
+  division: "fbs" | "fcs" | "d2" | "d3" | "naia" | "unknown";
+  rows: number;
+  teams: number;
+};
+
 const querySchema = z.object({
   dataset: z.enum(["all", ...DATASETS]).default("box"),
   season: z.coerce.number().int().min(2010).max(2035).default(2025),
@@ -180,8 +186,9 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
     away_score: number | null;
   }> };
   let receipts: { results: Array<{ dataset: Dataset; season: number; receipt_json: string }> };
+  let divisionCoverage: { results: DivisionCoverage[] } | null = null;
   try {
-    [count, rows, receipts] = await withTimeout(Promise.all([
+    [count, rows, receipts, divisionCoverage] = await withTimeout(Promise.all([
       db.prepare(`SELECT count(*) AS total
         FROM football_stats s LEFT JOIN football_games g ON g.id=s.game_id
         WHERE ${where}`)
@@ -212,6 +219,29 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
       db.prepare(`SELECT dataset,season,receipt_json FROM football_sources WHERE season=?${q.dataset === "all" ? "" : " AND dataset=?"} ORDER BY dataset`)
         .bind(...(q.dataset === "all" ? [q.season] : [q.season, q.dataset]))
         .all<{ dataset: Dataset; season: number; receipt_json: string }>(),
+      // Division coverage is deliberately based on the exact retained team
+      // directory join. It makes an empty D2/D3 player slice explainable while
+      // preventing a team name or source category from creating a division.
+      withTimeout(
+        db.prepare(`SELECT CASE
+          WHEN lower(trim(COALESCE(json_extract(team_scope.stats_json,'$.division'),''))) IN ('fbs','fcs','d2','d3','naia')
+            THEN lower(trim(json_extract(team_scope.stats_json,'$.division')))
+          ELSE 'unknown'
+        END AS division,
+        count(*) AS rows,
+        count(DISTINCT s.team_id) AS teams
+        FROM football_stats s
+        LEFT JOIN football_stats team_scope
+          ON team_scope.dataset='teams'
+         AND team_scope.season=s.season
+         AND team_scope.team_id=s.team_id
+        WHERE s.season=?${q.dataset === "all" ? "" : " AND s.dataset=?"}
+        GROUP BY division
+        ORDER BY division`)
+          .bind(...(q.dataset === "all" ? [q.season] : [q.season, q.dataset]))
+          .all<DivisionCoverage>(),
+        2500,
+      ).catch(() => null),
     ]), DB_TIMEOUT_MS);
   } catch {
     return c.json({ error: "The football source archive is temporarily unavailable." }, 503, { "Cache-Control": "no-store" });
@@ -273,6 +303,19 @@ footballSourceStats.get("/", zValidator("query", querySchema), async (c) => {
     // on every row in the retained archive.
     field_catalog: fieldCatalog,
     field_catalog_scope: "returned_page",
+    division_coverage: divisionCoverage ? {
+      status: "exact" as const,
+      scope: "season_and_dataset" as const,
+      rows: divisionCoverage.results.map((row) => ({
+        division: row.division,
+        rows: Number(row.rows || 0),
+        teams: Number(row.teams || 0),
+      })),
+    } : {
+      status: "unavailable" as const,
+      scope: "season_and_dataset" as const,
+      rows: [],
+    },
     source_receipts: sourceReceipts,
     filters: { q: q.q, team: q.team ?? null, game: q.game ?? null, division: q.division },
     rows: parsedRows,
