@@ -482,6 +482,8 @@ const balancedQueries = (where: string, minGames: number, minMinutes: number) =>
       NULLIF(fga + 0.475 * fta, 0) AS ts_denominator,
       CASE WHEN fga > 0 THEN 100.0 * (fgm + 0.5 * tpm) / fga ELSE NULL END AS efg_value,
       NULLIF(fga, 0) AS efg_denominator,
+      CASE WHEN possessions > 0 THEN 100.0 * turnovers / possessions ELSE NULL END AS tov_rate_value,
+      NULLIF(possessions, 0) AS tov_rate_denominator,
       CASE WHEN minutes > 0 THEN 40.0 * points / minutes ELSE NULL END AS per40_value
     FROM aggregate a
     WHERE games >= ? AND minutes >= ?`;
@@ -494,6 +496,7 @@ const balancedQueries = (where: string, minGames: number, minMinutes: number) =>
        CASE WHEN bpg_value IS NOT NULL THEN 1 ELSE 0 END +
        CASE WHEN ts_value IS NOT NULL THEN 1 ELSE 0 END +
        CASE WHEN efg_value IS NOT NULL THEN 1 ELSE 0 END +
+       CASE WHEN tov_rate_value IS NOT NULL THEN 1 ELSE 0 END +
        CASE WHEN per40_value IS NOT NULL THEN 1 ELSE 0 END) AS component_count,
       AVG(ppg_value) OVER () AS ppg_mean,
       sqrt(max(0.0, AVG(ppg_value * ppg_value) OVER () - AVG(ppg_value) OVER () * AVG(ppg_value) OVER ())) AS ppg_sd,
@@ -509,6 +512,8 @@ const balancedQueries = (where: string, minGames: number, minMinutes: number) =>
       sqrt(max(0.0, AVG(ts_value * ts_value) OVER () - AVG(ts_value) OVER () * AVG(ts_value) OVER ())) AS ts_sd,
       AVG(efg_value) OVER () AS efg_mean,
       sqrt(max(0.0, AVG(efg_value * efg_value) OVER () - AVG(efg_value) OVER () * AVG(efg_value) OVER ())) AS efg_sd,
+      AVG(tov_rate_value) OVER () AS tov_rate_mean,
+      sqrt(max(0.0, AVG(tov_rate_value * tov_rate_value) OVER () - AVG(tov_rate_value) OVER () * AVG(tov_rate_value) OVER ())) AS tov_rate_sd,
       AVG(per40_value) OVER () AS per40_mean,
       sqrt(max(0.0, AVG(per40_value * per40_value) OVER () - AVG(per40_value) OVER () * AVG(per40_value) OVER ())) AS per40_sd
     FROM derived d`;
@@ -522,6 +527,7 @@ const balancedQueries = (where: string, minGames: number, minMinutes: number) =>
         CASE WHEN bpg_value IS NOT NULL AND bpg_sd > 0 THEN (bpg_value - bpg_mean) / bpg_sd ELSE 0 END +
         CASE WHEN ts_value IS NOT NULL AND ts_sd > 0 THEN (ts_value - ts_mean) / ts_sd ELSE 0 END +
         CASE WHEN efg_value IS NOT NULL AND efg_sd > 0 THEN (efg_value - efg_mean) / efg_sd ELSE 0 END +
+        CASE WHEN tov_rate_value IS NOT NULL AND tov_rate_sd > 0 THEN (tov_rate_mean - tov_rate_value) / tov_rate_sd ELSE 0 END +
         CASE WHEN per40_value IS NOT NULL AND per40_sd > 0 THEN (per40_value - per40_mean) / per40_sd ELSE 0 END
       ) / NULLIF(component_count, 0) AS value
     FROM stats s

@@ -276,7 +276,7 @@ const metricGuidance: Record<Metric, string> = {
   orapm: "Offensive RAPM is the exact-ID regularized offensive lineup impact estimate.",
   drapm: "Defensive RAPM is the exact-ID regularized defensive lineup impact estimate.",
   impact_index: "Impact index averages standardized Net RAPM and scoring rate when both qualified sources are present.",
-  balanced_index: "The all-around index averages standardized scoring, rebounding, playmaking, defense, shooting and per-40 components that are observed.",
+  balanced_index: "The all-around index averages standardized scoring, rebounding, playmaking, defense, shooting, ball security and per-40 components that are observed.",
 };
 
 const selectedMetric = (value: string | null): Metric =>

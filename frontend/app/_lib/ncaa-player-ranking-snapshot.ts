@@ -54,7 +54,7 @@ const definitions: Array<{
   { metric: "mpg", label: "Minutes per game", note: "5 games · 200 minutes" },
   { metric: "topg", label: "Turnovers per game", note: "5 games · 200 minutes" },
   { metric: "ts", label: "True shooting", minVolume: 100, note: "5 games · 200 minutes · 100 FGA units" },
-  { metric: "balanced_index", label: "Balanced production", note: "5 games · 200 minutes · 4 of 8 components" },
+  { metric: "balanced_index", label: "Balanced production", note: "5 games · 200 minutes · 4 of 9 components" },
   { metric: "impact_index", label: "Impact + production", note: "5 games · 200 minutes · 500 O/D possessions" },
 ];
 

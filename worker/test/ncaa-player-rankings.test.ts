@@ -45,6 +45,29 @@ describe("NCAA player rankings availability", () => {
     expect(volumeColumn("usage_rate")).toBe("usage_events");
   });
 
+  it("includes lower-is-better turnover rate in the all-around index", async () => {
+    const prepare = vi.fn((_query: string) => ({
+      bind: vi.fn(() => ({
+        first: vi.fn(async () => ({ total: 1 })),
+        all: vi.fn(async () => ({ results: [{ player_name: "Complete sample", component_count: 9, tov_rate_value: 8.5, tov_rate_denominator: 600, value: 1.2, rank: 1 }] })),
+      })),
+    }));
+    const response = await ncaaPlayerRankings.request(
+      "/?season=2026&metric=balanced_index&minGames=5&minMinutes=200",
+      {},
+      { DB: { prepare } } as never,
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      metric: "balanced_index",
+      rows: [{ component_count: 9, tov_rate_value: 8.5, tov_rate_denominator: 600 }],
+    });
+    const sql = prepare.mock.calls.map(([query]) => String(query)).join("\n");
+    expect(sql).toContain("AS tov_rate_value");
+    expect(sql).toContain("AS tov_rate_denominator");
+    expect(sql).toContain("tov_rate_mean - tov_rate_value");
+  });
+
   it("keeps estimated usage unavailable when any team workload row is incomplete", async () => {
     const prepare = vi.fn((_query: string) => ({
       bind: vi.fn(() => ({

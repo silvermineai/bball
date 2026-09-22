@@ -28,7 +28,7 @@ export type RankingContextSpec = {
 
 /** A small, stable set of comparison boards. Their cutoffs stay visible in the UI. */
 export const rankingContextSpecs: readonly RankingContextSpec[] = [
-  { metric: "balanced_index", label: "All-around", minGames: 5, minMinutes: 200, minVolume: 0, description: "Eight-component production screen" },
+  { metric: "balanced_index", label: "All-around", minGames: 5, minMinutes: 200, minVolume: 0, description: "Nine-component production screen" },
   { metric: "ppg", label: "Scoring", minGames: 5, minMinutes: 200, minVolume: 0, description: "Points per game" },
   { metric: "ts", label: "Efficiency", minGames: 10, minMinutes: 400, minVolume: 100, description: "True shooting with 100 FGA units" },
   { metric: "poss_share", label: "Role load", minGames: 5, minMinutes: 200, minVolume: 0, description: "Player possessions divided by team possessions" },
