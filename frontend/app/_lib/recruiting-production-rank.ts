@@ -76,15 +76,17 @@ export function rankRecruitingProduction(
   const minFields = Number.isSafeInteger(options.minFields) && (options.minFields ?? 1) > 0
     ? options.minFields as number
     : 4;
-  const candidates = people.filter((person) =>
-    person.category === "transfer"
-    && person.stats != null
-    && validSourceId(person.stats.id)
-    && Number.isSafeInteger(person.stats.games)
+  // Validate the whole transfer production namespace before applying the
+  // ranking floor. A malformed or duplicated ID in a below-floor row is
+  // still an identity collision in the retained release; silently filtering
+  // it could make an otherwise broken source packet look rankable.
+  const transferSourceRows = people.filter((person) => person.category === "transfer" && person.stats != null) as Array<RecruitingPerson & { stats: RecruitingProductionStats }>;
+  const sourceIds = transferSourceRows.map((person) => person.stats.id);
+  if (sourceIds.some((id) => !validSourceId(id)) || new Set(sourceIds).size !== sourceIds.length) return [];
+  const candidates = transferSourceRows.filter((person) =>
+    Number.isSafeInteger(person.stats.games)
     && person.stats.games >= minGames,
-  ) as Array<RecruitingPerson & { stats: RecruitingProductionStats }>;
-  const ids = candidates.map((person) => person.stats.id);
-  if (new Set(ids).size !== ids.length) return [];
+  );
 
   const moments = new Map<RecruitingProductionMetric, { mean: number; sd: number }>();
   for (const metric of recruitingProductionMetrics) {

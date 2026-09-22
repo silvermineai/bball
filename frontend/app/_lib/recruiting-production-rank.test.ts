@@ -84,6 +84,17 @@ describe("recruiting production rank", () => {
     ])).toEqual([]);
   });
 
+  it("withholds identity collisions and malformed IDs below the ranking floor", () => {
+    expect(rankRecruitingProduction([
+      person(),
+      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, games: 9 } }),
+    ])).toEqual([]);
+    expect(rankRecruitingProduction([
+      person(),
+      person({ key: "1-player-b", name: "B Player", stats: { ...person().stats!, id: "not-a-source-id", games: 9 } }),
+    ])).toEqual([]);
+  });
+
   it("rolls exact-ID production up to destinations with game-weighted rates", () => {
     const rows = summarizeRecruitingDestinationProduction([
       person(),
