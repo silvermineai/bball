@@ -10,6 +10,7 @@ import {
   applyLiveFootballMarketComparisons,
   loadLiveFootballForecasts,
   loadLiveFootballMarketComparisons,
+  loadLiveFootballModelReliability,
   mergeLiveFootballForecasts,
 } from "../../_lib/live-football-forecasts";
 import type { LiveFootballMarketComparisonSet } from "../../_lib/live-football-forecasts";
@@ -69,6 +70,7 @@ export default function MatchupBrowser({
     [copied, setCopied] = useState(""),
     [liveGames, setLiveGames] = useState<Game[] | null>(null),
     [liveModelId, setLiveModelId] = useState<string | null>(null),
+    [liveReliability, setLiveReliability] = useState<FootballReliabilityBand[] | null>(null),
     [liveError, setLiveError] = useState(""),
     [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, LiveFootballMarketComparisonSet> | null>(null),
     [liveMarketError, setLiveMarketError] = useState(""),
@@ -212,6 +214,22 @@ export default function MatchupBrowser({
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
           setLiveMarketError(reason instanceof Error ? reason.message : "Live football market comparisons unavailable.");
         }
+      });
+    return () => controller.abort();
+  }, [liveModelId]);
+  useEffect(() => {
+    if (!liveModelId) {
+      setLiveReliability(null);
+      return;
+    }
+    const controller = new AbortController();
+    setLiveReliability(null);
+    loadLiveFootballModelReliability(controller.signal, liveModelId)
+      .then((summary) => {
+        if (!controller.signal.aborted && summary.modelId === liveModelId) setLiveReliability(summary.reliability);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLiveReliability(null);
       });
     return () => controller.abort();
   }, [liveModelId]);
@@ -504,8 +522,8 @@ export default function MatchupBrowser({
                 home: recruitingContext.get(g.home_id),
               } : undefined}
               model={model}
-              calibrationReliability={model?.evaluation?.reliability}
-              expectedModelId={modelId}
+              calibrationReliability={liveReliability || model?.evaluation?.reliability}
+              expectedModelId={liveModelId || modelId}
             />
             <button className="button secondary matchup-prep-toggle" type="button" aria-pressed={prepIds.includes(g.id)} onClick={() => togglePrep(g.id)}>
               {prepIds.includes(g.id) ? "✓ In prep list" : prepIds.length >= 12 ? "Prep list full" : "+ Add to prep list"}
