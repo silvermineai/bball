@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseUncommittedProspectPage, topUncommittedProspects, type UncommittedProspect } from "./UncommittedProspectSupply";
+import { parseUncommittedProspectPage, prospectSupplySeasons, topUncommittedProspects, type UncommittedProspect } from "./UncommittedProspectSupply";
 
 const row = (id: string, position: string, rank: number | null = 1): UncommittedProspect => ({
   athlete_id: id,
@@ -26,6 +26,10 @@ const payload = (rows: UncommittedProspect[] = [row("1", "PG")]) => ({
 });
 
 describe("uncommitted prospect supply", () => {
+  it("keeps the class selector inside the retained national release range", () => {
+    expect(prospectSupplySeasons).toEqual([2025, 2026, 2027, 2028, 2029, 2030]);
+  });
+
   it("rejects a row that carries a recorded destination", () => {
     expect(parseUncommittedProspectPage({ ...payload(), rows: [{ ...row("1", "PG"), committed_team_id: "99" }] })).toBeNull();
   });

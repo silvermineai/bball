@@ -29,6 +29,10 @@ export type UncommittedProspectPage = {
   rows: UncommittedProspect[];
 };
 
+/** Classes retained by the national recruiting release. */
+export const prospectSupplySeasons = [2025, 2026, 2027, 2028, 2029, 2030] as const;
+export type ProspectSupplySeason = (typeof prospectSupplySeasons)[number];
+
 const isInteger = (value: unknown): value is number => Number.isSafeInteger(value);
 const nullableString = (value: unknown): value is string | null => value == null || typeof value === "string";
 const nullableFinite = (value: unknown): value is number | null => value == null || (typeof value === "number" && Number.isFinite(value));
@@ -89,25 +93,28 @@ const size = (row: UncommittedProspect) => {
   return [height, weight].filter(Boolean).join(" · ") || "—";
 };
 
-export default function UncommittedProspectSupply({ role, season = 2027 }: { role: FitRole; season?: number }) {
+export default function UncommittedProspectSupply({ role, season = 2027 }: { role: FitRole; season?: ProspectSupplySeason }) {
   const [release, setRelease] = useState<UncommittedProspectPage | null>(null);
   const [status, setStatus] = useState<"checking" | "ready" | "unavailable">("checking");
+  const [selectedSeason, setSelectedSeason] = useState<ProspectSupplySeason>(season);
+
+  useEffect(() => setSelectedSeason(season), [season]);
 
   useEffect(() => {
     const controller = new AbortController();
     setStatus("checking");
     setRelease(null);
     const load = async () => {
-      const firstResponse = await fetch(`/api/basketball/research/recruiting-rankings?season=${season}&committed=no&rank_max=250&page=0`, { signal: controller.signal });
+      const firstResponse = await fetch(`/api/basketball/research/recruiting-rankings?season=${selectedSeason}&committed=no&rank_max=250&page=0`, { signal: controller.signal });
       if (!firstResponse.ok) throw new Error("Prospect supply unavailable");
-      const first = parseUncommittedProspectPage(await firstResponse.json() as unknown, season);
+      const first = parseUncommittedProspectPage(await firstResponse.json() as unknown, selectedSeason);
       if (!first) throw new Error("Prospect supply failed edition checks");
       const pages = Math.max(1, Math.ceil(first.total / first.page_size));
       if (pages > 20) throw new Error("Prospect supply is outside the bounded view");
       const remaining = await Promise.all(Array.from({ length: pages - 1 }, (_, index) => index + 1).map(async (page) => {
-        const response = await fetch(`/api/basketball/research/recruiting-rankings?season=${season}&committed=no&rank_max=250&page=${page}`, { signal: controller.signal });
+        const response = await fetch(`/api/basketball/research/recruiting-rankings?season=${selectedSeason}&committed=no&rank_max=250&page=${page}`, { signal: controller.signal });
         if (!response.ok) throw new Error("Prospect supply page unavailable");
-        const parsed = parseUncommittedProspectPage(await response.json() as unknown, season);
+        const parsed = parseUncommittedProspectPage(await response.json() as unknown, selectedSeason);
         if (!parsed || parsed.edition !== first.edition || parsed.total !== first.total || parsed.page !== page) throw new Error("Prospect supply changed during load");
         return parsed;
       }));
@@ -122,28 +129,28 @@ export default function UncommittedProspectSupply({ role, season = 2027 }: { rol
       if ((error as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setStatus("unavailable");
     });
     return () => controller.abort();
-  }, [season]);
+  }, [selectedSeason]);
 
   const rows = useMemo(() => release ? topUncommittedProspects(release.rows, role) : [], [release, role]);
   const position = role === "any" ? "" : role === "guard" ? "PG" : role === "wing" ? "SF" : "C";
   return <section className="paper-panel recruiting-class-table" aria-labelledby="uncommitted-prospect-supply" style={{ marginTop: 24, marginBottom: 24 }}>
     <div className="section-heading" style={{ marginBottom: 10 }}>
-      <div><div className="eyebrow">National prospect supply / {season} class</div><h3 id="uncommitted-prospect-supply">Recorded {roleLabels[role].toLowerCase()} supply.</h3></div>
-      <span className="note">{status === "ready" ? `${release?.total.toLocaleString()} rows` : status === "checking" ? "Checking release…" : "Unavailable"}</span>
+      <div><div className="eyebrow">National prospect supply / {selectedSeason} class</div><h3 id="uncommitted-prospect-supply">Recorded {roleLabels[role].toLowerCase()} supply.</h3></div>
+      <label className="control"><span>CLASS</span><select value={selectedSeason} onChange={(event) => setSelectedSeason(Number(event.target.value) as ProspectSupplySeason)}>{prospectSupplySeasons.map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
     </div>
     <p className="note">This is a ranked view of rows whose committed-team field is empty in the same retained class edition. “Uncommitted” means no destination was recorded by the source; it does not establish availability, contact, an offer, enrollment or eligibility.</p>
     {status === "ready" && release ? <>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Rank</th><th>Prospect</th><th>Position</th><th>Grade</th><th>Size</th><th>Origin</th><th>Evidence</th></tr></thead><tbody>{rows.map((row) => <tr key={row.athlete_id}>
         <td className="numeric">{row.rank == null ? "—" : `#${row.rank}`}</td>
-        <th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${season}&id=${encodeURIComponent(row.athlete_id)}`}>{row.name}</Link><small>Exact athlete ID {row.athlete_id}</small></th>
+        <th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${selectedSeason}&id=${encodeURIComponent(row.athlete_id)}`}>{row.name}</Link><small>Exact athlete ID {row.athlete_id}</small></th>
         <td>{row.position || "Unavailable"}</td>
         <td className="numeric">{row.grade == null ? "—" : fmt(row.grade, 1)}</td>
         <td>{size(row)}</td>
         <td>{row.high_school || row.hometown || "Unavailable"}<small>{row.high_school && row.hometown ? row.hometown : "Source field"}</small></td>
-        <td><small>No destination recorded</small><Link href={`/basketball/recruiting/?season=${season}&committed=no${position ? `&position=${position}` : ""}`}>Open filtered board →</Link></td>
+        <td><small>No destination recorded</small><Link href={`/basketball/recruiting/?season=${selectedSeason}&committed=no${position ? `&position=${position}` : ""}`}>Open filtered board →</Link></td>
       </tr>)}</tbody></table></div>
       {!rows.length && <p className="empty">No recorded prospects match the selected role.</p>}
       <p className="note" style={{ marginTop: 12 }}>Release {release.edition} · captured {release.captured_at ? new Date(release.captured_at).toLocaleDateString("en-US", { timeZone: "UTC" }) : "date unavailable"} UTC · {release.total.toLocaleString()} rows reconciled.</p>
-    </> : <p className="empty">The retained {season} prospect release is unavailable right now; no supply claim is shown.</p>}
+    </> : <p className="empty">The retained {selectedSeason} prospect release is unavailable right now; no supply claim is shown.</p>}
   </section>;
 }
