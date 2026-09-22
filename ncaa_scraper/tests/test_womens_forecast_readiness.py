@@ -53,7 +53,7 @@ def test_wbb_readiness_requires_receipt_hashes_before_fit(tmp_path):
         "forecasts": [{"game_id": "g1"}],
     }))
     result = assess(tmp_path, forecast_path=forecast)
-    assert result["status"] == "ready_for_fit"
+    assert result["status"] == "published"
     assert result["missing_inputs"] == []
     assert result["model_id"] == "wbb-test"
     assert result["forecast_rows"] == 1
@@ -61,3 +61,28 @@ def test_wbb_readiness_requires_receipt_hashes_before_fit(tmp_path):
     assert release_url("team_box", 2026).endswith(
         "/espn_womens_college_basketball_team_boxscores/team_box_2026.parquet"
     )
+
+
+def test_wbb_readiness_keeps_fit_ready_distinct_from_published(tmp_path):
+    for season in (2023, 2024, 2025, 2026):
+        retain_asset(tmp_path, "team_box", season, f"team_box_{season}.parquet")
+        retain_asset(tmp_path, "schedule", season, f"wbb_schedule_{season}.parquet")
+    retain_asset(tmp_path, "schedule", 2027, "wbb_schedule_2027.parquet")
+
+    fit_metadata = tmp_path / "fit-metadata.json"
+    fit_metadata.write_text(json.dumps({
+        "validation": {"games": 100, "interval_games": 100, "interval_coverage": 0.8},
+        "calibration": {
+            "games": 100,
+            "logistic_coefficients": [0.0, 0.1],
+            "brier": 0.2,
+            "log_loss": 0.6,
+            "margin_half_width": 20.0,
+        },
+        "forecasts": [],
+    }))
+    result = assess(tmp_path, forecast_path=fit_metadata)
+
+    assert result["status"] == "ready_for_fit"
+    assert result["model_id"] is None
+    assert result["forecast_rows"] == 0

@@ -185,15 +185,32 @@ def assess(
             "next_step": "Fit and persist women’s calibration coefficients with Brier and log-loss evidence before publishing probabilities.",
         })
     ready = not missing and all(check["status"] == "ready" for check in checks)
+    forecast_rows = forecast.get("forecasts")
+    published = (
+        ready
+        and isinstance(forecast.get("model_id"), str)
+        and bool(forecast["model_id"].strip())
+        and isinstance(forecast_rows, list)
+        and len(forecast_rows) > 0
+    )
+    status = "published" if published else "ready_for_fit" if ready else "blocked"
+    model_id = forecast.get("model_id") if published else None
+    model_boundary = (
+        "A women’s-only multi-season forecast is published from separately retained team-box history. Men’s coefficients, calibration, IDs and forecast rows are never substituted."
+        if published
+        else "A women’s-only fit has passed its input gates, but no published forecast edition is present. Men’s coefficients, calibration, IDs and forecast rows are never substituted."
+        if ready
+        else "No women’s forecast is published. Men’s coefficients, calibration, IDs and forecast rows are never substituted."
+    )
     return {
         "schema_version": 1,
         "sport": "basketball",
         "gender": "women",
         "target_season": target_season,
-        "status": "ready_for_fit" if ready else "blocked",
-        "model_id": forecast.get("model_id") if ready else None,
-        "forecast_rows": len(forecast.get("forecasts", [])) if ready else 0,
-        "model_boundary": "A women’s-only multi-season forecast is published from separately retained team-box history. Men’s coefficients, calibration, IDs and forecast rows are never substituted." if ready else "No women’s forecast is published. Men’s coefficients, calibration, IDs and forecast rows are never substituted.",
+        "status": status,
+        "model_id": model_id,
+        "forecast_rows": len(forecast_rows) if published else 0,
+        "model_boundary": model_boundary,
         "checks": checks,
         "assets": historical + [target_schedule],
         "missing_inputs": missing,

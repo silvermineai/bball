@@ -12,7 +12,7 @@ type ReadinessCheck = {
 
 type Readiness = {
   target_season: number;
-  status: "ready_for_fit" | "blocked";
+  status: "published" | "ready_for_fit" | "blocked";
   model_id: string | null;
   baseline_model_id?: string;
   baseline_forecast_rows?: number;
@@ -40,7 +40,7 @@ export default function WomensForecastReadiness() {
 
   if (!readiness) return <p className="muted">Loading women&apos;s forecast readiness…</p>;
   const blocked = readiness.status === "blocked";
-  const published = Boolean(readiness.model_id);
+  const published = readiness.status === "published" && Boolean(readiness.model_id);
   return <section className="field-card" aria-labelledby="wbb-readiness-title">
     <div className="eyebrow">MODEL READINESS · {readiness.target_season}</div>
     <h3 id="wbb-readiness-title">{published ? "Women’s-only multi-season forecast is live." : blocked ? "Baseline forecast live; expanded fit still assembling." : "Inputs are ready for an expanded women’s-only fit."}</h3>
