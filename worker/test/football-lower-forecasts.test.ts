@@ -80,7 +80,7 @@ describe("football lower-division forecast publication", () => {
 
   it("serves filtered, paginated forecasts without mixing divisions", async () => {
     const response = await footballLowerForecasts.request(
-      "/?division=d2&q=d2%20home&page=0&limit=1",
+      "/?division=d2&gameId=d2-game&q=d2%20home&page=0&limit=1",
       {},
       { ASSETS: assets() },
     );
@@ -111,7 +111,7 @@ describe("football lower-division forecast publication", () => {
     expect(completed.status).toBe(200);
     await expect(completed.json()).resolves.toMatchObject({ total: 0, rows: [] });
     const assetsMock = assets();
-    for (const path of ["/?season=2020", "/?limit=101", "/?page=-1", "/?division=naia"]) {
+    for (const path of ["/?season=2020", "/?limit=101", "/?page=-1", "/?division=naia", "/?gameId=bad%2Fid"]) {
       expect((await footballLowerForecasts.request(path, {}, { ASSETS: assetsMock })).status).toBe(400);
     }
     expect(assetsMock.fetch).not.toHaveBeenCalled();

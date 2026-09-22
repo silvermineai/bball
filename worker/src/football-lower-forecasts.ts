@@ -13,6 +13,8 @@ const CACHE_TTL = 300;
 const querySchema = z.object({
   season: z.coerce.number().int().min(2022).max(2035).default(2026),
   division: z.enum(["all", "fcs", "d2", "d3"]).default("all"),
+  // Keep a direct matchup lookup available for lower-division game pages.
+  gameId: z.string().trim().regex(/^[A-Za-z0-9._-]{1,120}$/).optional(),
   status: z.enum(["all", "upcoming", "completed"]).default("upcoming"),
   q: z.string().trim().max(120).optional(),
   model: z.union([
@@ -198,10 +200,13 @@ footballLowerForecasts.get("/", zValidator("query", querySchema), async (c) => {
     const modelFiltered = args.model === "latest" || args.model === "all"
       ? selectedRows
       : selectedRows.filter((row) => row.model_id === args.model);
+    const gameFiltered = args.gameId
+      ? modelFiltered.filter((row) => row.game_id === args.gameId)
+      : modelFiltered;
     const needle = args.q?.toLocaleLowerCase();
     const filtered = needle
-      ? modelFiltered.filter((row) => `${row.home_name} ${row.away_name}`.toLocaleLowerCase().includes(needle))
-      : modelFiltered;
+      ? gameFiltered.filter((row) => `${row.home_name} ${row.away_name}`.toLocaleLowerCase().includes(needle))
+      : gameFiltered;
     filtered.sort((a, b) => String(a.kickoff).localeCompare(String(b.kickoff)) || String(a.game_id).localeCompare(String(b.game_id)));
     const response = args.meta === "1"
       ? c.json({

@@ -343,13 +343,14 @@ describe("live research scorecard", () => {
       };
     });
     const response = await researchScorecard.request(
-      "/?sport=basketball&season=2027&model=model-1&limit=5000",
+      "/?sport=basketball&season=2027&gameId=game-1&model=model-1&limit=5000",
       {},
       { RESEARCH_DB: { prepare } as never },
     );
     expect(response.status).toBe(200);
-    const body = await response.json() as { live: boolean; model: string | null; total: number; market_observations: number; qualifying_market_observations: number; unmatched_events: number; games: Array<Record<string, unknown>>; sports: Record<string, Record<string, unknown>> };
+    const body = await response.json() as { live: boolean; game_id: string | null; model: string | null; total: number; market_observations: number; qualifying_market_observations: number; unmatched_events: number; games: Array<Record<string, unknown>>; sports: Record<string, Record<string, unknown>> };
     expect(body.live).toBe(true);
+    expect(body.game_id).toBe("game-1");
     expect(body.model).toBe("model-1");
     expect(body.total).toBe(1);
     expect(body.market_observations).toBe(7);
@@ -399,7 +400,7 @@ describe("live research scorecard", () => {
       },
     });
     expect(prepare.mock.calls.some(([sql]) => String(sql).includes("p.model_id=?"))).toBe(true);
-    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("registered_at<=? AND model_id=?"))).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("registered_at<=? AND game_id=? AND model_id=?"))).toBe(true);
   });
 
   it("publishes reliability and keeps model-edition results separate", async () => {

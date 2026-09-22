@@ -1,7 +1,58 @@
-import { describe, expect, it } from "vitest";
-import { parseFootballModelSummary } from "../src/football-forecasts";
+import { describe, expect, it, vi } from "vitest";
+import { footballForecasts, parseFootballModelSummary } from "../src/football-forecasts";
 
 describe("football model evidence", () => {
+  it("resolves the latest edition for an exact upcoming game lookup", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      bind: (..._args: unknown[]) => ({
+        first: async () => sql.includes("SELECT m.id")
+          ? {
+            id: "football-model-game",
+            created_at: "2026-09-20T00:00:00Z",
+            cutoff: "2026-09-19T00:00:00Z",
+            artifact_json: JSON.stringify({ target_season: 2026, calibration: { margin_half_width: 18 } }),
+          }
+          : sql.includes("count(*) AS total") ? { total: 1 } : null,
+        all: async () => ({ results: [{
+          game_id: "401",
+          model_id: "football-model-game",
+          created_at: "2026-09-20T00:00:00Z",
+          home_margin: 4.5,
+          total: 48,
+          home_win_probability: 0.63,
+          season: 2026,
+          kickoff: "2026-09-25T00:00:00Z",
+          home_id: "home",
+          away_id: "away",
+          home_name: "Home",
+          away_name: "Away",
+          home_conference: "A",
+          away_conference: "B",
+          home_division: "fbs",
+          away_division: "fbs",
+          home_score: null,
+          away_score: null,
+          completed: 0,
+          neutral: 0,
+          week: 4,
+          venue: null,
+          time_tbd: 0,
+        }] }),
+      }),
+    }));
+
+    const response = await footballForecasts.request(
+      "/?season=2026&status=upcoming&gameId=401&limit=1",
+      {},
+      { DB: { prepare } as never },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json() as { total: number; rows: Array<Record<string, unknown>> };
+    expect(body.total).toBe(1);
+    expect(body.rows[0]).toMatchObject({ game_id: "401", model_id: "football-model-game", prediction_integrity: "valid" });
+    expect(prepare.mock.calls.filter(([sql]) => String(sql).includes("p.game_id=?")).length).toBeGreaterThanOrEqual(2);
+  });
+
   it("publishes bounded calibration and holdout metrics without fitted coefficients", () => {
     const summary = parseFootballModelSummary(JSON.stringify({
       version: "ridge-team-calibrated-v2",

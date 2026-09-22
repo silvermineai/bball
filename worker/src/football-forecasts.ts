@@ -7,6 +7,9 @@ type Bindings = Env;
 
 const querySchema = z.object({
   season: z.coerce.number().int().min(2022).max(2035).default(2026),
+  // A game-scoped read is the canonical handoff for matchup pages and keeps
+  // callers from having to search a paginated slate before joining context.
+  gameId: z.string().trim().regex(/^[A-Za-z0-9._-]{1,120}$/).optional(),
   status: z.enum(["all", "upcoming", "completed"]).default("all"),
   q: z.string().trim().max(120).optional(),
   model: z.union([
@@ -213,18 +216,19 @@ function marginHalfWidth(artifactJson: string) {
 }
 
 footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
-  const { season, status, q, model, page, limit, meta } = c.req.valid("query");
+  const { season, gameId, status, q, model, page, limit, meta } = c.req.valid("query");
   const db = footballDb(c.env);
+  const latestModelGameClause = gameId ? " AND p.game_id=?" : "";
   const latestModel = await db.prepare(
     `SELECT m.id,m.created_at,m.cutoff,m.artifact_json
        FROM football_models m
       WHERE EXISTS (
         SELECT 1 FROM football_predictions p
         JOIN football_games g ON g.id=p.game_id
-        WHERE p.model_id=m.id AND g.season=?
+        WHERE p.model_id=m.id AND g.season=?${latestModelGameClause}
       )
       ORDER BY m.created_at DESC,m.id DESC LIMIT 1`,
-  ).bind(season).first<{ id: string; created_at: string; cutoff: string; artifact_json: string }>();
+  ).bind(...(gameId ? [season, gameId] : [season])).first<{ id: string; created_at: string; cutoff: string; artifact_json: string }>();
   // Clients pin subsequent pages to the immutable model ID returned on page
   // zero. Resolve that edition's artifact as well so scores and calibrated
   // intervals do not disappear merely because `model` is no longer `latest`.
@@ -328,6 +332,10 @@ footballForecasts.get("/", zValidator("query", querySchema), async (c) => {
 
   const clauses = ["g.season=?"];
   const binds: Array<string | number> = [season];
+  if (gameId) {
+    clauses.push("p.game_id=?");
+    binds.push(gameId);
+  }
   if (status === "upcoming") {
     clauses.push("g.completed=0", "g.kickoff>?");
     binds.push(new Date().toISOString());
