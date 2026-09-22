@@ -28,6 +28,7 @@ from .espn_pickcenter import (
 from .football_sources import ROOT, utcnow
 from .odds_feed import schedules
 from .research_ledger import connect, digest, encoded, timestamp
+from .espn_robots import DEFAULT_USER_AGENT, verify_robots_policy
 
 PROVIDER = "ESPN Summary"
 SPORT = "football"
@@ -35,6 +36,7 @@ BASE_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/college-f
 DOCS_URL = "https://www.espn.com/college-football/"
 CACHE = ROOT / ".local/odds"
 DEFAULT_HORIZON_DAYS = 60
+USER_AGENT = DEFAULT_USER_AGENT
 
 
 def _flattened_pickcenter(summary: dict, game: dict, captured_at: str, receipt_id: str) -> list[tuple[str, str, str, dict]]:
@@ -166,13 +168,18 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
         raise ValueError("limit must be between 1 and 300")
     now = datetime.now(timezone.utc)
     games = _future_games(schedules(SPORT), season, horizon_days, now)[:limit]
+    robots = verify_robots_policy(BASE_URL, USER_AGENT)
+    if robots.get("crawl_delay_seconds"):
+        REQUEST_DELAY_SECONDS_LOCAL = max(REQUEST_DELAY_SECONDS, float(robots["crawl_delay_seconds"]))
+    else:
+        REQUEST_DELAY_SECONDS_LOCAL = REQUEST_DELAY_SECONDS
     captured = now.isoformat(timespec="microseconds").replace("+00:00", "Z")
     summaries: list[dict] = []
     fetch_failures = 0
     CACHE.mkdir(parents=True, exist_ok=True)
     for index, game in enumerate(games):
         if index:
-            time.sleep(REQUEST_DELAY_SECONDS)
+            time.sleep(REQUEST_DELAY_SECONDS_LOCAL)
         event_id = str(game["id"])
         url = f"{BASE_URL}?event={event_id}"
         try:
@@ -225,6 +232,7 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
         "summary_count": summary_count,
         "summary_with_pickcenter": pickcenter_count,
         "timing_basis": "summary_capture",
+        "robots_policy": robots,
         "sha256": digest(summaries),
     }
     return summaries, receipt

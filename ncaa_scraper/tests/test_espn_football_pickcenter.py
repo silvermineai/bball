@@ -174,6 +174,7 @@ class EspnFootballPickcenterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, \
             patch.object(collector, "schedules", return_value=games), \
             patch.object(collector, "_future_games", return_value=games), \
+            patch.object(collector, "verify_robots_policy", return_value={"robots_url": "https://site.web.api.espn.com/robots.txt", "robots_status": 200, "robots_sha256": "a" * 64, "crawl_delay_seconds": None}), \
             patch.object(collector.requests, "get", return_value=FailedResponse()), \
             patch.object(collector.time, "sleep"), \
             patch.object(collector, "CACHE", Path(directory)):

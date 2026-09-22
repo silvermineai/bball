@@ -22,6 +22,7 @@ import requests
 from .football_sources import ROOT, utcnow
 from .odds_feed import schedules
 from .research_ledger import connect, digest, encoded, finite, timestamp
+from .espn_robots import DEFAULT_USER_AGENT, verify_robots_policy
 
 PROVIDER = "ESPN Summary"
 SPORT = "basketball"
@@ -42,6 +43,7 @@ MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 DEFAULT_CAPTURE_LIMIT = 300
 DEFAULT_HORIZON_DAYS = 90
 REQUEST_DELAY_SECONDS = 0.2
+USER_AGENT = DEFAULT_USER_AGENT
 
 
 def american_to_decimal(value: object) -> float:
@@ -352,6 +354,11 @@ def fetch_upcoming(
     # for complete coverage when the schedule contains hundreds more games.
     candidate_games = _future_games(schedules(SPORT), season, horizon_days, now)
     games = select_capture_games(candidate_games, limit)
+    robots = verify_robots_policy(BASE_URL, USER_AGENT)
+    if robots.get("crawl_delay_seconds"):
+        REQUEST_DELAY_SECONDS_LOCAL = max(REQUEST_DELAY_SECONDS, float(robots["crawl_delay_seconds"]))
+    else:
+        REQUEST_DELAY_SECONDS_LOCAL = REQUEST_DELAY_SECONDS
     captured = now.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     summaries: list[dict] = []
     fetch_failures = 0
@@ -359,7 +366,7 @@ def fetch_upcoming(
     for index, game in enumerate(games):
         if index:
             # Keep the bounded public capture polite to ESPN's endpoint.
-            time.sleep(REQUEST_DELAY_SECONDS)
+            time.sleep(REQUEST_DELAY_SECONDS_LOCAL)
         event_id = str(game["id"])
         url = f"{BASE_URL}?event={event_id}"
         try:
@@ -411,6 +418,7 @@ def fetch_upcoming(
         "summary_fetch_failures": fetch_failures,
         **diagnostics,
         "timing_basis": "summary_capture",
+        "robots_policy": robots,
         "sha256": digest(summaries),
     }
     return summaries, receipt

@@ -80,7 +80,7 @@ class EspnPickcenterTests(unittest.TestCase):
         ]
         with patch.object(collector, "schedules", return_value=candidates), patch.object(
             collector, "_future_games", return_value=candidates
-        ), patch.object(collector.requests, "get", return_value=FailedResponse()), patch.object(
+        ), patch.object(collector, "verify_robots_policy", return_value={"robots_url": "https://site.web.api.espn.com/robots.txt", "robots_status": 200, "robots_sha256": "a" * 64, "crawl_delay_seconds": None}), patch.object(collector.requests, "get", return_value=FailedResponse()), patch.object(
             collector.time, "sleep"
         ), patch.object(collector, "CACHE", Path(".local/test-market-cache")):
             summaries, receipt = collector.fetch_upcoming(

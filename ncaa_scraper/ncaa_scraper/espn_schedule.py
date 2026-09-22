@@ -20,6 +20,7 @@ import requests
 from .football_sources import ROOT, utcnow
 from .odds_feed import schedules
 from .research_ledger import connect, digest, encoded, timestamp
+from .espn_robots import DEFAULT_USER_AGENT, verify_robots_policy
 
 PROVIDER = "ESPN Scoreboard"
 SPORT = "basketball"
@@ -29,6 +30,7 @@ CACHE = ROOT / ".local/odds"
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 DEFAULT_HORIZON_DAYS = 60
 REQUEST_DELAY_SECONDS = 0.2
+USER_AGENT = DEFAULT_USER_AGENT
 
 
 def _competition(event: dict) -> dict:
@@ -192,13 +194,18 @@ def fetch_upcoming(
     ]
     dates = sorted({game["starts_at"][:10].replace("-", "") for game in games})[:limit_dates]
     captured = now.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+    robots = verify_robots_policy(BASE_URL, USER_AGENT)
+    if robots.get("crawl_delay_seconds"):
+        REQUEST_DELAY_SECONDS_LOCAL = max(REQUEST_DELAY_SECONDS, float(robots["crawl_delay_seconds"]))
+    else:
+        REQUEST_DELAY_SECONDS_LOCAL = REQUEST_DELAY_SECONDS
     observations: list[dict] = []
     urls: list[str] = []
     CACHE.mkdir(parents=True, exist_ok=True)
     for index, date in enumerate(dates):
         if index:
             # Keep the bounded public capture polite to ESPN's endpoint.
-            time.sleep(REQUEST_DELAY_SECONDS)
+            time.sleep(REQUEST_DELAY_SECONDS_LOCAL)
         params = {"dates": date, "limit": 500}
         url = f"{BASE_URL}?dates={date}&limit=500"
         try:
@@ -236,6 +243,7 @@ def fetch_upcoming(
         "dates": dates,
         "urls": urls,
         "timing_basis": "scoreboard_capture",
+        "robots_policy": robots,
         "sha256": digest(observations),
     }
     return observations, receipt
