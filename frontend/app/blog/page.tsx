@@ -174,6 +174,7 @@ export default function Page() {
           games={basketball.upcoming
             .filter((game) => game.prediction)
             .slice(0, 12)}
+          ratings={basketball.ratings}
         />
       </section>
       <section className="section">
