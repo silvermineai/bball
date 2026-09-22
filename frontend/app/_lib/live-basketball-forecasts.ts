@@ -355,6 +355,21 @@ export async function fetchLiveForecast(
 export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BBGame {
   if (!row || row.game_id !== game.id || !row.home_name || !row.away_name) return game;
   const coldStart = row.prediction?.estimate_type === "cold_start";
+  // Featured cards are hydrated one game at a time, so apply the same
+  // edition lineage gate used by the full slate. A static factor set without
+  // an exact producing edition must not survive beside a newer live forecast.
+  const liveFactors = row.matchup_factors ?? null;
+  const staticFactors = !liveFactors
+    && game.matchup_factors
+    && game.matchup_factors_model_id === row.model_id
+    ? game.matchup_factors
+    : null;
+  const factors = liveFactors || staticFactors;
+  const factorsModelId = liveFactors
+    ? row.matchup_factors_model_id || null
+    : staticFactors
+      ? game.matchup_factors_model_id || null
+      : null;
   return {
     ...game,
     forecast_model_id: row.model_id || game.forecast_model_id || null,
@@ -371,6 +386,16 @@ export function mergeLiveForecast(game: BBGame, row: LiveForecastRow | null): BB
     source_start: row.source_start ?? game.source_start ?? null,
     source_time_valid: row.source_time_valid ?? game.source_time_valid ?? null,
     source_observed_at: row.source_observed_at ?? game.source_observed_at ?? null,
+    matchup_factors: factors,
+    matchup_factors_model_id: factorsModelId,
+    matchup_factors_generated_at: liveFactors
+      ? row.created_at ?? null
+      : staticFactors
+        ? game.matchup_factors_generated_at ?? null
+        : null,
+    matchup_factors_same_edition: factors
+      ? Boolean(factorsModelId && row.model_id && factorsModelId === row.model_id)
+      : null,
     prediction: coldStart ? game.prediction : row.prediction,
     fallback_prediction: coldStart ? row.prediction : game.fallback_prediction ?? null,
   } satisfies BBGame;

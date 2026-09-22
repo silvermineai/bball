@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BBGame } from "./basketball-types";
-import { forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballGameMarketComparison, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
+import { forecastModelId, liveMarketComparisonStatus, loadLiveBasketballForecasts, loadLiveBasketballGameMarketComparison, loadLiveBasketballMarketComparisons, matchingRosterScenario, mergeLiveBasketballForecasts, mergeLiveForecast, publishedBasketballPrediction, type LiveForecastRow } from "./live-basketball-forecasts";
 
 const prediction = (margin: number) => ({
   home_score: 70 + margin,
@@ -304,6 +304,53 @@ describe("live basketball forecast merge", () => {
     expect(merged[0].source_start).toBe("2026-11-02T06:00:00Z");
     expect(merged[0].source_time_valid).toBe(true);
     expect(merged[1].prediction).toBeNull();
+  });
+
+  it("keeps featured-card factors on the live forecast edition", () => {
+    const staticFactors: NonNullable<BBGame["matchup_factors"]> = {
+      season: 2026,
+      factors: {},
+      edges: { efg: 0.01 },
+    };
+    const liveFactors: NonNullable<BBGame["matchup_factors"]> = {
+      season: 2026,
+      factors: {},
+      edges: { efg: -0.04 },
+    };
+    const staticGame = {
+      ...game("featured", "2026-11-02T05:00:00Z", prediction(4)),
+      forecast_model_id: "model-old",
+      matchup_factors: staticFactors,
+      matchup_factors_model_id: "model-old",
+      matchup_factors_same_edition: true,
+    };
+    const liveRow = {
+      game_id: "featured",
+      model_id: "model-live",
+      created_at: "2026-09-21T12:00:00Z",
+      season: 2027,
+      starts_at: "2026-11-02T05:00:00Z",
+      home_id: "featured-home",
+      away_id: "featured-away",
+      home_name: "Home featured",
+      away_name: "Away featured",
+      neutral: 0,
+      time_tbd: 1,
+      venue: null,
+      broadcast: null,
+      prediction: prediction(8),
+      matchup_factors: liveFactors,
+      matchup_factors_model_id: "model-live",
+    } satisfies LiveForecastRow;
+    const merged = mergeLiveForecast(staticGame, liveRow);
+    expect(merged.matchup_factors).toEqual(liveFactors);
+    expect(merged.matchup_factors_model_id).toBe("model-live");
+    expect(merged.matchup_factors_generated_at).toBe("2026-09-21T12:00:00Z");
+    expect(merged.matchup_factors_same_edition).toBe(true);
+
+    const withoutLiveFactors = mergeLiveForecast(staticGame, { ...liveRow, matchup_factors: undefined, matchup_factors_model_id: undefined });
+    expect(withoutLiveFactors.matchup_factors).toBeNull();
+    expect(withoutLiveFactors.matchup_factors_same_edition).toBeNull();
   });
 
   it("carries Four Factor context only with its exact live forecast edition", () => {
