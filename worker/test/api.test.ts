@@ -1042,6 +1042,14 @@ describe("bball api", () => {
   });
 
   it("returns publisher ranks from the retained source row", async () => {
+    const sourceReceipt = JSON.stringify({
+      dataset: "ncaa_individual",
+      season: 2026,
+      url: "https://stats.ncaa.org/rankings/national_ranking",
+      fetched_at: "2026-09-10T13:27:22Z",
+      sha256: "e".repeat(64),
+      kind: "normalized_public_derivative",
+    });
     const prepare = vi.fn(() => ({
       bind: vi.fn(() => ({
         all: vi.fn().mockResolvedValue({
@@ -1052,6 +1060,7 @@ describe("bball api", () => {
             team_name: "Example U",
             stat_value: 12.5,
             publisher_rank: 7,
+            source_receipt_json: sourceReceipt,
             payload_json: JSON.stringify({
               player_id: 42,
               rpg: 12.5,
@@ -1067,10 +1076,19 @@ describe("bball api", () => {
       { DB: { prepare } },
     );
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json() as { source_receipts: Array<Record<string, unknown>> };
+    expect(body).toMatchObject({
       provenance: { kind: "publisher_snapshot_with_exact_id_fill", publisher_rank: true },
+      source_receipts: [{
+        dataset: "ncaa_individual",
+        season: 2026,
+        fetched_at: "2026-09-10T13:27:22Z",
+        sha256: "e".repeat(64),
+        kind: "normalized_public_derivative",
+      }],
       rows: [{ publisher_rank: 7, rpg: 12.5 }],
     });
+    expect(body.source_receipts[0]).not.toHaveProperty("url");
   });
 
   it("applies the source games floor inside the national leaderboard query", async () => {
@@ -1201,6 +1219,14 @@ describe("bball api", () => {
   });
 
   it("serves compact NCAA leaderboard coverage metadata from D1", async () => {
+    const sourceReceipt = JSON.stringify({
+      dataset: "ncaa_individual",
+      season: 2026,
+      url: "https://stats.ncaa.org/rankings/national_ranking",
+      fetched_at: "2026-09-10T13:27:22Z",
+      sha256: "f".repeat(64),
+      method: "Cached final snapshots fetched only when robots.txt permits.",
+    });
     const prepare = vi.fn((sql: string) => ({
       bind: vi.fn(() => ({
         all: vi.fn().mockResolvedValue({
@@ -1211,6 +1237,7 @@ describe("bball api", () => {
               rpg: null,
               apg: null,
               mpg: 31.5,
+              source_receipt_json: sourceReceipt,
               payload_json: JSON.stringify({ pts: 546, fg_pct: 54.1 }),
             },
             {
@@ -1219,6 +1246,7 @@ describe("bball api", () => {
               rpg: 8.1,
               apg: null,
               mpg: null,
+              source_receipt_json: sourceReceipt,
               payload_json: JSON.stringify({ pts: 301 }),
             },
           ],
@@ -1233,6 +1261,7 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as {
       coverage: { players: number; divisions: Record<string, Record<string, number>> };
+      source_receipts: Array<Record<string, unknown>>;
     };
     expect(body.coverage).toMatchObject({
       players: 2,
@@ -1241,6 +1270,13 @@ describe("bball api", () => {
         "2": { players: 1, rpg: 1, pts: 1 },
       },
     });
+    expect(body.source_receipts).toEqual([{
+      dataset: "ncaa_individual",
+      season: 2026,
+      fetched_at: "2026-09-10T13:27:22Z",
+      sha256: "f".repeat(64),
+      method: "Cached final snapshots fetched only when robots.txt permits.",
+    }]);
     expect(prepare).toHaveBeenCalledWith(expect.stringContaining("SELECT division,ppg,rpg,apg,mpg,payload_json"));
   });
 
@@ -2049,7 +2085,10 @@ describe("bball api", () => {
       { results: [{ season: 2026 }] },
       { results: [{ value: "G" }] },
       { results: [{ value: "Fr." }] },
-      { results: [{ dataset: "ncaa_player_box", url: "https://example.test/ncaa-player-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) }] },
+      { results: [
+        { dataset: "ncaa_individual", url: "https://stats.ncaa.org/rankings/national_ranking", fetched_at: "2026-09-10T13:27:22Z", sha256: "b".repeat(64) },
+        { dataset: "ncaa_player_box", url: "https://example.test/ncaa-player-box.parquet", fetched_at: "2026-09-08T02:12:45Z", sha256: "a".repeat(64) },
+      ] },
     ]);
     const response = await app.request(
       "/api/basketball/research/ncaa-player-rankings?meta=1&season=2026",
@@ -2059,8 +2098,12 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       seasons: [2026],
-      sources: [{ dataset: "ncaa_player_box", fetched_at: "2026-09-08T02:12:45Z" }],
+      sources: [
+        { dataset: "ncaa_individual", fetched_at: "2026-09-10T13:27:22Z" },
+        { dataset: "ncaa_player_box", fetched_at: "2026-09-08T02:12:45Z" },
+      ],
     });
+    expect(prepare).toHaveBeenCalledWith(expect.stringContaining("'ncaa_individual'"));
     expect(batch).toHaveBeenCalledOnce();
   });
 

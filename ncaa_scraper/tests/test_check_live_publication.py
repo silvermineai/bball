@@ -16,6 +16,7 @@ from scripts.check_live_publication import (
     validate_market_capture,
     matchup_personnel_coverage,
     player_box_field_metadata,
+    receipt_ages,
     womens_forecast_metadata,
     womens_lower_division_metadata,
     womens_lower_schedule_archive_metadata,
@@ -30,6 +31,16 @@ from scripts.check_live_publication import (
 
 
 class LivePublicationCheckTest(unittest.TestCase):
+    def test_final_national_snapshot_keeps_its_real_clock_without_aging_active_feeds(self):
+        now = datetime(2026, 9, 22, 20, tzinfo=timezone.utc)
+        ages = receipt_ages({
+            "source_receipts": [
+                {"dataset": "games", "latest_source_at": "2026-09-22T18:00:00Z"},
+                {"dataset": "ncaa_individual", "latest_source_at": "2026-06-01T18:00:00Z"},
+            ],
+        }, "basketball", now, 72, archival_datasets={"ncaa_individual"})
+        self.assertEqual(ages, [2.0])
+
     @staticmethod
     def womens_lower_schedule_payload():
         return {

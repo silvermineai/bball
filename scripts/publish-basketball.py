@@ -789,11 +789,13 @@ run([PY, "scripts/sync-recruiting.py"])
 run([PY, "scripts/sync-news.py"])
 run([PY, "scripts/sync-careers.py"])
 run([PY, "scripts/sync-career-source-releases.py"])
+# Archive the normalized national snapshot before syncing it so D1 receives
+# the exact content-addressed receipt rather than a synthesized locator.
+run([PY, "scripts/sync-ncaa-source-releases.py"])
 run([PY, "scripts/sync-ncaa-individual.py"])
 run([PY, "scripts/sync-matchup-stints.py"])
 run([PY, "scripts/sync-ncaa-team-box.py"])
 run([PY, "scripts/sync-ncaa-player-box.py"])
-run([PY, "scripts/sync-ncaa-source-releases.py"])
 run([PY, "scripts/sync-within-impact.py"])
 # The overview edition can be refreshed by a later derived-artifact step.
 # Rebuild this compact identity-review summary at the end so its timestamp

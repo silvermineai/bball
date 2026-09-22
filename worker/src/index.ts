@@ -1135,6 +1135,23 @@ function withNCAALeaderTimeout<T>(promise: Promise<T>, milliseconds: number): Pr
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+function ncaaIndividualReceipt(value: unknown) {
+  const receipt = parseObject(value);
+  const fetchedAt = typeof receipt.fetched_at === "string" ? Date.parse(receipt.fetched_at) : Number.NaN;
+  if (
+    receipt.dataset !== "ncaa_individual"
+    || receipt.season !== 2026
+    || typeof receipt.url !== "string"
+    || !/^https?:\/\//.test(receipt.url)
+    || !Number.isFinite(fetchedAt)
+    || typeof receipt.sha256 !== "string"
+    || !/^[a-f0-9]{64}$/i.test(receipt.sha256)
+  ) return null;
+  // Keep the exact archived clock, digest, and collection policy while the
+  // private upstream locator and attribution payload stay server-side.
+  return publicReceipt(receipt);
+}
+
 app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQuery), async (c) => {
   const db = researchDb(c.env);
   const { division, stat, min_games, q, page, meta } = c.req.valid("query");
@@ -1157,14 +1174,15 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
     // actually supplied a numeric value; missing fields stay unavailable.
     try {
     const records = await withNCAALeaderTimeout(db.prepare(
-      "SELECT division,ppg,rpg,apg,mpg,payload_json FROM ncaa_individual_players WHERE season=?",
-    ).bind(2026).all<{
+      "SELECT division,ppg,rpg,apg,mpg,payload_json,(SELECT receipt_json FROM bb_sources WHERE dataset='ncaa_individual' AND season=?) AS source_receipt_json FROM ncaa_individual_players WHERE season=?",
+    ).bind(2026, 2026).all<{
       division: number;
       ppg: number | null;
       rpg: number | null;
       apg: number | null;
       mpg: number | null;
       payload_json: string;
+      source_receipt_json: string | null;
     }>(), NCAA_LEADER_TIMEOUT_MS);
     const coverageStats = ["ppg", "rpg", "apg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"] as const;
     const divisions: Record<string, { players: number; [key: string]: number }> = {
@@ -1194,10 +1212,12 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
         if (typeof value === "number" && Number.isFinite(value)) bucket[key] += 1;
       }
     }
+    const receipt = ncaaIndividualReceipt(records.results[0]?.source_receipt_json);
     const response = c.json({
       season: 2026,
       coverage: { players: records.results.length, divisions },
       provenance: { kind: "publisher_snapshot", dataset: "ncaa_final_national_rankings", publisher_rank: true },
+      source_receipts: receipt ? [receipt] : [],
     });
     response.headers.set("Cache-Control", `public, max-age=${NCAA_LEADER_CACHE_TTL}`);
     if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
@@ -1228,7 +1248,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
   const statSql = ` AND ${value} IS NOT NULL`;
   const order = `${value} DESC, name, player_id`;
   try {
-  const rows = await withNCAALeaderTimeout(db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json FROM ncaa_individual_players WHERE ${where}${gamesSql}${searchSql}${statSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(...binds, page * 40).all(), NCAA_LEADER_TIMEOUT_MS);
+  const rows = await withNCAALeaderTimeout(db.prepare(`SELECT player_id,division,name,team_name,${value} AS stat_value,${publisherRankColumn} AS publisher_rank,count(*) OVER () AS total_count,payload_json,(SELECT receipt_json FROM bb_sources WHERE dataset='ncaa_individual' AND season=?) AS source_receipt_json FROM ncaa_individual_players WHERE ${where}${gamesSql}${searchSql}${statSql} ORDER BY ${order} LIMIT 40 OFFSET ?`).bind(2026, ...binds, page * 40).all(), NCAA_LEADER_TIMEOUT_MS);
   const boxDerivedStats = new Set(["ppg", "rpg", "spg", "bpg", "fg_pct", "three_pct", "ft_pct", "threes_pg", "mpg", "ast_to", "dbl_dbl", "pts", "reb", "stl", "blk", "tov", "fgm", "fga", "three_fgm", "three_fga", "ftm", "fta", "orb", "drb", "pf", "o_poss", "tpm", "tpa", "mins"]);
   // The NCAA snapshot has explicit publisher rows for all three divisions.
   // Only the supplemental box-score calculation is D1-scoped: the public
@@ -1263,7 +1283,8 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
       publisher_rank: true,
     };
   const total = rows.results.length ? Number((rows.results[0] as Record<string, unknown>).total_count || 0) : 0;
-  const response = c.json({ season: 2026, division, stat, min_games, page, limit: 40, total, pages: Math.max(1, Math.ceil(total / 40)), provenance, rows: rows.results.map((row) => {
+  const receipt = ncaaIndividualReceipt((rows.results[0] as Record<string, unknown> | undefined)?.source_receipt_json);
+  const response = c.json({ season: 2026, division, stat, min_games, page, limit: 40, total, pages: Math.max(1, Math.ceil(total / 40)), provenance, source_receipts: receipt ? [receipt] : [], rows: rows.results.map((row) => {
     let payload: Record<string, unknown> = {};
     try {
       const parsed = JSON.parse(String(row.payload_json));
@@ -1271,7 +1292,7 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
     } catch {
       // Preserve the leaderboard row while withholding malformed source JSON.
     }
-    const { payload_json, stat_value, total_count, ...summary } = row as Record<string, unknown>;
+    const { payload_json, source_receipt_json, stat_value, total_count, ...summary } = row as Record<string, unknown>;
     return { ...summary, [stat]: stat_value, payload };
   }) });
   response.headers.set("Cache-Control", `public, max-age=${NCAA_LEADER_CACHE_TTL}`);

@@ -72,7 +72,14 @@ def get_json(base_url: str, path: str, attempts: int = 4) -> dict:
     raise RuntimeError(f"could not read {path}: {last_error}")
 
 
-def receipt_ages(payload: dict, label: str, checked_at: datetime, max_age_hours: float) -> list[float]:
+def receipt_ages(
+    payload: dict,
+    label: str,
+    checked_at: datetime,
+    max_age_hours: float,
+    *,
+    archival_datasets: set[str] | None = None,
+) -> list[float]:
     receipts = payload.get("source_receipts")
     if not isinstance(receipts, list) or not receipts:
         raise ValueError(f"{label} coverage has no source receipts")
@@ -83,9 +90,14 @@ def receipt_ages(payload: dict, label: str, checked_at: datetime, max_age_hours:
         if not isinstance(name, str) or not isinstance(captured, str):
             raise ValueError(f"{label} source receipt is malformed")
         age = (checked_at - timestamp(captured)).total_seconds() / 3600
-        if age < -24 or age > max_age_hours:
+        archival = name in (archival_datasets or set())
+        if age < -24 or (age > max_age_hours and not archival):
             raise ValueError(f"{label} source {name} is {max(age, 0):.1f} hours old")
-        ages.append(age)
+        # Final-season snapshots remain valid after the daily feeds refresh.
+        # Keep their real capture clock visible without letting a historical
+        # edition redefine the freshness of active schedules and box scores.
+        if not archival:
+            ages.append(age)
     return ages
 
 
@@ -1508,7 +1520,13 @@ def check_live(
     if not isinstance(basketball["coverage"], list) or not basketball["coverage"]:
         raise ValueError("basketball coverage has no dataset rows")
     validate_coverage_audit(basketball)
-    ages = receipt_ages(basketball, "basketball", checked_at, max_age_hours)
+    ages = receipt_ages(
+        basketball,
+        "basketball",
+        checked_at,
+        max_age_hours,
+        archival_datasets={"ncaa_individual"},
+    )
 
     football = get_json(base_url, "/api/football/coverage")
     if not isinstance(football.get("coverage"), list) or not football["coverage"]:

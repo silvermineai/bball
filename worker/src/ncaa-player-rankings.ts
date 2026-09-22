@@ -613,7 +613,7 @@ ncaaPlayerRankings.get("/", zValidator("query", querySchema), async (c) => {
         researchDb(c.env).prepare("SELECT DISTINCT season FROM bb_ncaa_player_season ORDER BY season DESC"),
         researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.class') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
         researchDb(c.env).prepare("SELECT DISTINCT json_extract(profile_json,'$.position') AS value FROM bb_ncaa_rosters WHERE season=? AND value IS NOT NULL AND value != '' ORDER BY value").bind(season),
-        researchDb(c.env).prepare("SELECT dataset, json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season=? AND dataset IN ('ncaa_player_box','ncaa_rapm','ncaa_team_rosters') ORDER BY dataset").bind(season),
+        researchDb(c.env).prepare("SELECT dataset, json_extract(receipt_json,'$.url') AS url, json_extract(receipt_json,'$.fetched_at') AS fetched_at, json_extract(receipt_json,'$.sha256') AS sha256 FROM bb_sources WHERE season=? AND dataset IN ('ncaa_individual','ncaa_player_box','ncaa_rapm','ncaa_team_rosters') ORDER BY dataset").bind(season),
       ]), DB_TIMEOUT_MS);
       const response = c.json({
         seasons: seasons.results.map((row) => Number((row as { season: number }).season)),
