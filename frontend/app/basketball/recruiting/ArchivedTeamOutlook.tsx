@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  archivedClassGap,
+  archivedClassCoverage,
   filterArchivedTeamOutlooks,
   type ArchivedRecruitingRelease,
   type ArchivedTeamSort,
@@ -95,7 +95,7 @@ export default function ArchivedTeamOutlook({ release }: { release: ArchivedRecr
           </thead>
           <tbody>
             {result.rows.map((team) => {
-              const classGap = archivedClassGap(team);
+              const classCoverage = archivedClassCoverage(team);
               return (
                 <tr key={team.id}>
                   <td className="numeric">{team.srsRank}</td>
@@ -111,7 +111,7 @@ export default function ArchivedTeamOutlook({ release }: { release: ArchivedRecr
                   </th>
                   <td>
                     <small>{Object.entries(team.classBreakdown).map(([label, count]) => `${label} ${count}`).join(" · ") || "Unavailable"}</small>
-                    {classGap > 0 && <small>+ {classGap} class label{classGap === 1 ? "" : "s"} unavailable</small>}
+                    {classCoverage ? <small>{classCoverage.labeled}/{classCoverage.roster} roster spots class-labeled{classCoverage.unavailable > 0 ? ` · ${classCoverage.unavailable} unavailable` : ""}</small> : <small>Class labels exceed roster denominator · unavailable</small>}
                   </td>
                   <td className="numeric">{team.rosterSize}</td>
                   <td className="numeric"><strong>{team.departingCount}</strong><small>{team.departingStarCount} marked star departures</small></td>

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  archivedClassCoverage,
   archivedClassGap,
   filterArchivedTeamOutlooks,
   parseArchivedRecruitingRelease,
@@ -22,7 +23,13 @@ describe("retained team recruiting outlook", () => {
   it("preserves an unclassified class count instead of filling the gap", () => {
     const floridaState = release.teams.find((team) => team.name === "Florida State Seminoles")!;
     expect(archivedClassGap(floridaState)).toBe(1);
+    expect(archivedClassCoverage(floridaState)).toEqual({ labeled: 14, roster: 15, unavailable: 1 });
     expect(floridaState.classBreakdown).not.toHaveProperty("Unclassified");
+  });
+
+  it("withholds class coverage when labels exceed the retained roster denominator", () => {
+    const team = { ...release.teams[0], rosterSize: 1, classBreakdown: { Freshman: 2 } };
+    expect(archivedClassCoverage(team)).toBeNull();
   });
 
   it("filters, sorts and paginates without mutating source rows", () => {

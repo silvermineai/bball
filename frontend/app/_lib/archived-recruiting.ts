@@ -174,3 +174,14 @@ export function archivedClassGap(row: ArchivedTeamOutlook) {
   const classified = Object.values(row.classBreakdown).reduce((total, value) => total + value, 0);
   return row.rosterSize - classified;
 }
+
+/** Keep the class-label denominator visible without accepting an over-count as coverage. */
+export function archivedClassCoverage(row: ArchivedTeamOutlook) {
+  const labeled = Object.values(row.classBreakdown).reduce((total, value) => total + value, 0);
+  if (labeled > row.rosterSize) return null;
+  return {
+    labeled,
+    roster: row.rosterSize,
+    unavailable: row.rosterSize - labeled,
+  };
+}
