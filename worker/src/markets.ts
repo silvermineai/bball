@@ -10,6 +10,10 @@ const querySchema = z.object({
   sport: z.enum(["football", "basketball"]).default("football"),
   season: z.union([z.coerce.number().int().min(2022).max(2035), z.literal("all")]).default(2025),
   q: z.string().trim().max(120).optional(),
+  // Let the archive isolate observations whose capture clock was before or
+  // after tip. This is a filter over retained evidence, never a claim that a
+  // postgame row was usable for prospective evaluation.
+  timing: z.enum(["all", "pregame", "postgame"]).default("all"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   meta: z.enum(["0", "1"]).default("0"),
   publication_check: z.string().trim().max(80).optional(),
@@ -317,7 +321,7 @@ function parseArchiveReceipts(value: unknown): ArchiveReceipt[] {
 }
 
 markets.get("/", zValidator("query", querySchema), async (c) => {
-  const { sport, season, q, page, meta } = c.req.valid("query");
+  const { sport, season, q, timing, page, meta } = c.req.valid("query");
   const football = sport === "football";
   // ESPN Summary football captures live in the append-only research ledger;
   // the historical SportsDataverse betting archive remains in FOOTBALL_DB.
@@ -439,18 +443,28 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     }
   }
   const search = q ? `%${q}%` : null;
+  const legacyTimingPredicate = timing === "all" ? null : `m.is_pregame=${timing === "pregame" ? 1 : 0}`;
+  const ledgerTimingPredicate = timing === "all"
+    ? null
+    : `datetime(m.captured_at) ${timing === "pregame" ? "<" : ">="} datetime(json_extract(m.payload_json,'$.starts_at'))`;
+  const timingPredicate = useCombinedFootballArchive
+    ? null
+    : football && !useFootballLedger ? legacyTimingPredicate : ledgerTimingPredicate;
+  const withTiming = (condition: string) => timingPredicate ? `${timingPredicate} AND ${condition}` : condition;
+  const withLegacyTiming = (condition: string) => legacyTimingPredicate ? `${legacyTimingPredicate} AND ${condition}` : condition;
+  const withLedgerTiming = (condition: string) => ledgerTimingPredicate ? `${ledgerTimingPredicate} AND ${condition}` : condition;
   const seasonClause = season === "all" ? "" : (useFootballLedger ? "json_extract(m.payload_json,'$.season')=? AND " : "g.season=? AND ");
   const where = useFootballLedger
     ? search
-      ? `${seasonClause}m.sport=? AND (json_extract(m.payload_json,'$.home_name') LIKE ? OR json_extract(m.payload_json,'$.away_name') LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`
-      : `${seasonClause}m.sport=?`
+      ? withTiming(`${seasonClause}m.sport=? AND (json_extract(m.payload_json,'$.home_name') LIKE ? OR json_extract(m.payload_json,'$.away_name') LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`)
+      : withTiming(`${seasonClause}m.sport=?`)
     : football
     ? search
-      ? `${seasonClause}(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)`
-      : (season === "all" ? "1=1" : "g.season=?")
+      ? withTiming(`${seasonClause}(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)`)
+      : withTiming(season === "all" ? "1=1" : "g.season=?")
     : search
-      ? `${seasonClause}m.sport=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`
-      : `${seasonClause}m.sport=?`;
+      ? withTiming(`${seasonClause}m.sport=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`)
+      : withTiming(`${seasonClause}m.sport=?`);
   const binds: Array<string | number> = useFootballLedger
     ? search
       ? [season as number, sport, search, search, search, search]
@@ -473,18 +487,23 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     let resultRows: unknown[] = [];
     if (useCombinedFootballArchive) {
       const legacyWhere = search
-        ? "(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)"
-        : "1=1";
+        ? withLegacyTiming("(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)")
+        : withLegacyTiming("1=1");
+      // The combined archive uses two bindings with different schemas. Keep
+      // each timing predicate tied to its own retained clock field.
+      const legacyCombinedWhere = legacyWhere;
       const legacyBinds: Array<string | number> = search ? [search, search, search] : [];
-      const ledgerWhere = search
+      const ledgerBaseWhere = search
         ? "m.sport=? AND (json_extract(m.payload_json,'$.home_name') LIKE ? OR json_extract(m.payload_json,'$.away_name') LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)"
         : "m.sport=?";
+      const ledgerWhere = withLedgerTiming(ledgerBaseWhere);
+      const legacyWhereForCombined = legacyCombinedWhere;
       const ledgerBinds: Array<string | number> = search
         ? [sport, search, search, search, search]
         : [sport];
       const [legacyCount, ledgerCount] = await Promise.all([
         withTimeout(db.prepare(
-          `SELECT count(*) AS total FROM football_markets m JOIN football_games g ON g.id=m.game_id WHERE ${legacyWhere}`,
+          `SELECT count(*) AS total FROM football_markets m JOIN football_games g ON g.id=m.game_id WHERE ${legacyWhereForCombined}`,
         ).bind(...legacyBinds).first<{ total: number }>(), DB_TIMEOUT_MS),
         withTimeout(researchDb(c.env).prepare(
           `SELECT count(*) AS total FROM audit_markets m WHERE ${ledgerWhere}`,
@@ -502,8 +521,8 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
                   NULL AS updated_at,
                   NULL AS home_price,NULL AS away_price,NULL AS over_price,NULL AS under_price,
                   NULL AS market,NULL AS bookmaker,NULL AS provider
-             FROM football_markets m JOIN football_games g ON g.id=m.game_id
-            WHERE ${legacyWhere}
+            FROM football_markets m JOIN football_games g ON g.id=m.game_id
+            WHERE ${legacyWhereForCombined}
             ORDER BY g.kickoff DESC,m.observed_at DESC,m.game_id DESC LIMIT ?`,
         ).bind(...legacyBinds, fetchLimit).all(), DB_TIMEOUT_MS),
         withTimeout(researchDb(c.env).prepare(
@@ -587,6 +606,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     const response = c.json({
       sport,
       season,
+      timing,
       page,
       page_size: 40,
       total,

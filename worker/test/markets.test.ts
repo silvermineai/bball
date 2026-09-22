@@ -346,6 +346,27 @@ describe("market archive metadata", () => {
     expect(sql).toContain("CASE WHEN datetime(m.captured_at) < datetime(g.starts_at) THEN 1 ELSE 0 END AS is_pregame");
   });
 
+  it("filters the ledger to the timing-qualified pregame cohort", async () => {
+    const prepare = vi.fn((sql: string) => {
+      const pregame = sql.includes("datetime(m.captured_at) < datetime(json_extract(m.payload_json,'$.starts_at'))");
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn().mockResolvedValue({ total: pregame ? 1 : 0 }),
+          all: vi.fn().mockResolvedValue({ results: pregame ? [{ game_id: "game-before-tip", is_pregame: 1 }] : [] }),
+        })),
+      };
+    });
+    const response = await markets.request(
+      "/?sport=basketball&season=2027&timing=pregame&page=0&publication_check=timing-filter",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ timing: "pregame", total: 1, rows: [{ game_id: "game-before-tip", is_pregame: 1 }] });
+    const sql = (prepare.mock.calls as unknown as Array<[string]>).map(([statement]) => statement).join("\n");
+    expect(sql).toContain("datetime(m.captured_at) < datetime(json_extract(m.payload_json,'$.starts_at'))");
+  });
+
   it("classifies quote validation outcomes from the capture receipt", async () => {
     const makeResponse = async (capture: Record<string, number>) => {
       const batch = vi.fn().mockResolvedValue([
