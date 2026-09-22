@@ -47,6 +47,35 @@ export type WomensLowerIndividualExport = {
   rows: Array<Array<string | number | null>>;
 };
 
+/**
+ * Keep an export on one source edition when a live statistic replaces the
+ * checked-in fallback. The live endpoint returns one statistic at a time, so
+ * exporting the fallback's other tables alongside it would produce a mixed
+ * clock and falsely look like one coherent release.
+ */
+export function activeWomensLowerDivisionExportStatistics(
+  archived: readonly {
+    statistic: string;
+    label: string;
+    headers: string[];
+    rows: readonly Record<string, unknown>[];
+    source_url: string;
+    through_games?: string | null;
+  }[],
+  live: {
+    statistic: string;
+    label: string;
+    headers: string[];
+    rows: readonly Record<string, unknown>[];
+    source_url: string;
+    through_games?: string | null;
+  } | null | undefined,
+  selectedStatistic: string,
+) {
+  if (live && live.statistic === selectedStatistic) return [live];
+  return archived;
+}
+
 export const LOWER_DIVISION_PAGE_SIZE = 25;
 
 /**

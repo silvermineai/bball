@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { downloadCsv, toCsv } from "../_lib/csv";
 import { parseWomensLowerDivisionEdition, type WomensLowerDivisionEdition, type WomensLowerDivisionStatistic } from "../_lib/womens-lower-division-integrity";
 import { womensLowerRankingRows, womensLowerRankingValueLabel } from "../_lib/womens-lower-division-rankings";
-import { womensLowerIndividualExport } from "../_lib/womens-lower-division-view";
+import { activeWomensLowerDivisionExportStatistics, womensLowerIndividualExport } from "../_lib/womens-lower-division-view";
 import { parseWomensLowerStatsMeta, parseWomensLowerStatsResponse, type WomensLowerStatsMeta } from "../_lib/womens-lower-division-api";
 
 const PAGE_SIZE = 50;
@@ -92,9 +92,13 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
   const visibleRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const download = () => {
     if (!current || !edition) return;
-    const exported = womensLowerIndividualExport(current.individual, query, Number(minimumGames) || 0);
+    const liveSelected = liveStatistic?.statistic === statistic ? liveStatistic : null;
+    const statistics = activeWomensLowerDivisionExportStatistics(current.individual, liveSelected, statistic);
+    const exported = womensLowerIndividualExport(statistics, query, Number(minimumGames) || 0);
     downloadCsv(`womens-d${division}-individual-source-${current.season}.csv`, toCsv(exported.headers, exported.rows));
-    setExportMessage(`Downloaded ${exported.rows.length.toLocaleString()} source rows across ${current.individual.length.toLocaleString()} individual statistics.`);
+    setExportMessage(liveSelected
+      ? `Downloaded ${exported.rows.length.toLocaleString()} live ${liveSelected.label} source rows.`
+      : `Downloaded ${exported.rows.length.toLocaleString()} checked-in source rows across ${current.individual.length.toLocaleString()} individual statistics.`);
   };
 
   return <section id="wbb-lower-ranking" className="field-card womens-lower-ranking-card" aria-labelledby="womens-lower-ranking-title">
@@ -110,7 +114,7 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
         <label htmlFor="wbb-lower-ranking-min-games">MINIMUM GAMES</label>
         <select id="wbb-lower-ranking-min-games" value={minimumGames} onChange={(event) => setMinimumGames(event.target.value)}><option value="0">Any recorded games</option><option value="5">5+</option><option value="10">10+</option><option value="20">20+</option></select>
       </div>
-      <div className="section-heading" style={{ marginBottom: 12 }}><p className="note">Showing {visibleRows.length ? `${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + visibleRows.length}` : "0"} of {rows.length.toLocaleString()} matching source rows · value field <code>{selected ? womensLowerRankingValueLabel(selected) : "—"}</code> · {edition.receipts.length.toLocaleString()} receipt-backed responses.</p><button className="button secondary" type="button" onClick={download} disabled={!rows.length}>Download filtered source CSV ↓</button></div>
+      <div className="section-heading" style={{ marginBottom: 12 }}><p className="note">Showing {visibleRows.length ? `${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + visibleRows.length}` : "0"} of {rows.length.toLocaleString()} matching source rows · value field <code>{selected ? womensLowerRankingValueLabel(selected) : "—"}</code> · {edition.receipts.length.toLocaleString()} receipt-backed responses.</p><button className="button secondary" type="button" onClick={download} disabled={!rows.length}>{liveStatistic?.statistic === statistic ? "Download live statistic CSV ↓" : "Download checked-in source CSV ↓"}</button></div>
       {exportMessage ? <p className="note" role="status">{exportMessage}</p> : null}
       <div className="table-scroll"><table className="data-table"><thead><tr><th>Source rank</th><th>Player</th><th>Team</th><th>Pos.</th><th className="numeric">Games</th><th className="numeric">{selected ? womensLowerRankingValueLabel(selected) : "Value"}</th><th>Team source path</th></tr></thead><tbody>{visibleRows.map((row, index) => <tr key={`${selected?.statistic}-${row.rank ?? "na"}-${row.name}-${row.team}-${index}`}><td className="rank-number">{row.rank == null ? "—" : `#${row.rank}`}</td><th scope="row">{row.name || "Name unavailable"}<small>{row.position || "Position unavailable"}</small></th><td>{row.team || "Team unavailable"}</td><td>{row.position || "—"}</td><td className="numeric">{display(row.games)}</td><td className="numeric"><strong>{display(row.value)}</strong></td><td><code>{row.teamSourcePath || "unavailable"}</code></td></tr>)}</tbody></table></div>
       {!visibleRows.length ? <p className="empty">No source rows match this search and threshold.</p> : null}

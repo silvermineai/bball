@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeWomensLowerDivisionExportStatistics,
   filterWomensLowerDivisionRows,
   lowerDivisionCellValue,
   lowerDivisionGames,
@@ -17,6 +18,16 @@ const rows = [
 ];
 
 describe("women's lower-division source row view", () => {
+  it("does not mix a live statistic with checked-in tables in one export", () => {
+    const archived = [
+      { statistic: "scoring", label: "Scoring", headers: ["PPG"], rows: [], source_url: "https://www.ncaa.com/stats/basketball-women/d2/current/individual/1" },
+      { statistic: "assists", label: "Assists", headers: ["AST"], rows: [], source_url: "https://www.ncaa.com/stats/basketball-women/d2/current/individual/2" },
+    ];
+    const live = { statistic: "scoring", label: "Scoring", headers: ["PPG"], rows: [{ source_fields: { PPG: "22.0" } }], source_url: "https://www.ncaa.com/stats/basketball-women/d2/current/individual/1" };
+    expect(activeWomensLowerDivisionExportStatistics(archived, live, "scoring")).toEqual([live]);
+    expect(activeWomensLowerDivisionExportStatistics(archived, null, "assists")).toBe(archived);
+  });
+
   it("reports source table coverage without calling repeated leaderboard rows unique players", () => {
     expect(summarizeWomensLowerDivisionCoverage({
       through_games: "Saturday, March 28, 2026",
