@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, modelScopedScorecardPath } from "./market-readiness";
+import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccess, marketSourceAccessLabel, modelScopedScorecardPath } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -132,6 +132,21 @@ describe("market connector readiness", () => {
     expect(modelScopedScorecardPath("basketball", "edition", 0)).toBe("/api/research/scorecard?sport=basketball&model=edition&limit=1");
     expect(modelScopedScorecardPath("football", " ")).toBeNull();
   });
+
+  it("keeps public, licensed, and authorized feed provenance distinct", () => {
+    const metadata = {
+      provider_capabilities: [
+        { source_access: "authorized" },
+        { source_access: "public" },
+        { source_access: "licensed" },
+        { source_access: "unverified" },
+      ],
+    };
+    expect(marketSourceAccess(metadata)).toEqual(["public", "licensed", "authorized"]);
+    expect(marketSourceAccessLabel(metadata)).toBe("public · licensed · authorized");
+    expect(marketSourceAccessLabel({ provider_capabilities: [{}] })).toBe("Not reported");
+  });
+
   it("reports when a capture is deliberately bounded below the eligible slate", () => {
     expect(marketCaptureDiagnostic({
       research_capture: {

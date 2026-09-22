@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
-import { marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
+import { marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccessLabel, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { comparisonGapDirectionLabel, comparisonGapLabel, comparisonTimingLabel } from "../../_lib/market-display";
 import { downloadCsv, toCsv } from "../../_lib/csv";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Estimate type", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Quote count", "Quotes JSON"];
@@ -442,7 +442,7 @@ export default function Scorecard() {
         </section>
       )}
       <section className="paper-panel" style={{ marginTop: 24 }} aria-live="polite">
-        <div className="eyebrow">Licensed odds feed / capture status</div>
+        <div className="eyebrow">Market feed / capture status</div>
         <h3 style={{ marginTop: 8 }}>
           {marketEvidence === "qualified"
             ? `${marketObservations.toLocaleString()} retained market observations`
@@ -450,7 +450,7 @@ export default function Scorecard() {
               ? `${marketObservations.toLocaleString()} retained observations · none qualify yet`
               : marketEvidence === "inconsistent"
                 ? "Market evidence counts are inconsistent"
-                : "No licensed pregame quote has been captured"}
+                : "No qualifying pregame quote has been captured"}
         </h3>
         <p>
           {marketEvidence === "qualified"
@@ -459,10 +459,11 @@ export default function Scorecard() {
               ? `${marketObservations.toLocaleString()} quote rows were retained, but none passed the forecast-registration, participant, kickoff, and freshness checks. The scorecard withholds model-versus-market comparisons until a quote qualifies.`
               : marketEvidence === "inconsistent"
                 ? "The ledger reports qualifying observations without retained rows. Model-versus-market comparisons are withheld until the ledger is repaired."
-                : "The scorecard does not invent a line from an archival reference. Add a licensed odds-feed key to the server environment, then run the bounded capture command; the feed timestamp and archive hash will be retained with each accepted quote."}
+                : "The scorecard does not invent a line from an archival reference. A feed must provide terms that permit prospective capture and the required game and clock fields; accepted quotes retain their source access class, timestamp, and archive hash."}
         </p>
         <div className="ledger-metrics" style={{ marginTop: 16 }} aria-label="Market capture readiness">
           <span>Capture readiness <b>{marketReadinessLabel(marketReadiness)}</b></span>
+          <span>Feed access <b>{marketSourceAccessLabel(marketMetadata)}</b></span>
           <span>Applicable feed contracts <b>{(marketMetadata?.provider_capabilities?.length || 0).toLocaleString()}</b></span>
           <span>Capture receipts <b>{(marketMetadata?.research_receipts || 0).toLocaleString()}</b></span>
           <span>Latest capture <b>{marketMetadata?.research_capture?.market_status ? "Recorded" : "Not recorded"}</b></span>
@@ -616,7 +617,7 @@ export default function Scorecard() {
                   <th>Market</th>
                   <th className="numeric">Games</th>
                   <th className="numeric">Average model difference</th>
-                  <th className="numeric">Average market margin</th>
+                  <th className="numeric">Average overround</th>
                 </tr>
               </thead>
               <tbody>

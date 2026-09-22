@@ -20,7 +20,10 @@ export type MarketReadinessMetadata = {
     captures_with_validated_markets?: number;
     captures_incomplete?: number;
   };
-  provider_capabilities?: unknown[];
+  provider_capabilities?: Array<{
+    provider?: string;
+    source_access?: unknown;
+  }>;
   research_capture?: {
     captured_at?: string;
     season?: number;
@@ -38,6 +41,31 @@ export type MarketReadinessMetadata = {
     market_status?: MarketCaptureStatus;
   };
 };
+
+export type MarketSourceAccess = "public" | "licensed" | "authorized";
+
+/**
+ * Keep feed provenance visible in the scorecard. A public capture receipt,
+ * an operator-authorized import, and a licensed provider are different
+ * evidence classes; collapsing them into "licensed" overstates what the
+ * archive proves.
+ */
+export function marketSourceAccess(metadata: MarketReadinessMetadata | null | undefined): MarketSourceAccess[] {
+  const order: MarketSourceAccess[] = ["public", "licensed", "authorized"];
+  const available = new Set(
+    (metadata?.provider_capabilities || [])
+      .map((capability) => capability?.source_access)
+      .filter((value): value is MarketSourceAccess => order.includes(value as MarketSourceAccess)),
+  );
+  return order.filter((value) => available.has(value));
+}
+
+/** Short provenance label suitable for a scorecard heading or metric. */
+export function marketSourceAccessLabel(metadata: MarketReadinessMetadata | null | undefined): string {
+  const access = marketSourceAccess(metadata);
+  if (!access.length) return "Not reported";
+  return access.join(" · ");
+}
 
 export type MarketReadinessState =
   | "checking"
