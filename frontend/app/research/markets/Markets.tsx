@@ -5,7 +5,7 @@ import Link from "next/link";
 import { date, fmt } from "../../_lib/format";
 import { normalizeMarketSeason } from "../../_lib/market-view";
 import { marketCaptureNextStep, marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
-import { marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessState } from "../../_lib/market-readiness";
+import { marketCaptureCoverageDetail, marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessState } from "../../_lib/market-readiness";
 import { marketArchiveTimingLabel } from "../../_lib/market-archive-view";
 
 type Meta = {
@@ -144,6 +144,7 @@ export default function Markets() {
   const archiveUnavailable = meta?.source === "unavailable" || data?.source === "unavailable";
   const archivePartial = meta?.source === "partial" || data?.source === "partial";
   const unavailableSources = Array.from(new Set([...(meta?.unavailable_sources || []), ...(data?.unavailable_sources || [])]));
+  const captureCoverage = marketCaptureCoverageDetail(meta);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -306,6 +307,7 @@ export default function Markets() {
             <strong>{marketReadinessLabel(marketReadiness)}</strong>
           </div>
           <p style={{ margin: "8px 0 0" }}>{captureDiagnostic || readinessDetail}</p>
+          {captureCoverage && <p className="note" style={{ margin: "6px 0 0" }}>{captureCoverage}</p>}
           {captureDiagnostic && <p className="note" style={{ margin: "6px 0 0" }}>{readinessDetail}</p>}
         </div> : null}
         {meta?.research_capture_summary?.latest_no_quote_capture_at && meta.research_capture_summary.latest_validated_capture_at ? <p className="note" role="status">

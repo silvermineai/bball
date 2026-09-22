@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
-import { marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccessLabel, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
+import { marketCaptureCoverageDetail, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccessLabel, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { comparisonGapDirectionLabel, comparisonGapLabel, comparisonTimingLabel } from "../../_lib/market-display";
 import { gameMarketReadinessExport, gameMarketReadinessLabel } from "../../_lib/game-market-readiness";
 import { timingQualifiedFootballMarketMetrics, type FootballMarketBenchmarkMetric } from "../../_lib/football-market-benchmark";
@@ -210,6 +210,7 @@ export default function Scorecard() {
   );
   const marketCaptureNote = marketCaptureDiagnostic(marketMetadata);
   const marketCaptureHistoryNote = marketCaptureHistoryDiagnostic(marketMetadata);
+  const marketCaptureCoverageNote = marketCaptureCoverageDetail(marketMetadata);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -500,6 +501,7 @@ export default function Scorecard() {
           {marketReadinessScorecardNote(marketReadiness)}
         </p>
         {marketCaptureNote && <p className="note" role="status" style={{ marginTop: 12 }}>{marketCaptureNote} This is capture evidence; only exact-game, pregame quotes enter the comparison ledger.</p>}
+        {marketCaptureCoverageNote && <p className="note" role="status" style={{ marginTop: 12 }}>{marketCaptureCoverageNote}</p>}
         {marketCaptureHistoryNote && <p className="note" role="status" style={{ marginTop: 12 }}>{marketCaptureHistoryNote}</p>}
         {readiness && (
           <>

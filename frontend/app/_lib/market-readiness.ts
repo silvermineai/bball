@@ -36,11 +36,77 @@ export type MarketReadinessMetadata = {
     capture_limit?: number;
     capture_truncated?: boolean;
     summary_fetch_failures?: number;
+    source_rows?: number;
+    rows_with_lines?: number;
     accepted_markets?: number;
     rejected_records?: number;
     market_status?: MarketCaptureStatus;
   };
 };
+
+export type MarketCaptureCoverage = {
+  /** Number of source summaries/rows successfully returned by the connector. */
+  returned: number | null;
+  /** Number of source requests that failed after being selected. */
+  failed: number | null;
+  /** Number of games/rows selected for this capture attempt. */
+  requested: number | null;
+  /** Number of candidate games available before a bounded selection. */
+  candidates: number | null;
+  /** Successful source responses divided by the selected request count. */
+  returnedRate: number | null;
+  /** Selected requests divided by the full candidate slate. */
+  selectedRate: number | null;
+  bounded: boolean;
+};
+
+function nonNegativeInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+/**
+ * Reconcile a bounded market capture without treating unrequested games as
+ * failed reads or treating failed reads as empty quote responses. The API
+ * intentionally keeps these counters raw; this derived view gives the UI a
+ * compact denominator for operators reviewing why a line is unavailable.
+ */
+export function marketCaptureCoverage(metadata: MarketReadinessMetadata | null | undefined): MarketCaptureCoverage {
+  const capture = metadata?.research_capture;
+  if (!capture) {
+    return { returned: null, failed: null, requested: null, candidates: null, returnedRate: null, selectedRate: null, bounded: false };
+  }
+  const returned = nonNegativeInteger(capture.summary_count ?? capture.source_rows);
+  const failed = nonNegativeInteger(capture.summary_fetch_failures);
+  const requested = nonNegativeInteger(capture.eligible_games);
+  const candidates = nonNegativeInteger(capture.candidate_games);
+  const returnedRate = returned !== null && requested !== null && requested > 0 && returned <= requested
+    ? returned / requested
+    : null;
+  const selectedRate = requested !== null && candidates !== null && candidates > 0 && requested <= candidates
+    ? requested / candidates
+    : null;
+  return {
+    returned,
+    failed,
+    requested,
+    candidates,
+    returnedRate,
+    selectedRate,
+    bounded: capture.capture_truncated === true,
+  };
+}
+
+/** Explain successful reads and bounded selection while preserving unresolved failures. */
+export function marketCaptureCoverageDetail(metadata: MarketReadinessMetadata | null | undefined): string | null {
+  const coverage = marketCaptureCoverage(metadata);
+  if (coverage.returned === null && coverage.requested === null) return null;
+  const returned = coverage.returned == null ? "—" : coverage.returned.toLocaleString();
+  const requested = coverage.requested == null ? "—" : coverage.requested.toLocaleString();
+  const failed = coverage.failed == null ? 0 : coverage.failed;
+  const result = `Source responses: ${returned} of ${requested} selected${coverage.returnedRate == null ? "" : ` (${(coverage.returnedRate * 100).toFixed(1)}%)`}; ${failed.toLocaleString()} selected requests failed.`;
+  if (!coverage.bounded || coverage.candidates === null || coverage.selectedRate === null) return result;
+  return `${result} Selection sampled ${requested} of ${coverage.candidates.toLocaleString()} available candidates (${(coverage.selectedRate * 100).toFixed(1)}%); the remainder was not requested.`;
+}
 
 export type MarketSourceAccess = "public" | "licensed" | "authorized";
 

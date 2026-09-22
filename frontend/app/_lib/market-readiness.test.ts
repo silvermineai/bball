@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMarketComparisonReadiness, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccess, marketSourceAccessLabel, modelScopedScorecardPath } from "./market-readiness";
+import { formatMarketComparisonReadiness, marketCaptureCoverage, marketCaptureCoverageDetail, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccess, marketSourceAccessLabel, modelScopedScorecardPath } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -163,6 +163,36 @@ describe("market connector readiness", () => {
         rejected_records: 0,
       },
     })).toContain("120 of 1,629 eligible games (limit 120)");
+  });
+
+  it("separates returned summaries, failed reads, and an intentionally bounded slate", () => {
+    const metadata = {
+      research_capture: {
+        summary_count: 299,
+        eligible_games: 300,
+        candidate_games: 559,
+        capture_truncated: true,
+        summary_fetch_failures: 1,
+      },
+    };
+    expect(marketCaptureCoverage(metadata)).toMatchObject({
+      returned: 299,
+      failed: 1,
+      requested: 300,
+      candidates: 559,
+      returnedRate: 299 / 300,
+      selectedRate: 300 / 559,
+      bounded: true,
+    });
+    expect(marketCaptureCoverageDetail(metadata)).toBe(
+      "Source responses: 299 of 300 selected (99.7%); 1 selected requests failed. Selection sampled 300 of 559 available candidates (53.7%); the remainder was not requested.",
+    );
+  });
+
+  it("does not invent a coverage ratio when counters contradict", () => {
+    const metadata = { research_capture: { summary_count: 12, eligible_games: 10 } };
+    expect(marketCaptureCoverage(metadata).returnedRate).toBeNull();
+    expect(marketCaptureCoverageDetail(metadata)).toBe("Source responses: 12 of 10 selected; 0 selected requests failed.");
   });
 
 });
