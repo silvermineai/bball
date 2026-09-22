@@ -89,6 +89,20 @@ describe("football player index category selection", () => {
   it("keeps exact-ID box totals rankable without inventing EPA", () => {
     expect(footballSourceBoxMetric("defensive")).toBe("tackles");
     expect(footballSourceBoxMetrics("defensive").map((metric) => metric.key)).toContain("sacks");
+    expect(footballSourceBoxMetrics("fumbles").map((metric) => metric.key)).toEqual([
+      "fumbles",
+      "fumbles_lost",
+      "fumbles_recovered",
+    ]);
+    expect(footballSourceBoxMetrics("kicking").map((metric) => metric.key)).toEqual([
+      "total_kicking_points",
+      "field_goals_made",
+      "field_goals_attempted",
+      "extra_points_made",
+      "extra_points_attempted",
+    ]);
+    expect(footballSourceBoxMetrics("punting").map((metric) => metric.key)).toContain("punts");
+    expect(footballSourceBoxMetrics("punting").map((metric) => metric.key)).toContain("touchbacks");
     expect(resolveFootballSourceBoxMetric("defensive", "sacks")?.label).toBe("Sacks");
     expect(resolveFootballSourceBoxMetric("defensive", "made_up")?.key).toBe("tackles");
     expect(footballSourceBoxMetric("passing")).toBeNull();
@@ -114,6 +128,16 @@ describe("football player index category selection", () => {
     expect(ranks.get(footballPlayerRankKey("2", "b", "defensive"))).toBe(1);
     expect(ranks.get(footballPlayerRankKey("1", "a", "defensive"))).toBe(2);
     expect(ranks.size).toBe(2);
+  });
+  it("ranks retained fumble totals while keeping missing values unavailable", () => {
+    const ranks = computeSourceBoxRanks([
+      { id: "1", team_id: "a", name: "Loose Ball", division: "fbs", categories: ["fumbles"], production: { fumbles: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { fumbles: 3, fumbles_lost: 1, fumbles_recovered: 2 } } } },
+      { id: "2", team_id: "b", name: "Secure Ball", division: "fbs", categories: ["fumbles"], production: { fumbles: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { fumbles: 1, fumbles_lost: 0, fumbles_recovered: 4 } } } },
+      { id: "3", team_id: "c", name: "No Fumble Field", division: "fbs", categories: ["fumbles"], production: { fumbles: { plays: null, yards: null, epa: null, epa_per_play: null, touchdowns: null, rank: null, metrics: { fumbles_recovered: 2 } } } },
+    ], "fumbles", "fbs", "fumbles_lost");
+    expect(ranks.get(footballPlayerRankKey("1", "a", "fumbles"))).toBe(1);
+    expect(ranks.get(footballPlayerRankKey("2", "b", "fumbles"))).toBe(2);
+    expect(ranks.has(footballPlayerRankKey("3", "c", "fumbles"))).toBe(false);
   });
   it("gives equal source-box totals the same competition rank", () => {
     const ranks = computeSourceBoxRanks([

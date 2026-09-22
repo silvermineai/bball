@@ -119,9 +119,11 @@ export type FootballSourceBoxMetric = {
 };
 
 /**
- * Rankable exact-ID counting fields retained in each source-box category.
+ * Rankable exact-ID totals and maxima retained in each source-box category.
  * Percentage and per-opportunity fields stay visible in the table but are not
- * ranked without a source-defined qualification threshold.
+ * ranked without a source-defined qualification threshold. Every field below
+ * is an additive source value (or a source-reported maximum); no rate or
+ * opportunity denominator is invented by the board.
  */
 const sourceBoxMetricMap: Partial<Record<FootballPlayerCategory, FootballSourceBoxMetric[]>> = {
   defensive: [
@@ -139,15 +141,21 @@ const sourceBoxMetricMap: Partial<Record<FootballPlayerCategory, FootballSourceB
     { key: "interception_touchdowns", label: "Interception touchdowns" },
   ],
   fumbles: [
+    { key: "fumbles", label: "Fumbles" },
+    { key: "fumbles_lost", label: "Fumbles lost" },
     { key: "fumbles_recovered", label: "Fumbles recovered" },
   ],
   kicking: [
     { key: "total_kicking_points", label: "Kicking points" },
     { key: "field_goals_made", label: "Field goals made" },
+    { key: "field_goals_attempted", label: "Field-goal attempts" },
     { key: "extra_points_made", label: "Extra points made" },
+    { key: "extra_points_attempted", label: "Extra-point attempts" },
   ],
   punting: [
+    { key: "punts", label: "Punts" },
     { key: "punt_yards", label: "Punt yards" },
+    { key: "touchbacks", label: "Punt touchbacks" },
     { key: "punts_inside_20", label: "Punts inside the 20" },
     { key: "long_punt", label: "Longest punt" },
   ],
