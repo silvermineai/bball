@@ -13,6 +13,7 @@ import { forecastConfidenceSummary, forecastEvidenceCoverage, forecastEvidenceDe
 import { latestForecastLabMarketQuote } from "../_lib/forecast-lab-market";
 import { resolveForecastEdition } from "../_lib/forecast-edition";
 import { explainBasketballPrediction, publishedScoreArithmetic } from "../_lib/basketball-prediction-explanation";
+import { exactBasketballCalibrationContext, type BasketballCalibrationBucket } from "../_lib/basketball-calibration";
 import { matchupPaceLens } from "../_lib/basketball-pace-lens";
 import { isUsableBasketballPrediction } from "../_lib/basketball-matchups";
 import RotationWatchPanel from "./RotationWatchPanel";
@@ -29,6 +30,8 @@ export default function BasketballCard({
   forecastModelId,
   forecastCreatedAt,
   model,
+  calibrationBuckets,
+  calibrationModelId,
 }: {
   game: BBGame;
   homeRoster?: BBRosterSummary;
@@ -41,6 +44,8 @@ export default function BasketballCard({
   forecastModelId?: string | null;
   forecastCreatedAt?: string | null;
   model?: Pick<BBOverview["model"], "id" | "teams" | "efficiency" | "tempo" | "evaluation"> | null;
+  calibrationBuckets?: readonly BasketballCalibrationBucket[];
+  calibrationModelId?: string | null;
 }) {
   const primaryPrediction = isUsableBasketballPrediction(g.prediction) ? g.prediction : null;
   const fallbackPrediction = isUsableBasketballPrediction(g.fallback_prediction) ? g.fallback_prediction : null;
@@ -53,6 +58,14 @@ export default function BasketballCard({
   const coldStart = !primaryPrediction && !!fallbackPrediction;
   const scoreExplanation = p ? explainBasketballPrediction(model, g, p) : null;
   const publishedArithmetic = p ? publishedScoreArithmetic(p) : null;
+  const calibrationContext = p && !coldStart
+    ? exactBasketballCalibrationContext(
+      p.home_win_probability,
+      calibrationBuckets,
+      forecastEdition.modelId,
+      calibrationModelId,
+    )
+    : null;
   const paceLens = matchupPaceLens(p, homeRating, awayRating);
   const signalContext = forecastSignalContext(p, !!primaryPrediction);
   const confidence = forecastConfidenceSummary(p, !!primaryPrediction);
@@ -125,6 +138,20 @@ export default function BasketballCard({
             </div>
             <small>{confidence.range_context}. The probability and range are from forecast edition <span className="mono">{forecastEdition.modelId || "unavailable"}</span>; this context does not include a market quote.</small>
           </div>
+          {calibrationContext && (
+            <div className="forecast-confidence-panel forecast-calibration-context" aria-label="Exact-edition held-out calibration context">
+              <div className="forecast-confidence-heading">
+                <strong>Held-out calibration context</strong>
+                <span>{calibrationContext.side} {fmt(calibrationContext.confidence_lower * 100, 0)}–{fmt(calibrationContext.confidence_upper * 100, 0)}%</span>
+              </div>
+              <div className="forecast-confidence-values">
+                <span><b>{fmt(calibrationContext.observed! * 100, 1)}%</b> observed win rate</span>
+                <span>{calibrationContext.games.toLocaleString()} held-out games</span>
+                <span>{calibrationContext.observed_gap_pp == null ? "—" : `${calibrationContext.observed_gap_pp >= 0 ? "+" : ""}${fmt(calibrationContext.observed_gap_pp, 1)} pp vs model`}</span>
+              </div>
+              <small>Historical replay for the exact forecast edition. The observed rate describes this probability band; it is not a guarantee for this game.</small>
+            </div>
+          )}
           {modelEvidence && (
             <details className="match-card-details model-track-record">
               <summary>Model track record</summary>

@@ -66,6 +66,23 @@ export function basketballCalibrationContext(
   };
 }
 
+/**
+ * Attach held-out context only when the replay and forecast name the same
+ * immutable model edition. A probability band from an older artifact cannot
+ * explain a live row after the forecast catalog advances.
+ */
+export function exactBasketballCalibrationContext(
+  homeWinProbability: number,
+  buckets: readonly BasketballCalibrationBucket[] | null | undefined,
+  forecastModelId: string | null | undefined,
+  calibrationModelId: string | null | undefined,
+): BasketballCalibrationContext | null {
+  const forecastId = forecastModelId?.trim();
+  const calibrationId = calibrationModelId?.trim();
+  if (!forecastId || !calibrationId || forecastId !== calibrationId) return null;
+  return basketballCalibrationContext(homeWinProbability, buckets);
+}
+
 export type BasketballCalibrationSummary = {
   games: number;
   expectedCalibrationError: number | null;

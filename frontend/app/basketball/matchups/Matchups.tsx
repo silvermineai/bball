@@ -34,6 +34,7 @@ import {
 import MatchupPersonnelPanel from "./MatchupPersonnel";
 import { resolveForecastEdition } from "../../_lib/forecast-edition";
 import { selectPublishedForecastModel } from "../../_lib/forecast-lab-view";
+import type { BasketballCalibrationBucket } from "../../_lib/basketball-calibration";
 
 type PublisherRating = { id: string; team: string; value: number | null };
 
@@ -47,6 +48,7 @@ export default function Matchups({
   rosterPrimaryModelId,
   teamRatings = {},
   scope = "all",
+  calibrationBuckets = [],
 }: {
   games: BBGame[];
   marketComparisons: Record<string, NonNullable<BBGame["market_comparisons"]>>;
@@ -57,6 +59,7 @@ export default function Matchups({
   rosterPrimaryModelId: string;
   teamRatings?: Record<string, BBTeam>;
   scope?: "all" | "forecasted";
+  calibrationBuckets?: readonly BasketballCalibrationBucket[];
 }) {
   const params = useSearchParams();
   const initial = parseMatchupFilters(params.toString());
@@ -595,6 +598,8 @@ export default function Matchups({
               forecastModelId={model.id}
               forecastCreatedAt={generatedAt}
               model={model}
+              calibrationBuckets={calibrationBuckets}
+              calibrationModelId={model.id}
             />
             <div className="matchup-card-actions">
               <button

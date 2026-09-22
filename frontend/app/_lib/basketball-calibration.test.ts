@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { basketballCalibrationContext, basketballCalibrationSummary } from "./basketball-calibration";
+import { basketballCalibrationContext, basketballCalibrationSummary, exactBasketballCalibrationContext } from "./basketball-calibration";
 
 describe("basketball calibration summary", () => {
   it("weights calibration error and interval coverage by held-out games", () => {
@@ -43,5 +43,12 @@ describe("basketball calibration summary", () => {
       observed_gap_pp: 10,
     });
     expect(basketballCalibrationContext(0.72, [])).toBeNull();
+  });
+
+  it("withholds a band when the replay belongs to another model edition", () => {
+    const buckets = [{ lower: 0.7, upper: 0.8, games: 20, predicted: 0.74, observed: 0.8 }];
+    expect(exactBasketballCalibrationContext(0.72, buckets, "model-current", "model-old")).toBeNull();
+    expect(exactBasketballCalibrationContext(0.72, buckets, "model-current", "model-current")).toMatchObject({ games: 20, side: "Home" });
+    expect(exactBasketballCalibrationContext(0.72, buckets, "", "model-current")).toBeNull();
   });
 });
