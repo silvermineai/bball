@@ -5,22 +5,27 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 type Bindings = Env;
-type Metric = { key: string; label: string; unit: "points per 100 possessions" | "possessions per 40 minutes" | "rank" | "minutes" };
+type Metric = {
+  key: string;
+  label: string;
+  unit: "points per 100 possessions" | "possessions per 40 minutes" | "rank" | "minutes";
+  description: string;
+};
 const ratingMetrics: Metric[] = [
-  { key: "rank", label: "Publisher rank", unit: "rank" },
-  { key: "adj_em", label: "Adjusted efficiency margin", unit: "points per 100 possessions" },
-  { key: "adj_o", label: "Adjusted offense", unit: "points per 100 possessions" },
-  { key: "adj_d", label: "Adjusted defense", unit: "points per 100 possessions" },
-  { key: "adj_tempo", label: "Adjusted tempo", unit: "possessions per 40 minutes" },
+  { key: "rank", label: "Publisher rank", unit: "rank", description: "Recorded overall rank in the selected team-season release." },
+  { key: "adj_em", label: "Adjusted efficiency margin", unit: "points per 100 possessions", description: "Adjusted offense minus adjusted defense; positive values indicate stronger expected scoring margin on a neutral floor." },
+  { key: "adj_o", label: "Adjusted offense", unit: "points per 100 possessions", description: "Opponent-adjusted points expected per 100 possessions on offense." },
+  { key: "adj_d", label: "Adjusted defense", unit: "points per 100 possessions", description: "Opponent-adjusted points allowed per 100 possessions; lower values are better." },
+  { key: "adj_tempo", label: "Adjusted tempo", unit: "possessions per 40 minutes", description: "Opponent-adjusted estimated possessions per 40 minutes." },
 ];
 const playerMetrics: Metric[] = [
   // BPM is a rate, not an untyped score. Keeping the unit in the public
   // catalog prevents the archive UI and CSV export from presenting these
   // source-attributed player values as arbitrary numbers.
-  { key: "box_bpm", label: "Box Plus/Minus", unit: "points per 100 possessions" },
-  { key: "box_obpm", label: "Offensive BPM", unit: "points per 100 possessions" },
-  { key: "box_dbpm", label: "Defensive BPM", unit: "points per 100 possessions" },
-  { key: "min", label: "Recorded minutes", unit: "minutes" },
+  { key: "box_bpm", label: "Box Plus/Minus", unit: "points per 100 possessions", description: "Source-attributed estimate of overall player value per 100 possessions from box-score production." },
+  { key: "box_obpm", label: "Offensive BPM", unit: "points per 100 possessions", description: "Source-attributed box-score estimate of offensive player value per 100 possessions." },
+  { key: "box_dbpm", label: "Defensive BPM", unit: "points per 100 possessions", description: "Source-attributed box-score estimate of defensive player value per 100 possessions." },
+  { key: "min", label: "Recorded minutes", unit: "minutes", description: "Minutes recorded for the player in the selected season." },
 ];
 const querySchema = z.object({
   kind: z.enum(["ratings", "players"]).default("ratings"),

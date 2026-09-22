@@ -1820,10 +1820,10 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       metrics: expect.arrayContaining([
-        expect.objectContaining({ key: "box_bpm", unit: "points per 100 possessions" }),
-        expect.objectContaining({ key: "box_obpm", unit: "points per 100 possessions" }),
-        expect.objectContaining({ key: "box_dbpm", unit: "points per 100 possessions" }),
-        expect.objectContaining({ key: "min", unit: "minutes" }),
+        expect.objectContaining({ key: "box_bpm", unit: "points per 100 possessions", description: expect.stringContaining("player value") }),
+        expect.objectContaining({ key: "box_obpm", unit: "points per 100 possessions", description: expect.stringContaining("offensive") }),
+        expect.objectContaining({ key: "box_dbpm", unit: "points per 100 possessions", description: expect.stringContaining("defensive") }),
+        expect.objectContaining({ key: "min", unit: "minutes", description: expect.stringContaining("Minutes") }),
       ]),
     });
   });
