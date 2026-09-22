@@ -4,6 +4,8 @@ export type ProspectLearningInput = {
   previousCapturedAt?: string | null;
   committedTeamId: string | null;
   committedTeamName: string | null;
+  /** Whether the committed ID resolves in the site's exact program directory. */
+  destinationProgramResolved?: boolean;
   recordedSchoolCount: number;
   resolvedSchoolCount: number;
   hasPeerContext: boolean;
@@ -45,10 +47,12 @@ export function prospectLearningChecks(input: ProspectLearningInput): ProspectLe
     {
       key: "fit",
       label: "Destination fit",
-      status: input.committedTeamId ? "recorded" : "unavailable",
-      detail: input.committedTeamId
-        ? "Roster workload can be reviewed by exact team ID"
-        : "Requires a recorded destination team ID",
+      status: input.committedTeamId && input.destinationProgramResolved !== false ? "recorded" : "unavailable",
+      detail: !input.committedTeamId
+        ? "Requires a recorded destination team ID"
+        : input.destinationProgramResolved === false
+          ? "Destination ID has no exact program-directory match"
+          : "Roster workload can be reviewed by exact team ID",
     },
     {
       key: "school-list",

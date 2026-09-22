@@ -178,6 +178,9 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     previousCapturedAt: prospect.previous_captured_at,
     committedTeamId: prospect.committed_team_id,
     committedTeamName: prospect.committed_team_name,
+    destinationProgramResolved: prospect.committed_team_id
+      ? programs.some((program) => program.id === prospect.committed_team_id)
+      : false,
     recordedSchoolCount: recordedSchools.length,
     resolvedSchoolCount: recordedSchools.filter((school) => school.resolved).length,
     hasPeerContext: peerContext != null,

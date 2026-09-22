@@ -36,4 +36,22 @@ describe("prospect learning queue", () => {
     expect(checks[0].detail).toBe("No prior retained rank capture");
     expect(checks[2].detail).toBe("Requires a recorded destination team ID");
   });
+
+  it("does not call destination fit recorded when the team ID is unresolved", () => {
+    const checks = prospectLearningChecks({
+      rank: 12,
+      previousRank: null,
+      committedTeamId: "missing-team",
+      committedTeamName: "Recorded School",
+      destinationProgramResolved: false,
+      recordedSchoolCount: 1,
+      resolvedSchoolCount: 0,
+      hasPeerContext: false,
+    });
+    expect(checks[1].status).toBe("recorded");
+    expect(checks[2]).toMatchObject({
+      status: "unavailable",
+      detail: "Destination ID has no exact program-directory match",
+    });
+  });
 });
