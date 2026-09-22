@@ -24,6 +24,7 @@ import { publicArchiveArticle } from "../../_lib/public-text";
 import type { ProspectProgram } from "../../_lib/prospect-schools";
 import RecruitingCoverageBoundary from "../../_components/RecruitingCoverageBoundary";
 import { assessRecruitingCoverage } from "../../_lib/recruiting-coverage";
+import { recruitingPlayerCoverage } from "../../_lib/recruiting-player-coverage";
 import ArchivedTeamOutlook from "./ArchivedTeamOutlook";
 import TransferProductionBoard from "./TransferProductionBoard";
 
@@ -103,6 +104,7 @@ export default function Page() {
     sourceCount: data.sources.length,
     directoryProgramCount: programDirectory.length,
   });
+  const playerCoverage = recruitingPlayerCoverage(data.people, data.events);
   const continuityRows = (rosters.team_summaries || [])
     .filter((row) => row.represented_prior_minutes > 0)
     .sort((a, b) => b.represented_prior_minutes - a.represented_prior_minutes || a.team.localeCompare(b.team))
@@ -136,6 +138,28 @@ export default function Page() {
         <div><strong>{data.coverage.programs.toLocaleString()}</strong><span>Programs reviewed</span></div>
         <div><strong>{data.coverage.events.toLocaleString()}</strong><span>Dated events</span></div>
         <div><strong>{data.coverage.historical_links.toLocaleString()}</strong><span>Prior stat links</span></div>
+      </section>
+      <section className="section" aria-labelledby="recruiting-player-coverage">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Reviewed player file / 2027 edition</div>
+            <h2 id="recruiting-player-coverage">See which player rows have production attached.</h2>
+          </div>
+          <span className="note">{data.coverage.players.toLocaleString()} retained people</span>
+        </div>
+        <p className="note">These counts reconcile the reviewed announcement file by player category. Prior production appears only when the release carries an exact reviewed player link; an absent link is unavailable and is never treated as zero. Dated events count only event rows attached to that person key.</p>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead><tr><th>Player category</th><th className="numeric">Players</th><th className="numeric">Dated events</th><th className="numeric">Prior production links</th><th className="numeric">Link coverage</th></tr></thead>
+            <tbody>{playerCoverage.map((row) => <tr key={row.category}>
+              <th scope="row">{row.category === "transfer" ? "Transfers" : row.category === "freshman" ? "Freshmen" : "International"}</th>
+              <td className="numeric"><strong>{row.players.toLocaleString()}</strong></td>
+              <td className="numeric">{row.events.toLocaleString()}</td>
+              <td className="numeric">{row.historicalLinks.toLocaleString()}</td>
+              <td className="numeric">{row.historicalLinkShare == null ? "—" : `${(row.historicalLinkShare * 100).toFixed(1)}%`}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
       </section>
       <LiveBasketballRecruitingStatus />
       <LiveBasketballProspectStatus />
