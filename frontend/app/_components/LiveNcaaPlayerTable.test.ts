@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { effectiveFieldGoalPercent, playerCoreStatCoverage, playerCsvHeaders, playerCsvRows, playerRecordedDetailGroups, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
+import { effectiveFieldGoalPercent, hasExactPlayerSourceIdentity, playerCoreStatCoverage, playerCsvHeaders, playerCsvRows, playerRecordedDetailGroups, validatePlayerExportPage, type LiveNCAAPlayerRow } from "./LiveNcaaPlayerTable";
 
 const row: LiveNCAAPlayerRow = {
   player_id: "p-1",
+  team_id: "team-1",
   player_name: "A Player",
   team_name: "A University",
   position: "G",
@@ -32,8 +33,8 @@ const row: LiveNCAAPlayerRow = {
 describe("homepage NCAA player export", () => {
   it("keeps raw counting totals, denominators, rates, and the selected metric together", () => {
     const values = playerCsvRows([row], "ppg")[0];
-    expect(playerCsvHeaders.slice(0, 9)).toEqual(["Rank", "Player ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG"]);
-    expect(values.slice(0, 9)).toEqual([4, "p-1", "A Player", "A University", "G", "JR", 20, 600, 30]);
+    expect(playerCsvHeaders.slice(0, 10)).toEqual(["Rank", "Player ID", "Team ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG"]);
+    expect(values.slice(0, 10)).toEqual([4, "p-1", "team-1", "A Player", "A University", "G", "JR", 20, 600, 30]);
     expect(values[playerCsvHeaders.indexOf("PPG")]).toBe(15);
     expect(values[playerCsvHeaders.indexOf("eFG%")]).toBe(58);
     expect(values[playerCsvHeaders.indexOf("3P%")]).toBe(40);
@@ -71,6 +72,13 @@ describe("homepage NCAA player export", () => {
     expect(validatePlayerExportPage(page, 2, 1, 0, 2)).toEqual([row]);
     expect(() => validatePlayerExportPage({ ...page, total: 3 }, 2, 1, 1, 2)).toThrow("changed during export");
     expect(() => validatePlayerExportPage({ ...page, rows: [] }, 2, 1, 0, 2)).toThrow("incomplete page");
+  });
+
+  it("fails closed when a ranked row is missing its exact team identity", () => {
+    expect(hasExactPlayerSourceIdentity({ player_id: "p-1", team_id: "team-1" })).toBe(true);
+    expect(hasExactPlayerSourceIdentity({ player_id: "p-1", team_id: "" })).toBe(false);
+    expect(hasExactPlayerSourceIdentity(null)).toBe(false);
+    expect(() => validatePlayerExportPage({ total: 1, page_size: 1, rows: [{ ...row, team_id: "" }] }, 1, 1, 0, 1)).toThrow("source identity");
   });
 
   it("accepts a short final page without accepting an incomplete cohort", () => {

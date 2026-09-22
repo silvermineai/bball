@@ -11,6 +11,8 @@ type Metric = LiveNCAAMetric;
 
 export type LiveNCAAPlayerRow = {
   player_id: string;
+  /** Exact NCAA team identity retained by the rankings endpoint. */
+  team_id: string;
   player_name: string | null;
   team_name: string | null;
   position: string | null;
@@ -71,6 +73,14 @@ export type LiveNCAAPlayerRankingResult = {
   rows: PlayerRow[];
 };
 type Result = LiveNCAAPlayerRankingResult;
+
+/** A ranked row must retain both sides of the exact player/team source key. */
+export function hasExactPlayerSourceIdentity(value: unknown): value is Pick<LiveNCAAPlayerRow, "player_id" | "team_id"> {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.player_id === "string" && row.player_id.trim().length > 0
+    && typeof row.team_id === "string" && row.team_id.trim().length > 0;
+}
 
 /**
  * Count only the core fields that the table can display without estimating a
@@ -185,6 +195,9 @@ export function validatePlayerExportPage(
   if (!Number.isInteger(pageTotal) || pageTotal !== expectedTotal || !Number.isInteger(pageSize) || pageSize !== expectedPageSize || !Array.isArray(payload.rows) || payload.rows.length > pageSize) {
     throw new Error("The player archive changed during export.");
   }
+  if (payload.rows.some((row) => !hasExactPlayerSourceIdentity(row))) {
+    throw new Error("The player archive returned an incomplete source identity.");
+  }
   if (page < totalPages - 1 && payload.rows.length === 0) {
     throw new Error("The player archive returned an incomplete page.");
   }
@@ -298,7 +311,7 @@ export const effectiveFieldGoalPercent = (
 ) => fgm == null || tpm == null ? null : percentage(fgm + 0.5 * tpm, fga);
 
 export const playerCsvHeaders = [
-  "Rank", "Player ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
+  "Rank", "Player ID", "Team ID", "Player", "Team", "Position", "Class", "GP", "Minutes", "MPG",
   "Points", "PPG", "Rebounds", "RPG", "Offensive rebounds", "OR/G", "Defensive rebounds", "DR/G",
   "Assists", "APG", "Steals", "SPG", "Blocks", "BPG", "Double-doubles", "Fouls", "PF/G", "Turnovers", "TO/G",
   "FGA", "FGM", "eFG%", "3PA", "3PM", "3P%", "FTA", "FTM", "FT%", "TS%", "Selected metric", "Selected value", "Core stat fields recorded", "Offensive possessions", "Team possessions", "Usage events", "Team usage events", "Team minutes",
@@ -323,7 +336,7 @@ export function playerCsvRows(rows: LiveNCAAPlayerRow[], metric: Metric): CsvCel
     const ftPct = percentage(row.ftm, row.fta);
     const ts = percentage(row.points, row.fga != null && row.fta != null ? 2 * (row.fga + 0.475 * row.fta) : null);
     return [
-      row.rank, row.player_id, row.player_name, row.team_name, row.position, row.class_year,
+      row.rank, row.player_id, row.team_id, row.player_name, row.team_name, row.position, row.class_year,
       row.games, row.minutes, mpg, row.points, ppg, row.rebounds, rpg, row.offensive_rebounds, orpg,
       row.defensive_rebounds, drpg, row.assists, apg, row.steals, spg, row.blocks, bpg, row.double_doubles, row.fouls, fpg,
       row.turnovers, topg, row.fga, row.fgm, efg, row.tpa, row.tpm, threePct, row.fta, row.ftm, ftPct, ts,
@@ -363,6 +376,9 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
       })
       .then((payload) => {
         if (controller.signal.aborted) return;
+        if (!Array.isArray(payload.rows) || payload.rows.some((row) => !hasExactPlayerSourceIdentity(row))) {
+          throw new Error("The player archive returned an incomplete source identity.");
+        }
         setResult(payload);
         setStatus(payload.rows?.length ? "ready" : "unavailable");
       })
@@ -428,7 +444,7 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
         setExportMessage(`Preparing ${rows.length.toLocaleString()} of ${totalRows.toLocaleString()} rows…`);
       }
       if (rows.length !== totalRows) throw new Error("The player archive returned an incomplete export.");
-      const identities = new Set(rows.map((row) => `${row.player_id}::${row.team_name || ""}`));
+      const identities = new Set(rows.map((row) => `${row.player_id}::${row.team_id}`));
       if (identities.size !== rows.length) throw new Error("The player archive returned duplicate player rows.");
       downloadCsv(`ncaa-player-production-${season}-${metric}-all.csv`, toCsv(playerCsvHeaders, playerCsvRows(rows, metric)));
       setExportMessage(`Downloaded ${rows.length.toLocaleString()} player rows.`);
@@ -463,10 +479,10 @@ export default function LiveNcaaPlayerTable({ season = 2026 }: { season?: number
             <tbody>{result.rows.slice(0, rowLimit).map((row) => {
               const coverage = playerCoreStatCoverage(row);
               const detailGroups = playerRecordedDetailGroups(row);
-              return <tr key={`${row.player_id}-${row.team_name || ""}`}>
+              return <tr key={`${row.player_id}-${row.team_id}`}>
                 <td className="rank-number">{row.rank}</td>
                 <th scope="row"><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>{row.player_name || row.player_id}</Link><small>{row.position || "—"} · {row.class_year || "Class unavailable"}</small><small>{coverage.observed}/{coverage.total} core stat fields recorded</small><small><Link href={`/basketball/ncaa-player/?id=${encodeURIComponent(row.player_id)}&season=${season}`}>Open shot map →</Link></small>{detailGroups.length > 0 && <details className="ranking-recorded-details"><summary>More recorded stats</summary>{detailGroups.map((group) => <div key={group.key}><small><strong>{group.label}</strong></small><div className="ranking-recorded-grid">{group.items.map((item) => <span key={item.label}><small>{item.label}</small><b>{fmt(item.value, item.decimals ?? 0)}{item.percent ? "%" : ""}</b></span>)}</div></div>)}</details>}</th>
-                <td>{row.team_name || "—"}</td>
+                <td>{row.team_name || "—"}<small>Source team ID: {row.team_id}</small></td>
                 <td className="numeric">{row.games}</td>
                 <td className="numeric">{fmt(row.minutes, 0)}</td>
                 <td className="numeric">{fmt(perGame(row.minutes, row.games))}</td>
