@@ -118,6 +118,10 @@ export type RosterLabRow = {
   incomingBpm: number | null;
   upcomingGames: number;
   forecastedGames: number;
+  /** Exact primary-edition roster scenario rows on the current upcoming slate. */
+  scenarioGames: number;
+  /** Largest absolute roster-scenario margin shift among those rows. */
+  scenarioLargestAbsShift: number | null;
 };
 
 /**
@@ -135,12 +139,28 @@ export function buildRosterLabRows(
     (rosterModel?.teams ?? []).map((row) => [row.team_id, row]),
   );
   const schedule = new Map<string, { upcoming: number; forecasted: number }>();
+  const upcomingGameIds = new Set<string>();
   for (const game of overview.upcoming) {
+    upcomingGameIds.add(String(game.id));
     for (const teamId of [game.home_id, game.away_id]) {
       const current = schedule.get(teamId) ?? { upcoming: 0, forecasted: 0 };
       current.upcoming += 1;
       if (game.prediction) current.forecasted += 1;
       schedule.set(teamId, current);
+    }
+  }
+  const scenarios = new Map<string, { games: number; largestAbsShift: number | null }>();
+  for (const scenario of rosterModel?.scenarios ?? []) {
+    // A scenario is actionable only when its model edition and exact game ID
+    // still match the current upcoming board. Stale or alternate-edition rows
+    // remain out of the team-level coverage count.
+    if (scenario.primary_model_id !== rosterModel?.primary_model_id || !upcomingGameIds.has(String(scenario.game_id))) continue;
+    const absShift = Number.isFinite(scenario.margin_delta) ? Math.abs(scenario.margin_delta) : null;
+    for (const teamId of [scenario.home_id, scenario.away_id]) {
+      const current = scenarios.get(teamId) ?? { games: 0, largestAbsShift: null };
+      current.games += 1;
+      if (absShift != null && (current.largestAbsShift == null || absShift > current.largestAbsShift)) current.largestAbsShift = absShift;
+      scenarios.set(teamId, current);
     }
   }
 
@@ -236,6 +256,7 @@ export function buildRosterLabRows(
       const rating = ratings.get(teamId);
       const publisherValue = publisherValues.get(teamId);
       const coverage = schedule.get(teamId) ?? { upcoming: 0, forecasted: 0 };
+      const scenarioCoverage = scenarios.get(teamId) ?? { games: 0, largestAbsShift: null };
       return {
         teamId,
         team: players[0]?.team ?? teamId,
@@ -271,6 +292,8 @@ export function buildRosterLabRows(
         incomingBpm: publisherValue?.incoming_bpm ?? null,
         upcomingGames: coverage.upcoming,
         forecastedGames: coverage.forecasted,
+        scenarioGames: scenarioCoverage.games,
+        scenarioLargestAbsShift: scenarioCoverage.largestAbsShift,
       } satisfies RosterLabRow;
     })
     .sort((a, b) => a.team.localeCompare(b.team));

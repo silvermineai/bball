@@ -95,6 +95,62 @@ describe("roster lab", () => {
     expect(rows.find((row) => row.teamId === "2")!.returningShare).toBeNull();
   });
 
+  it("counts only current exact-edition roster scenarios and preserves their largest shift", () => {
+    const rows = buildRosterLabRows(
+      rosters([player("1", "Alpha", "same_program", 800), player("2", "Beta", "same_program", 400)]),
+      overview,
+      {
+        primary_model_id: "model-current",
+        scenarios: [
+          {
+            game_id: "g",
+            home_id: "1",
+            away_id: "2",
+            primary_model_id: "model-current",
+            base_margin: 2,
+            roster_margin: 0,
+            margin_delta: -2.5,
+            home_predicted_net: 1,
+            away_predicted_net: 2,
+            roster_home_win_probability: 0.5,
+            roster_margin_low: -10,
+            roster_margin_high: 10,
+          },
+          {
+            game_id: "g",
+            home_id: "1",
+            away_id: "2",
+            primary_model_id: "old-model",
+            base_margin: 2,
+            roster_margin: 2,
+            margin_delta: 9,
+            home_predicted_net: 1,
+            away_predicted_net: 2,
+            roster_home_win_probability: 0.5,
+            roster_margin_low: -10,
+            roster_margin_high: 10,
+          },
+          {
+            game_id: "stale-game",
+            home_id: "1",
+            away_id: "2",
+            primary_model_id: "model-current",
+            base_margin: 2,
+            roster_margin: 2,
+            margin_delta: 8,
+            home_predicted_net: 1,
+            away_predicted_net: 2,
+            roster_home_win_probability: 0.5,
+            roster_margin_low: -10,
+            roster_margin_high: 10,
+          },
+        ],
+      } as BBRosterModel,
+    );
+    expect(rows.find((row) => row.teamId === "1")).toMatchObject({ scenarioGames: 1, scenarioLargestAbsShift: 2.5 });
+    expect(rows.find((row) => row.teamId === "2")).toMatchObject({ scenarioGames: 1, scenarioLargestAbsShift: 2.5 });
+  });
+
   it("joins source-attributed team BPM only by exact team ID", () => {
     const rows = buildRosterLabRows(
       rosters([player("1", "Alpha", "same_program", 800), player("2", "Beta", "same_program", 400)]),

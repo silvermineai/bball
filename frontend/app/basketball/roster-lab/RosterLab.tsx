@@ -144,7 +144,7 @@ export default function RosterLab({ rows }: { rows: RosterLabRow[] }) {
             {filtered.map((row) => (
               <tr key={row.teamId}>
                 <td><Link href={`/basketball/programs/${row.teamId}/`}>{row.team}</Link><small>{row.newToDataset} new to dataset · {row.ambiguous} ambiguous</small></td>
-                <td className="numeric">{row.upcomingGames ? `${row.forecastedGames}/${row.upcomingGames}` : "—"}<small>forecasted / listed</small></td>
+                <td className="numeric">{row.upcomingGames ? `${row.forecastedGames}/${row.upcomingGames}` : "—"}<small>forecasted / listed</small><small>{row.scenarioGames ? `${row.scenarioGames}/${row.upcomingGames} exact roster scenarios` : "No exact roster scenario"}</small>{row.scenarioLargestAbsShift != null && <small>max shift {fmt(row.scenarioLargestAbsShift, 1)} pts</small>}</td>
                 <td className="numeric">{row.listed}</td>
                 <td className="numeric">{row.returning}</td>
                 <td className="numeric">{row.incoming}</td>
