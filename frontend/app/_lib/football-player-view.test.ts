@@ -60,6 +60,14 @@ describe("football player index category selection", () => {
     ]);
     expect(compareFootballPlayers(players, ["1:b", "2:c"], "all").map((row) => row.selectedCategory)).toEqual(["rushing", "receiving"]);
   });
+  it("keeps the publisher rank attached to each exact comparison row", () => {
+    const players: FootballRankablePlayer[] = [
+      { id: "7", team_id: "z", name: "Ranked Player", division: "fbs", categories: ["passing"], production: { passing: { plays: 120, yards: 1400, epa: 18, epa_per_play: 0.15, touchdowns: 10, rank: 4 } } },
+      { id: "8", team_id: "y", name: "Unranked Player", division: "fbs", categories: ["passing"], production: { passing: { plays: 90, yards: 900, epa: 8, epa_per_play: 0.09, touchdowns: 6, rank: null } } },
+    ];
+    const compared = compareFootballPlayers(players, ["7:z", "8:y"], "passing");
+    expect(compared.map((row) => row.stats.rank)).toEqual([4, null]);
+  });
   it("keeps efficiency percentiles descriptive and unavailable-safe", () => {
     expect(footballCohortPercentile(0.4, [0.1, 0.4, 0.4, null])).toBe(100);
     expect(footballCohortPercentile(0.1, [0.1, 0.4, 0.4, null])).toBe(33.3);

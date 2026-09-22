@@ -447,13 +447,14 @@ export default function PlayerBrowser({ catalog }: { catalog: PlayerCatalog }) {
           <p className="note">These are source production rows for the selected category. Team-season affiliations stay separate, and unavailable values remain dashes.</p>
           {comparisonPlayers.some((player) => [player.stats.games, player.stats.plays, player.stats.yards, player.stats.touchdowns, player.stats.epa, player.stats.epa_per_play].some((value) => value != null)) && <div className="table-scroll">
             <table className="data-table">
-              <thead><tr><th>Player / team</th><th>Category</th><th className="numeric">Games</th><th className="numeric">Plays</th><th className="numeric">Yards</th><th className="numeric">Yards / play</th><th className="numeric">TD</th><th className="numeric">Success rate</th><th className="numeric">Total EPA</th><th className="numeric">EPA / play</th></tr></thead>
+              <thead><tr><th>Player / team</th><th>Category</th><th className="numeric">Publisher rank</th><th className="numeric">Games</th><th className="numeric">Plays</th><th className="numeric">Yards</th><th className="numeric">Yards / play</th><th className="numeric">TD</th><th className="numeric">Success rate</th><th className="numeric">Total EPA</th><th className="numeric">EPA / play</th></tr></thead>
               <tbody>{comparisonPlayers.map((player) => {
                 const stats = player.stats;
                 const yardsPerPlay = stats.yards_per_play ?? (stats.yards != null && stats.plays ? stats.yards / stats.plays : null);
                 return <tr key={`${player.id}-${player.team_id}`}>
                   <th scope="row"><Link href={`/football/player/?id=${encodeURIComponent(player.id)}&season=${season}`}>{player.name}</Link><small>{player.team || "Team unavailable"} · {player.conference || "Conference unavailable"} · {player.division.toUpperCase()}</small></th>
                   <td>{player.selectedCategory}</td>
+                  <td className="numeric">{stats.rank == null ? "—" : `#${stats.rank}`}<small>{stats.rank == null ? "Not in publisher rank" : "Retained source rank"}</small></td>
                   <td className="numeric">{fmt(stats.games, 0)}</td>
                   <td className="numeric">{fmt(stats.plays, 0)}</td>
                   <td className="numeric">{fmt(stats.yards, 0)}</td>
