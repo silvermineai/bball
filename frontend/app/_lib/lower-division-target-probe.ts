@@ -15,8 +15,24 @@ export type LowerDivisionTargetProbeSummary = {
   generatedAt: string;
   calendarDays: number;
   contests: number;
+  divisionCalendarDays: Record<"2" | "3", number>;
+  divisionContests: Record<"2" | "3", number>;
+  unscopedCalendarDays: number;
+  unscopedContests: number;
   receipts: number;
 };
+
+function exactDivisionCount(rows: unknown[], division: "2" | "3"): number {
+  return rows.filter((row) => Boolean(row) && typeof row === "object" && !Array.isArray(row) && (row as { division?: unknown }).division === Number(division)).length;
+}
+
+function unscopedCount(rows: unknown[]): number {
+  return rows.filter((row) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) return true;
+    const division = (row as { division?: unknown }).division;
+    return division !== 2 && division !== 3;
+  }).length;
+}
 
 /**
  * Summarize an availability probe without treating an empty response as a
@@ -33,13 +49,19 @@ export function summarizeLowerDivisionTargetProbe(
   if (!Array.isArray(probe?.calendar) || !Array.isArray(probe?.contests) || !Array.isArray(probe?.receipts)) return null;
   const receiptCount = probe.receipts.filter((receipt) => typeof receipt?.sha256 === "string" && /^[0-9a-f]{64}$/i.test(receipt.sha256)).length;
   if (!receiptCount) return null;
+  const calendar = probe.calendar;
+  const contests = probe.contests;
   return {
     season: probe.target_season || `${seasonYear}-${String(seasonYear + 1).slice(-2)}`,
     seasonYear,
     months: [...probe.requested_months],
     generatedAt,
-    calendarDays: probe.calendar.length,
-    contests: probe.contests.length,
+    calendarDays: calendar.length,
+    contests: contests.length,
+    divisionCalendarDays: { "2": exactDivisionCount(calendar, "2"), "3": exactDivisionCount(calendar, "3") },
+    divisionContests: { "2": exactDivisionCount(contests, "2"), "3": exactDivisionCount(contests, "3") },
+    unscopedCalendarDays: unscopedCount(calendar),
+    unscopedContests: unscopedCount(contests),
     receipts: receiptCount,
   };
 }
