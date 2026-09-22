@@ -1,12 +1,13 @@
 {
   "edition": "ad76aeb534dca56a54974836c33b3e28be4cd4d9818d107336a83e43d8e31664",
-  "generated_at": "2026-09-12T13:31:19.184387Z",
+  "generated_at": "2026-09-22T12:51:52.162475Z",
   "season": 2025,
   "evaluation_experiment_id": "e15877c196505e6c92dc951c0e27c6a4d93e7b34178f1a9bcec8944e59a51b95",
   "coverage": {
     "evaluation_games": 784,
     "market_games": 784,
     "pregame_market_games": 0,
+    "timing_qualified_games": 0,
     "market_source": "SportsDataverse archive"
   },
   "metrics": {
@@ -21,9 +22,24 @@
       "margin_rmse": 15.0737,
       "total_mae": 12.4656,
       "winner_accuracy": 0.7385
+    },
+    "timing_qualified": {
+      "games": 0,
+      "model": {
+        "margin_mae": null,
+        "margin_rmse": null,
+        "total_mae": null,
+        "winner_accuracy": null
+      },
+      "archived_line": {
+        "margin_mae": null,
+        "margin_rmse": null,
+        "total_mae": null,
+        "winner_accuracy": null
+      }
     }
   },
-  "methodology": "Model uses the fixed preseason holdout prediction; archived margin is the negative home spread. Archived observations are historical reference rows and have no verified pregame capture timing, so this benchmark is descriptive and excluded from prospective evaluation.",
+  "methodology": "Model uses the fixed preseason holdout prediction; archived margin is the negative home spread. Reference metrics cover retained historical rows regardless of capture timing. Timing-qualified metrics use only rows with a verified pregame capture flag and are the only market cohort eligible for model-versus-market comparison.",
   "rows": [
     {
       "game_id": "401756846",

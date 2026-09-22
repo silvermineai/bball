@@ -31,6 +31,24 @@ def accuracy(values: list[bool]) -> float | None:
     return round(sum(values) / len(values), 4) if values else None
 
 
+def metrics_for(rows: list[dict[str, object]]) -> dict[str, dict[str, float | None]]:
+    """Return model and line metrics for one explicitly selected evidence cohort.
+
+    The cohort is selected by the caller so a retrospective archive cannot be
+    accidentally presented as a timing-qualified market benchmark.
+    """
+    model_margin_errors = [float(row["model_margin"]) - float(row["actual_margin"]) for row in rows]
+    market_margin_errors = [float(row["archived_margin"]) - float(row["actual_margin"]) for row in rows if row["archived_margin"] is not None]
+    model_total_errors = [float(row["model_total"]) - float(row["actual_total"]) for row in rows]
+    market_total_errors = [float(row["archived_total"]) - float(row["actual_total"]) for row in rows if row["archived_total"] is not None]
+    model_picks = [bool(row["model_pick_correct"]) for row in rows if row["model_pick_correct"] is not None]
+    market_picks = [bool(row["market_pick_correct"]) for row in rows if row["market_pick_correct"] is not None]
+    return {
+        "model": {"margin_mae": mae(model_margin_errors), "margin_rmse": rmse(model_margin_errors), "total_mae": mae(model_total_errors), "winner_accuracy": accuracy(model_picks)},
+        "archived_line": {"margin_mae": mae(market_margin_errors), "margin_rmse": rmse(market_margin_errors), "total_mae": mae(market_total_errors), "winner_accuracy": accuracy(market_picks)},
+    }
+
+
 def main() -> None:
     evaluation = json.loads((ROOT / "frontend/public/data/football/evaluation/games.json").read_text())
     games = evaluation["games"]
@@ -73,23 +91,19 @@ def main() -> None:
             "is_pregame": bool(market["is_pregame"]),
         })
 
-    model_margin_errors = [row["model_margin"] - row["actual_margin"] for row in rows]
-    market_margin_errors = [row["archived_margin"] - row["actual_margin"] for row in rows if row["archived_margin"] is not None]
-    model_total_errors = [row["model_total"] - row["actual_total"] for row in rows]
-    market_total_errors = [row["archived_total"] - row["actual_total"] for row in rows if row["archived_total"] is not None]
-    model_picks = [row["model_pick_correct"] for row in rows if row["model_pick_correct"] is not None]
-    market_picks = [row["market_pick_correct"] for row in rows if row["market_pick_correct"] is not None]
+    timing_qualified_rows = [row for row in rows if row["is_pregame"]]
     canonical = json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()
+    reference_metrics = metrics_for(rows)
+    timing_qualified_metrics = metrics_for(timing_qualified_rows)
     payload = {
         "edition": hashlib.sha256(canonical).hexdigest(),
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "season": 2025, "evaluation_experiment_id": evaluation.get("experiment_id"),
-        "coverage": {"evaluation_games": len(games), "market_games": len(rows), "pregame_market_games": sum(1 for row in rows if row["is_pregame"]), "market_source": "SportsDataverse archive"},
-        "metrics": {
-            "model": {"margin_mae": mae(model_margin_errors), "margin_rmse": rmse(model_margin_errors), "total_mae": mae(model_total_errors), "winner_accuracy": accuracy(model_picks)},
-            "archived_line": {"margin_mae": mae(market_margin_errors), "margin_rmse": rmse(market_margin_errors), "total_mae": mae(market_total_errors), "winner_accuracy": accuracy(market_picks)},
-        },
-        "methodology": "Model uses the fixed preseason holdout prediction; archived margin is the negative home spread. Archived observations are historical reference rows and have no verified pregame capture timing, so this benchmark is descriptive and excluded from prospective evaluation.",
+        "coverage": {"evaluation_games": len(games), "market_games": len(rows), "pregame_market_games": len(timing_qualified_rows), "timing_qualified_games": len(timing_qualified_rows), "market_source": "SportsDataverse archive"},
+        # Keep the reference cohort for auditability, but expose a separate
+        # scorecard-equivalent cohort. The UI must use timing_qualified.
+        "metrics": {**reference_metrics, "timing_qualified": {"games": len(timing_qualified_rows), **timing_qualified_metrics}},
+        "methodology": "Model uses the fixed preseason holdout prediction; archived margin is the negative home spread. Reference metrics cover retained historical rows regardless of capture timing. Timing-qualified metrics use only rows with a verified pregame capture flag and are the only market cohort eligible for model-versus-market comparison.",
         "rows": rows,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)

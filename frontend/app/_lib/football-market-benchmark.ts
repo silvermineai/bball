@@ -5,6 +5,7 @@ export type FootballMarketBenchmarkRow = {
   model_total: number;
   archived_margin: number | null;
   archived_total: number | null;
+  is_pregame: boolean;
 };
 
 export type PairedErrorRecord = {
@@ -25,6 +26,11 @@ export type MarginDisagreementDirection = PairedErrorRecord & {
   key: "model-above" | "model-below" | "same";
   label: string;
 };
+
+/** Keep market comparisons on the same timing-qualified cohort as the scorecard. */
+export function timingQualifiedFootballMarketRows(rows: FootballMarketBenchmarkRow[]) {
+  return rows.filter((row) => row.is_pregame);
+}
 
 const average = (values: number[]) => values.length
   ? values.reduce((total, value) => total + value, 0) / values.length

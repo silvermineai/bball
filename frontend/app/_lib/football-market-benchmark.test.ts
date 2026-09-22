@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marginDisagreementBands, marginDisagreementDirections, pairedFootballMarketErrors, type FootballMarketBenchmarkRow } from "./football-market-benchmark";
+import { marginDisagreementBands, marginDisagreementDirections, pairedFootballMarketErrors, timingQualifiedFootballMarketRows, type FootballMarketBenchmarkRow } from "./football-market-benchmark";
 
 const row = (values: Partial<FootballMarketBenchmarkRow>): FootballMarketBenchmarkRow => ({
   actual_margin: 0,
@@ -8,10 +8,21 @@ const row = (values: Partial<FootballMarketBenchmarkRow>): FootballMarketBenchma
   model_total: 40,
   archived_margin: 0,
   archived_total: 40,
+  is_pregame: false,
   ...values,
 });
 
 describe("football market benchmark analysis", () => {
+  it("keeps only rows with verified pregame timing in the benchmark cohort", () => {
+    expect(timingQualifiedFootballMarketRows([
+      row({ is_pregame: false }),
+      row({ is_pregame: true }),
+    ])).toHaveLength(1);
+    expect(timingQualifiedFootballMarketRows([
+      row({ is_pregame: false }),
+    ])).toEqual([]);
+  });
+
   it("compares model and archive only on paired finite observations", () => {
     const result = pairedFootballMarketErrors([
       row({ actual_margin: 4, model_margin: 5, archived_margin: 8, actual_total: 50, model_total: 48, archived_total: 45 }),
