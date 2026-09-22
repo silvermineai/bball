@@ -11,7 +11,7 @@ describe("sport navigation", () => {
   });
 
   it("matches nested section routes without fuzzy names", () => {
-    const games = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Games");
+    const games = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Matches");
     const teams = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Teams");
     const players = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Players");
     const rankings = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Rankings");
@@ -67,7 +67,7 @@ describe("sport navigation", () => {
       Teams: "wbb-lower-ratings",
       Players: "wbb-lower-player-stats",
       Recruiting: "wbb-lower-recruiting",
-      Games: "wbb-lower-schedule",
+      Matches: "wbb-lower-schedule",
       Predictions: "wbb-lower-ratings",
       Learn: "wbb-division-readiness-title",
       Rankings: "wbb-lower-ranking",
@@ -90,9 +90,9 @@ describe("sport navigation", () => {
   it("keeps the core stat tabs consistent across each sport tab", () => {
     const labels = Object.values(SPORT_NAVIGATION).map((config) => config.items.map((item) => item.label));
     expect(labels).toEqual([
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Learn", "Rankings", "Division"],
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Learn", "Rankings", "Division"],
-      ["Teams", "Players", "Recruiting", "Games", "Predictions", "Learn", "Rankings", "Division"],
+      ["Teams", "Players", "Recruiting", "Matches", "Predictions", "Learn", "Rankings", "Division"],
+      ["Teams", "Players", "Recruiting", "Matches", "Predictions", "Learn", "Rankings", "Division"],
+      ["Teams", "Players", "Recruiting", "Matches", "Predictions", "Learn", "Rankings", "Division"],
     ]);
 
     expect(SPORT_NAVIGATION["womens-basketball"].items.find((item) => item.label === "Division")?.href)
