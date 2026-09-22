@@ -21,29 +21,7 @@ import ProspectRosterBridge from "./ProspectRosterBridge";
 import { prospectRankTrajectory } from "./rank-trajectory";
 import { prospectGradeTrajectory } from "./grade-trajectory";
 import { parseRecruitingRosterBridge, type RecruitingRosterBridge } from "../../../_lib/recruiting-roster-bridge";
-
-type Prospect = {
-  athlete_id: string;
-  name: string;
-  position: string | null;
-  grade: number | null;
-  rank: number | null;
-  position_rank: number | null;
-  state_rank: number | null;
-  region_rank: number | null;
-  status: string | null;
-  committed_team_id: string | null;
-  committed_team_name: string | null;
-  high_school: string | null;
-  hometown: string | null;
-  height_inches: number | null;
-  weight_pounds: number | null;
-  captured_at: string;
-  source_url: string;
-  previous_rank?: number | null;
-  previous_captured_at?: string | null;
-  school_ids?: string[];
-};
+import { parseProspectDossierPayload, type ProspectDossierProspect as Prospect, type ProspectDossierResponse as Response } from "./payload";
 type PublisherMention = {
   id: string;
   publisher: string;
@@ -53,8 +31,6 @@ type PublisherMention = {
   link: string;
   division?: string;
 };
-type Response = { season: number; rows: Prospect[]; edition?: string | null; captured_at: string | null; source_receipt?: { dataset: string; captured_at: string; source_rows: number; sha256: string | null; sha256_scope: "release_edition" | "unavailable"; integrity: "verified" | "unavailable" } | null; history?: RecruitingHistoryEntry[]; class_context?: ProspectClassContextPayload; peer_context?: ProspectPeerContextPayload; roster_bridge?: unknown; source?: { provider: string; methodology: string }; unavailable_reason?: string };
-
 const number = (value: number | null, digits = 0) => value == null ? "—" : value.toFixed(digits);
 const rank = (value: number | null) => value == null ? "—" : `#${number(value)}`;
 const movement = (current: number | null, previous: number | null, previousCapturedAt?: string | null) => {
@@ -101,22 +77,24 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&history=1&page=0`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The prospect record is unavailable.");
-        return response.json() as Promise<Response>;
+        return response.json() as Promise<unknown>;
       })
       .then((value) => {
         if (controller.signal.aborted) return;
-        setSource(value.source);
-        setEdition(value.edition || null);
-        setSourceReceipt(value.source_receipt || null);
-        setClassContextPayload(value.class_context || null);
-        setPeerContextPayload(value.peer_context || null);
-        setRosterBridge(parseRecruitingRosterBridge(value.roster_bridge, athleteId));
-        const validatedHistory = validateRecruitingHistory(value.history);
+        const parsed = parseProspectDossierPayload(value, Number(season), athleteId);
+        if (!parsed) throw new Error("The prospect record failed exact-ID integrity checks.");
+        setSource(parsed.source);
+        setEdition(parsed.edition || null);
+        setSourceReceipt(parsed.source_receipt || null);
+        setClassContextPayload(parsed.class_context || null);
+        setPeerContextPayload(parsed.peer_context || null);
+        setRosterBridge(parseRecruitingRosterBridge(parsed.roster_bridge, athleteId));
+        const validatedHistory = validateRecruitingHistory(parsed.history);
         setHistory(validatedHistory || []);
         setHistoryStatus(validatedHistory ? "verified" : "unavailable");
-        if (value.unavailable_reason) setError(value.unavailable_reason);
-        else if (!value.rows.length) setError("That prospect is not in the selected class edition.");
-        else setProspect(value.rows[0]);
+        if (parsed.unavailable_reason) setError(parsed.unavailable_reason);
+        else if (!parsed.rows.length) setError("That prospect is not in the selected class edition.");
+        else setProspect(parsed.rows[0]);
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setError(reason instanceof Error ? reason.message : "The prospect record is unavailable.");
