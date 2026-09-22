@@ -41,6 +41,8 @@ const isHttps = (value: unknown): value is string => {
   }
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
 /**
  * Keep the browser-side API boundary source-native. The Worker validates the
  * edition before responding, but rejecting a malformed or cross-division
@@ -80,7 +82,8 @@ export function parseWomensLowerStatsResponse(
   if (candidate.division !== division || candidate.kind !== "individual" || candidate.statistic !== statistic
     || typeof candidate.label !== "string" || !Array.isArray(candidate.headers) || candidate.headers.length === 0
     || candidate.headers.some((header) => typeof header !== "string") || !Array.isArray(candidate.rows)
-    || candidate.rows.some((row) => !row || typeof row !== "object" || Array.isArray(row)) || !isHttps(candidate.source_url)) {
+    || candidate.rows.some((row) => !isRecord(row) || !isRecord(row.source_fields))
+    || !isHttps(candidate.source_url)) {
     throw new Error(`Women’s D${division} ${statistic} response scope is invalid.`);
   }
   return {
