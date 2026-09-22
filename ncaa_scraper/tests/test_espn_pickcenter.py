@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from ncaa_scraper import espn_pickcenter as collector
-from ncaa_scraper.espn_pickcenter import BASE_URL, DEFAULT_CAPTURE_LIMIT, _future_games, american_to_decimal, build_parser, ingest, parse_pickcenter, summary_capture_counts, summary_capture_diagnostics
+from ncaa_scraper.espn_pickcenter import BASE_URL, DEFAULT_CAPTURE_LIMIT, _future_games, american_to_decimal, build_parser, ingest, parse_pickcenter, select_capture_games, summary_capture_counts, summary_capture_diagnostics
 from ncaa_scraper.odds_feed import schedules
 
 
@@ -91,6 +91,17 @@ class EspnPickcenterTests(unittest.TestCase):
         self.assertEqual(receipt["candidate_games"], 3)
         self.assertEqual(receipt["capture_limit"], 2)
         self.assertTrue(receipt["capture_truncated"])
+        self.assertEqual(receipt["selection_strategy"], "nearest_two_thirds_plus_uniform_tail")
+
+    def test_bounded_capture_samples_the_later_horizon_without_losing_near_term_games(self):
+        games = [{**GAME, "id": str(index)} for index in range(10)]
+        selected = select_capture_games(games, 6)
+        self.assertEqual([game["id"] for game in selected], ["0", "1", "2", "3", "4", "9"])
+        self.assertEqual(len({game["id"] for game in selected}), 6)
+
+    def test_capture_selection_keeps_all_games_when_under_bound(self):
+        games = [{**GAME, "id": str(index)} for index in range(3)]
+        self.assertEqual(select_capture_games(games, 6), games)
 
     def test_capture_diagnostics_separate_odds_payloads_from_complete_quotes(self):
         with_odds = {"event_id": "one", "summary": {"pickcenter": [], "odds": [{"provider": {"name": "A book"}}]}}

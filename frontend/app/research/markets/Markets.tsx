@@ -34,6 +34,8 @@ type Meta = {
     candidate_games?: number;
     capture_limit?: number;
     capture_truncated?: boolean;
+    selection_strategy?: "all_candidates" | "nearest_two_thirds_plus_uniform_tail";
+    near_term_games?: number;
     summary_fetch_failures?: number;
     source_rows?: number;
     rows_with_lines?: number;
@@ -53,6 +55,8 @@ type Meta = {
     candidate_games?: number;
     capture_limit?: number;
     capture_truncated?: boolean;
+    selection_strategy?: "all_candidates" | "nearest_two_thirds_plus_uniform_tail";
+    near_term_games?: number;
     summary_fetch_failures?: number;
     accepted_markets?: number;
     rejected_records?: number;
@@ -284,6 +288,7 @@ export default function Markets() {
               <tr><th scope="row">Eligible games</th><td className="numeric">{meta.research_capture?.eligible_games == null ? "—" : meta.research_capture.eligible_games.toLocaleString()}</td><td>Confirmed future games in the requested capture window</td></tr>
               {meta.research_capture?.candidate_games != null ? <tr><th scope="row">Candidate games</th><td className="numeric">{meta.research_capture.candidate_games.toLocaleString()}</td><td>Eligible games available before the bounded request limit</td></tr> : null}
               {meta.research_capture?.capture_truncated ? <tr><th scope="row">Capture bound</th><td className="numeric">{meta.research_capture.capture_limit == null ? "Bounded" : meta.research_capture.capture_limit.toLocaleString()}</td><td>Only this many candidates were requested; remaining games were not treated as failed reads</td></tr> : null}
+              {meta.research_capture?.selection_strategy === "nearest_two_thirds_plus_uniform_tail" ? <tr><th scope="row">Slate selection</th><td className="numeric">{meta.research_capture.near_term_games == null ? "Bounded" : meta.research_capture.near_term_games.toLocaleString()}</td><td>Nearest games receive most requests; the remaining budget samples later candidates across the full window</td></tr> : null}
               <tr><th scope="row">Summary requests failed</th><td className="numeric">{(meta.research_capture?.summary_fetch_failures || 0).toLocaleString()}</td><td>Games whose public summary could not be read; these remain unresolved</td></tr>
               <tr><th scope="row">Capture window</th><td className="numeric">{meta.research_capture?.horizon_days != null ? `${meta.research_capture.horizon_days} days` : "—"}</td><td>Prospective schedule window requested by the connector</td></tr>
               <tr><th scope="row">Complete quotes</th><td className="numeric">{(meta.research_capture?.summary_with_pickcenter || 0).toLocaleString()}</td><td>Summaries containing a complete quote set</td></tr>

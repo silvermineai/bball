@@ -266,6 +266,36 @@ def _future_games(games: list[dict], season: int, horizon_days: int, now: dateti
     ]
 
 
+def select_capture_games(candidate_games: list[dict], limit: int) -> list[dict]:
+    """Choose a bounded, deterministic slice of the upcoming slate.
+
+    Keep most requests on the nearest games, where a provider is most likely
+    to have published a line, while reserving a uniform sample for the rest of
+    the requested horizon.  A chronological prefix alone can silently miss
+    later games whenever the candidate slate is larger than the request cap.
+    The returned rows are still canonical schedule rows; this function only
+    selects which exact event IDs the collector will request.
+    """
+    if limit < 1 or limit > 300:
+        raise ValueError("limit must be between 1 and 300")
+    if len(candidate_games) <= limit:
+        return list(candidate_games)
+
+    # Two thirds of the bounded budget stays on the nearest games. The
+    # remaining third is distributed over the rest of the horizon, including
+    # its final candidate, so a fixed cap does not create a blind spot.
+    near_count = max(1, (limit * 2) // 3)
+    tail_count = limit - near_count
+    tail = len(candidate_games) - near_count
+    indexes = list(range(near_count))
+    if tail_count == 1:
+        indexes.append(near_count + tail - 1)
+    else:
+        for offset in range(tail_count):
+            indexes.append(near_count + (offset * (tail - 1)) // (tail_count - 1))
+    return [candidate_games[index] for index in indexes]
+
+
 def summary_capture_counts(summaries: list[dict]) -> tuple[int, int]:
     """Return fetched summary and non-empty pickcenter counts for a receipt."""
     diagnostics = summary_capture_diagnostics(summaries)
@@ -315,7 +345,7 @@ def fetch_upcoming(
     # A receipt that says "120 eligible games" is otherwise easy to mistake
     # for complete coverage when the schedule contains hundreds more games.
     candidate_games = _future_games(schedules(SPORT), season, horizon_days, now)
-    games = candidate_games[:limit]
+    games = select_capture_games(candidate_games, limit)
     captured = now.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     summaries: list[dict] = []
     fetch_failures = 0
@@ -369,6 +399,8 @@ def fetch_upcoming(
         "eligible_games": len(games),
         "candidate_games": len(candidate_games),
         "capture_limit": limit,
+        "selection_strategy": "nearest_two_thirds_plus_uniform_tail" if len(candidate_games) > len(games) else "all_candidates",
+        "near_term_games": min(len(candidate_games), max(1, (limit * 2) // 3)),
         "capture_truncated": len(candidate_games) > len(games),
         "summary_fetch_failures": fetch_failures,
         **diagnostics,

@@ -99,6 +99,8 @@ type ResearchCapture = {
   candidate_games?: number;
   capture_limit?: number;
   capture_truncated?: boolean;
+  selection_strategy?: "all_candidates" | "nearest_two_thirds_plus_uniform_tail";
+  near_term_games?: number;
   summary_fetch_failures?: number;
   source_rows?: number;
   rows_with_lines?: number;
@@ -184,6 +186,12 @@ function parseResearchCapture(value: unknown): ResearchCapture | null {
     }
     if (typeof payload.capture_truncated === "boolean") {
       result.capture_truncated = payload.capture_truncated;
+    }
+    if (payload.selection_strategy === "all_candidates" || payload.selection_strategy === "nearest_two_thirds_plus_uniform_tail") {
+      result.selection_strategy = payload.selection_strategy;
+    }
+    if (typeof payload.near_term_games === "number" && Number.isInteger(payload.near_term_games) && payload.near_term_games >= 0) {
+      result.near_term_games = payload.near_term_games;
     }
     if (typeof payload.summary_fetch_failures === "number" && Number.isInteger(payload.summary_fetch_failures) && payload.summary_fetch_failures >= 0) {
       result.summary_fetch_failures = payload.summary_fetch_failures;
