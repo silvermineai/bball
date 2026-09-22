@@ -60,7 +60,11 @@ export const SPORT_NAVIGATION: Record<Sport, SportNavConfig> = {
     explore: BASKETBALL_EXPLORE,
   },
   football: {
-    label: "Football",
+    // Keep football explicit in the sport switcher. Basketball already has
+    // separate men’s and women’s editions; the same convention prevents a
+    // reader from mistaking the football archive for another gender-neutral
+    // sport scope when moving between the three editions.
+    label: "Men's Football",
     gender: "men",
     home: "/football/",
     available: true,

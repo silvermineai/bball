@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScopeHref, divisionAwareNavHref, divisionDeskHref, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
+import { buildScopeHref, divisionAwareNavHref, divisionDeskHref, DIVISION_OPTIONS, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
 
 describe("sport navigation", () => {
   it("keeps the active sport aligned with the URL and gender scope", () => {
@@ -66,6 +66,15 @@ describe("sport navigation", () => {
 
   it("advertises the published women's D1 sport tab", () => {
     expect(SPORT_NAVIGATION["womens-basketball"].available).toBe(true);
+  });
+
+  it("names the three sport editions explicitly", () => {
+    expect(Object.values(SPORT_NAVIGATION).map((config) => config.label)).toEqual([
+      "Men's Basketball",
+      "Women's Basketball",
+      "Men's Football",
+    ]);
+    expect(DIVISION_OPTIONS.map((option) => option.value)).toEqual(["1", "2", "3"]);
   });
 
   it("routes each Division tab to its scope-specific desk", () => {
