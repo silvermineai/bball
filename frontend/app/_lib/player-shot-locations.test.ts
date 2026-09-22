@@ -12,6 +12,7 @@ import {
   summarizePlayerShotProfile,
   summarizePlayerShotSides,
   toPlayerCourtPoint,
+  playerShotCoordinateExportRows,
   type PlayerShotLocation,
 } from "./player-shot-locations";
 
@@ -32,6 +33,23 @@ const shot = (values: Partial<PlayerShotLocation>): PlayerShotLocation => ({
 });
 
 describe("player shot location helpers", () => {
+  it("exports every retained coordinate with exact team and contest provenance", () => {
+    expect(playerShotCoordinateExportRows([{
+      season: 2026,
+      team_id: "team-1",
+      team_name: "Example",
+      stats: {
+        coordinates: [
+          ["contest-1", 1, 2, 12, "rim", "layup", true, 2],
+          { contest_id: "contest-2", x: null, y: null, made: null, zone: "unknown" },
+        ],
+      },
+    }])).toEqual([
+      { season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 0, contest_id: "contest-1", x: 1, y: 2, distance_ft: 12, zone: "rim", type: "layup", made: true, points: 2, raw_coordinate: '["contest-1",1,2,12,"rim","layup",true,2]' },
+      { season: 2026, team_id: "team-1", team_name: "Example", coordinate_index: 1, contest_id: "contest-2", x: null, y: null, distance_ft: null, zone: "unknown", type: null, made: null, points: null, raw_coordinate: '{"contest_id":"contest-2","x":null,"y":null,"made":null,"zone":"unknown"}' },
+    ]);
+  });
+
   it("filters event markers without treating unknown outcomes as misses", () => {
     expect(matchesPlayerShotOutcome(shot({ made: true }), "all")).toBe(true);
     expect(matchesPlayerShotOutcome(shot({ made: 1 }), "made")).toBe(true);

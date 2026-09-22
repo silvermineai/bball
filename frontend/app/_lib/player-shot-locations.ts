@@ -38,6 +38,92 @@ export type PlayerShotLocation = {
   text?: string | null;
 };
 
+export type PlayerShotCoordinate = {
+  contest_id?: string | null;
+  x: number | null;
+  y: number | null;
+  distance_ft?: number | null;
+  zone?: string | null;
+  type?: string | null;
+  made?: boolean | number | null;
+  points?: number | null;
+};
+
+export type PlayerShotCoordinateTuple = [
+  string | null,
+  number | null,
+  number | null,
+  number | null,
+  string | null,
+  string | null,
+  boolean | number | null,
+  number | null,
+];
+
+export type PlayerShotCoordinateInput = {
+  season: number;
+  team_id: string;
+  team_name: string | null;
+  stats: {
+    coordinates?: ReadonlyArray<PlayerShotCoordinate | PlayerShotCoordinateTuple>;
+  };
+};
+
+export type PlayerShotCoordinateExportRow = {
+  season: number;
+  team_id: string;
+  team_name: string | null;
+  coordinate_index: number;
+  contest_id: string | null;
+  x: number | null;
+  y: number | null;
+  distance_ft: number | null;
+  zone: string | null;
+  type: string | null;
+  made: boolean | number | null;
+  points: number | null;
+  raw_coordinate: string;
+};
+
+/** Expand the compact tuple used by the NCAA shot release without coercion. */
+export function expandPlayerShotCoordinate(raw: PlayerShotCoordinate | PlayerShotCoordinateTuple): PlayerShotCoordinate {
+  if (!Array.isArray(raw)) return raw;
+  return {
+    contest_id: raw[0],
+    x: raw[1],
+    y: raw[2],
+    distance_ft: raw[3],
+    zone: raw[4],
+    type: raw[5],
+    made: raw[6],
+    points: raw[7],
+  };
+}
+
+/** Flatten every retained coordinate event for an exact season/team export. */
+export function playerShotCoordinateExportRows(
+  rows: readonly PlayerShotCoordinateInput[],
+): PlayerShotCoordinateExportRow[] {
+  return rows.flatMap((row) => (row.stats.coordinates || []).map((raw, coordinate_index) => {
+    const shot = expandPlayerShotCoordinate(raw);
+    return {
+      season: row.season,
+      team_id: row.team_id,
+      team_name: row.team_name,
+      coordinate_index,
+      contest_id: shot.contest_id ?? null,
+      x: shot.x ?? null,
+      y: shot.y ?? null,
+      distance_ft: shot.distance_ft ?? null,
+      zone: shot.zone ?? null,
+      type: shot.type ?? null,
+      made: shot.made ?? null,
+      points: shot.points ?? null,
+      raw_coordinate: JSON.stringify(raw),
+    };
+  }));
+}
+
 export type CourtPoint = {
   x: number;
   y: number;

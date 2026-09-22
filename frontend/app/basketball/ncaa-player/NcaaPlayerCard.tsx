@@ -9,7 +9,7 @@ import { buildNcaaRecentForm, gameEvidenceWindowLabel, playerGameExportEvidence,
 import { completeStatsSum, effectiveFieldGoal, playerAdvancedRates, playerScoringProfile, playerSeasonBoxSummary, safeRate, safeSum, trueShooting } from "../../_lib/ncaa-player-box";
 import PlayerRankingSnapshot from "./PlayerRankingSnapshot";
 import PlayerShotLocationCourt from "../../_components/PlayerShotLocationCourt";
-import type { PlayerShotLocation } from "../../_lib/player-shot-locations";
+import { expandPlayerShotCoordinate, playerShotCoordinateExportRows, type PlayerShotLocation, type PlayerShotCoordinate, type PlayerShotCoordinateTuple } from "../../_lib/player-shot-locations";
 import {
   buildNcaaPlayerTrajectory,
   trajectoryContext,
@@ -24,9 +24,7 @@ import { recruitingFitHref } from "../../_lib/player-recruiting-handoff";
 type Stats = Record<string, number | null>;
 type SeasonRow = { season: number; team_id: string; team_name: string | null; player_name: string | null; games: number; stats: Stats };
 type RosterRow = { season: number; team_id: string; team_name: string | null; player_name: string | null; profile: Record<string, string | number | null> };
-type CoordinateShot = { contest_id?: string | null; x: number | null; y: number | null; distance_ft?: number | null; zone?: string | null; type?: string | null; made?: boolean | number | null; points?: number | null };
-type CoordinateTuple = [string | null, number | null, number | null, number | null, string | null, string | null, boolean | number | null, number | null];
-type ShotRow = { season: number; team_id: string; team_name: string | null; stats: { attempts: number; makes: number; points: number; distance_sum: number; distance_count: number; zones: Record<string, { attempts: number; makes: number; points: number }>; coordinates?: Array<CoordinateShot | CoordinateTuple>; coordinate_count?: number; located_count?: number } };
+type ShotRow = { season: number; team_id: string; team_name: string | null; stats: { attempts: number; makes: number; points: number; distance_sum: number; distance_count: number; zones: Record<string, { attempts: number; makes: number; points: number }>; coordinates?: Array<PlayerShotCoordinate | PlayerShotCoordinateTuple>; coordinate_count?: number; located_count?: number } };
 type GameRow = { season?: number; contest_id: string; team_id: string; game_date: string | null; team_name: string | null; opponent_name: string | null; player_name: string | null; stats: Stats };
 type GameStatCoverage = { rows: number; contests: number; fields: Record<string, { observed: number; total: number | null }> };
 type GameExport = { season: number; page: number; page_size: number; total: number; rows: GameRow[] };
@@ -41,20 +39,6 @@ const stat = (row: SeasonRow | undefined, key: string) => value(row?.stats, key)
 const prettySourceField = (key: string) => key
   .replaceAll("_", " ")
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
-
-function expandCoordinate(raw: CoordinateShot | CoordinateTuple): CoordinateShot {
-  if (!Array.isArray(raw)) return raw;
-  return {
-    contest_id: raw[0],
-    x: raw[1],
-    y: raw[2],
-    distance_ft: raw[3],
-    zone: raw[4],
-    type: raw[5],
-    made: raw[6],
-    points: raw[7],
-  };
-}
 
 function SourceTotals({ rows }: { rows: SeasonRow[] }) {
   const fieldCount = rows.reduce((total, row) => total + Object.keys(row.stats).length, 0);
@@ -244,7 +228,7 @@ export default function NcaaPlayerCard() {
   const rosterFitHref = recruitingFitHref(roster?.team_id);
   const shootingRows = useMemo(() => card?.shooting.filter((row) => row.season === season) || [], [card, season]);
   const shotLocations = useMemo<PlayerShotLocation[]>(() => shootingRows.flatMap((row) => (row.stats.coordinates || []).map((raw, index) => {
-    const shot = expandCoordinate(raw);
+    const shot = expandPlayerShotCoordinate(raw);
     return {
     id: `${row.team_id}-${shot.contest_id || "attempt"}-${index}`,
     game: shot.contest_id || null,
@@ -257,6 +241,7 @@ export default function NcaaPlayerCard() {
     location_status: shot.x == null || shot.y == null ? "missing" : "located",
     text: shot.zone || "",
   }; })), [id, shootingRows]);
+  const shotCoordinateRows = useMemo(() => playerShotCoordinateExportRows(shootingRows), [shootingRows]);
   const recentForm = useMemo(() => buildNcaaRecentForm(card?.games || [], 5), [card?.games]);
   const trajectory = useMemo(
     () => buildNcaaPlayerTrajectory(card?.seasons || []),
@@ -306,6 +291,19 @@ export default function NcaaPlayerCard() {
       setExporting(false);
     }
   };
+  const downloadShotCoordinates = () => {
+    if (!shotCoordinateRows.length) return;
+    downloadCsv(
+      `ncaa-player-${id}-${season}-shot-coordinates.csv`,
+      toCsv(
+        ["Season", "Team", "Archive team ID", "Coordinate index", "Contest ID", "X (ft)", "Y (ft)", "Distance (ft)", "Zone", "Type", "Made", "Points", "Raw source coordinate JSON"],
+        shotCoordinateRows.map((row) => [
+          row.season, row.team_name, row.team_id, row.coordinate_index, row.contest_id,
+          row.x, row.y, row.distance_ft, row.zone, row.type, row.made == null ? null : String(row.made), row.points, row.raw_coordinate,
+        ]),
+      ),
+    );
+  };
   const visibleGames = allGames || card?.games || [];
   if (!id) return <><div className="page-title"><div className="eyebrow">Player identity / Player card</div><h1>Open a player&apos;s<br /><em>full file.</em></h1><p>Select a player from an archive table to see production, shot profile, roster context and game evidence in one place.</p><Link className="button" href="/basketball/ncaa-rankings/">Find a player ↗</Link></div></>;
   return <>
@@ -324,7 +322,7 @@ export default function NcaaPlayerCard() {
       {selected?.length ? <SourceTotals rows={selected} /> : null}
       <GameArchiveFieldTotals coverage={card.game_stat_coverage} />
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Recent form / latest retained contests</div><h2>Read the current rhythm.</h2></div><span className="note">{recentForm.window_games ? `Latest ${recentForm.window_games} of up to 12 rows` : "No recent rows"}</span></div><p className="note">This is a short retained-row window, ordered newest first by the player archive. It is descriptive context for film and preparation, not a projection. Each metric uses only contests where its required fields were recorded; missing values are not treated as zero.</p><div className="strip"><div><strong>{fmt(recentForm.points_per_game)}</strong><span>Recent points / game · {recentForm.points_games} rows</span></div><div><strong>{fmt(recentForm.minutes_per_game)}</strong><span>Recent minutes / game · {recentForm.minutes_games} rows</span></div><div><strong>{pct(recentForm.true_shooting)}</strong><span>Recent pooled TS% · {recentForm.shooting_games} rows</span></div><div><strong>{recentForm.points_delta == null ? "—" : `${recentForm.points_delta > 0 ? "+" : ""}${fmt(recentForm.points_delta)}`}</strong><span>Points / game vs prior five</span></div></div><p className="note">The comparison uses the next five retained rows when available. A blank comparison means the preceding window has no complete points sample.</p></section>
-      <section className="section two-col"><div id="shot-profile" className="paper-panel"><div className="eyebrow">Shot profile / {label(season)}</div><h2>Where attempts came from.</h2>{shootingRows.length ? <><p className="note">The archive publishes {shootingRows.length} team shooting row{shootingRows.length === 1 ? "" : "s"} for this season; each stint stays visible.</p>{shotLocations.length ? <PlayerShotLocationCourt shots={shotLocations} recordedAttempts={shootingRows.reduce((total, row) => total + (Number.isFinite(row.stats.attempts) ? row.stats.attempts : 0), 0)} playerName={name} title="Recorded shot locations" showEvents /> : <p className="empty">This profile has aggregate shooting totals, but no retained coordinate rows for this season.</p>}{shootingRows.map((row) => <ShotProfile key={`${row.season}-${row.team_id}`} row={row} />)}</> : <p className="empty">No shooting profile is published for this season-team record.</p>}</div><div className="paper-panel"><div className="eyebrow">Roster / recruiting context</div><h2>What the roster release says.</h2>{roster ? <><div className="raw-stat-grid">{[["Class", roster.profile.class], ["Position", roster.profile.position], ["Height", roster.profile.height], ["Hometown", roster.profile.hometown], ["High school", roster.profile.high_school]].map(([key, field]) => <div key={key}><dt>{key}</dt><dd>{field || "—"}</dd></div>)}</div><div className="hero-actions"><Link className="button secondary" href={`/basketball/recruiting/?q=${encodeURIComponent(name)}`}>Search dated school evidence ↗</Link>{rosterFitHref && <Link className="hero-link" href={rosterFitHref}>Compare recorded program role fit →</Link>}{roster.profile.high_school && <Link className="hero-link" href={`/basketball/ncaa-high-schools/?q=${encodeURIComponent(String(roster.profile.high_school))}`}>Trace high-school pipeline →</Link>}</div><p className="note">The role-fit link uses only the retained program ID. Name and school-label searches are research leads; none establishes identity, commitment, transfer, eligibility or current membership.</p></> : <p className="empty">No roster row is published for {label(season)}.</p>}</div></section>
+      <section className="section two-col"><div id="shot-profile" className="paper-panel"><div className="eyebrow">Shot profile / {label(season)}</div><div className="section-heading"><h2>Where attempts came from.</h2><button className="button secondary" type="button" onClick={downloadShotCoordinates} disabled={!shotCoordinateRows.length}>Download shot coordinates ↓</button></div>{shootingRows.length ? <><p className="note">The archive publishes {shootingRows.length} team shooting row{shootingRows.length === 1 ? "" : "s"} for this season; each stint stays visible. The coordinate export retains every returned event, including rows without plottable x/y values.</p>{shotLocations.length ? <PlayerShotLocationCourt shots={shotLocations} recordedAttempts={shootingRows.reduce((total, row) => total + (Number.isFinite(row.stats.attempts) ? row.stats.attempts : 0), 0)} playerName={name} title="Recorded shot locations" showEvents /> : <p className="empty">This profile has aggregate shooting totals, but no retained coordinate rows for this season.</p>}{shootingRows.map((row) => <ShotProfile key={`${row.season}-${row.team_id}`} row={row} />)}</> : <p className="empty">No shooting profile is published for this season-team record.</p>}</div><div className="paper-panel"><div className="eyebrow">Roster / recruiting context</div><h2>What the roster release says.</h2>{roster ? <><div className="raw-stat-grid">{[["Class", roster.profile.class], ["Position", roster.profile.position], ["Height", roster.profile.height], ["Hometown", roster.profile.hometown], ["High school", roster.profile.high_school]].map(([key, field]) => <div key={key}><dt>{key}</dt><dd>{field || "—"}</dd></div>)}</div><div className="hero-actions"><Link className="button secondary" href={`/basketball/recruiting/?q=${encodeURIComponent(name)}`}>Search dated school evidence ↗</Link>{rosterFitHref && <Link className="hero-link" href={rosterFitHref}>Compare recorded program role fit →</Link>}{roster.profile.high_school && <Link className="hero-link" href={`/basketball/ncaa-high-schools/?q=${encodeURIComponent(String(roster.profile.high_school))}`}>Trace high-school pipeline →</Link>}</div><p className="note">The role-fit link uses only the retained program ID. Name and school-label searches are research leads; none establishes identity, commitment, transfer, eligibility or current membership.</p></> : <p className="empty">No roster row is published for {label(season)}.</p>}</div></section>
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Impact / player model</div><h2>Read the player in context.</h2></div></div>{card.impact ? <><div className="strip"><div><strong>{fmt(card.impact.rapm_net, 2)}</strong><span>Net RAPM</span></div><div><strong>{fmt(card.impact.orapm, 2)}</strong><span>ORAPM</span></div><div><strong>{fmt(card.impact.drapm, 2)}</strong><span>DRAPM</span></div><div><strong>{card.impact.rank ? `#${card.impact.rank}` : "—"}</strong><span>{card.impact.qualified ? "Qualified league rank" : "Unqualified sample"}</span></div></div><p className="note">Exact NCAA player ID lookup from the Cloudflare research archive · {card.impact.off_poss == null ? "offensive possession sample unavailable" : `${fmt(card.impact.off_poss, 0)} offensive possessions`} · {card.impact.def_poss == null ? "defensive possession sample unavailable" : `${fmt(card.impact.def_poss, 0)} defensive possessions`}.</p></> : <p className="empty">No league-wide RAPM row matches this archive ID and season. Open the <Link href="/basketball/impact/">full impact archive</Link> for the broader impact board.</p>}</section>
       <section className="section"><div className="section-heading"><div><div className="eyebrow">Game evidence / {label(season)}</div><h2>Open the possessions behind the total.</h2></div><div className="button-row"><span className="note">{allGames ? gameEvidenceWindowLabel(games, visibleGames.length) : gameEvidenceWindowLabel(games, card.games.length)}</span>{allGames ? <button className="button secondary" type="button" onClick={() => setAllGames(null)}>Show latest 12</button> : <button className="button secondary" type="button" onClick={() => { void fetchFullGameLog(); }} disabled={loadingGames || !card.games.length}>{loadingGames ? "Loading log…" : "Show complete log"}</button>}<button className="button secondary" type="button" onClick={downloadFullGameLog} disabled={exporting || loadingGames || !card.games.length}>{exporting ? "Preparing log…" : "Download full season CSV ↓"}</button></div></div><p className="note">The card starts with the latest 12 rows for a fast load. POSS is the source-recorded offensive-possession count; PTS/POSS is unavailable when that denominator is missing or zero. Show complete log loads every retained contest, and the download includes all retained fields.</p><div className="table-scroll"><table className="data-table"><thead><tr><th>Date / opponent</th><th className="numeric">MIN</th><th className="numeric">PTS</th><th className="numeric">POSS</th><th className="numeric">PTS/POSS</th><th className="numeric">REB</th><th className="numeric">AST</th><th className="numeric">TO</th><th className="numeric">PF</th><th className="numeric">FG</th><th className="numeric">3P</th><th className="numeric">FT</th></tr></thead><tbody>{visibleGames.map((game) => { const possessionLine = playerGamePossessionLine(game.stats); return <tr key={game.contest_id}><td>{game.game_date || "Date unavailable"}<small>{game.team_name || team} vs {game.opponent_name || "Opponent unavailable"} · contest {game.contest_id}</small></td><td className="numeric">{fmt(value(game.stats, "mins"), 0)}</td><td className="numeric">{fmt(value(game.stats, "pts"), 0)}</td><td className="numeric">{fmt(possessionLine.possessions, 0)}</td><td className="numeric">{fmt(possessionLine.points_per_possession, 2)}</td><td className="numeric">{fmt(safeSum(value(game.stats, "orb"), value(game.stats, "drb")), 0)}</td><td className="numeric">{fmt(value(game.stats, "ast"), 0)}</td><td className="numeric">{fmt(value(game.stats, "tov"), 0)}</td><td className="numeric">{fmt(value(game.stats, "pf"), 0)}</td><td className="numeric">{fmt(value(game.stats, "fgm"), 0)}/{fmt(value(game.stats, "fga"), 0)}</td><td className="numeric">{fmt(value(game.stats, "tpm"), 0)}/{fmt(value(game.stats, "tpa"), 0)}</td><td className="numeric">{fmt(value(game.stats, "ftm"), 0)}/{fmt(value(game.stats, "fta"), 0)} <small>{pct(rate(value(game.stats, "ftm"), value(game.stats, "fta")))}</small></td></tr>; })}</tbody></table></div>{!visibleGames.length && <p className="empty">No game-level rows are published for this season; use the season summary above.</p>}</section>
       <section className="section paper-panel"><h2>Use the card with the archive caveat.</h2><p>Every table on this page stays within the Archive ID namespace. The same numeric ID is the only join used here. A missing row means this release does not contain that evidence; it does not mean the player was absent, ineligible or transferred. For cross-archive history, open the separate player file from the player index.</p></section>
