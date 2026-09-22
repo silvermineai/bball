@@ -1,5 +1,6 @@
 import { divisionRankingMetrics } from "./division-player-rankings";
 import {
+  retainedPlayerValue,
   sortDivisionPlayers,
   type DivisionPlayerWithEvidence,
 } from "./division-player-detail";
@@ -8,6 +9,11 @@ import {
 export const divisionPlayerArchiveMetricOptions = divisionRankingMetrics.map(([key, label]) => ({ key, label }));
 
 export const DIVISION_PLAYER_ARCHIVE_PAGE_SIZE = 50;
+
+export type DivisionPlayerArchiveRankedRow = DivisionPlayerWithEvidence & {
+  /** Competition rank within the filtered, exact-division cohort. */
+  archive_rank: number | null;
+};
 
 export function filterDivisionPlayerArchive(
   players: readonly DivisionPlayerWithEvidence[],
@@ -20,6 +26,33 @@ export function filterDivisionPlayerArchive(
     .filter((player) => String(player.division) === division)
     .filter((player) => !needle || `${player.name} ${player.team_name || ""} ${player.player_id}`.toLowerCase().includes(needle));
   return sortDivisionPlayers(filtered, metric) as DivisionPlayerWithEvidence[];
+}
+
+/**
+ * Attach a transparent Silvermine rank to the archive's sorted rows. The
+ * rank is calculated before pagination, uses competition ranking (1, 1, 3),
+ * and leaves source-missing values unranked instead of treating them as zero.
+ * This is a view rank for the selected retained field; publisher ranks remain
+ * available in source_stats and in the dedicated ranking desk.
+ */
+export function rankDivisionPlayerArchiveRows(
+  players: readonly DivisionPlayerWithEvidence[],
+  metric: string,
+): DivisionPlayerArchiveRankedRow[] {
+  const sorted = sortDivisionPlayers(players, metric);
+  let previousValue: number | null = null;
+  let competitionRank = 0;
+  return sorted.map((player, index) => {
+    const currentValue = retainedPlayerValue(player, metric);
+    if (currentValue == null) {
+      return { ...player, archive_rank: null };
+    }
+    if (previousValue === null || currentValue !== previousValue) {
+      competitionRank = index + 1;
+      previousValue = currentValue;
+    }
+    return { ...player, archive_rank: competitionRank };
+  });
 }
 
 export function paginateDivisionPlayerArchive(

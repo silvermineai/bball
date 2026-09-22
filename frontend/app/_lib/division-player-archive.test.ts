@@ -4,6 +4,7 @@ import {
   divisionPlayerArchiveMetricOptions,
   filterDivisionPlayerArchive,
   paginateDivisionPlayerArchive,
+  rankDivisionPlayerArchiveRows,
 } from "./division-player-archive";
 
 const players = [
@@ -43,5 +44,20 @@ describe("division player archive", () => {
     expect(keys).toContain("pf");
     expect(keys).toContain("mins");
     expect(keys).toContain("o_poss");
+  });
+
+  it("assigns competition ranks across the filtered cohort and leaves missing values unranked", () => {
+    const rows = rankDivisionPlayerArchiveRows([
+      { player_id: 1, division: 2, name: "Alpha", ppg: 25 },
+      { player_id: 2, division: 2, name: "Beta", ppg: 25 },
+      { player_id: 3, division: 2, name: "Gamma", ppg: 20 },
+      { player_id: 4, division: 2, name: "Missing", ppg: null },
+    ], "ppg");
+    expect(rows.map((row) => [row.name, row.archive_rank])).toEqual([
+      ["Alpha", 1],
+      ["Beta", 1],
+      ["Gamma", 3],
+      ["Missing", null],
+    ]);
   });
 });
