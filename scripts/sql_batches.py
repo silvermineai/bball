@@ -1,5 +1,7 @@
 """Small, deterministic SQL-file batching helpers for remote D1 imports."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 
