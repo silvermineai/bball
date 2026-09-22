@@ -659,16 +659,17 @@ async function loadSport(db: D1Database, sport: Sport, season: number, now: stri
       SELECT sport,game_id,provider,source_start,source_time_valid,observed_at,payload_json,
              ROW_NUMBER() OVER (PARTITION BY sport,game_id ORDER BY observed_at DESC,id DESC) AS clock_rank
         FROM audit_schedule_times
-       WHERE sport=? AND observed_at<=?
+       WHERE sport=? AND observed_at<=?${gameId ? " AND game_id=?" : ""}
     )
     SELECT sport,game_id,provider,source_start,source_time_valid,observed_at,payload_json
       FROM latest_clock WHERE clock_rank=1
-  `).bind(sport, now).all();
+  `).bind(...(gameId ? [sport, now, gameId] : [sport, now])).all();
   const clockByGame = new Map<string, Record<string, unknown>>();
   for (const clock of clockResult.results as Array<Record<string, unknown>>) {
     clockByGame.set(String(clock.game_id), clock);
   }
-  const quotesResult = await db.prepare("SELECT id,sport,game_id,provider,bookmaker,market,captured_at,updated_at,payload_json FROM audit_markets WHERE sport=? ORDER BY captured_at,updated_at,id").bind(sport).all();
+  const quotesResult = await db.prepare(`SELECT id,sport,game_id,provider,bookmaker,market,captured_at,updated_at,payload_json
+    FROM audit_markets WHERE sport=?${gameId ? " AND game_id=?" : ""} ORDER BY captured_at,updated_at,id`).bind(...(gameId ? [sport, gameId] : [sport])).all();
   const quotesByGame = new Map<string, Json[]>();
   for (const quote of quotesResult.results as Array<Record<string, unknown>>) {
     const key = String(quote.game_id);
