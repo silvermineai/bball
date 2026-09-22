@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "./data";
-import { applyLiveFootballMarketComparisons, dashboardFootballMarketComparisons, loadLiveFootballForecasts, loadLiveFootballMarketComparisons, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
+import { applyLiveFootballMarketComparisons, dashboardFootballMarketComparisons, exactLiveFootballReliability, loadLiveFootballForecasts, loadLiveFootballMarketComparisons, loadLiveFootballModelReliability, mergeLiveFootballForecasts, type LiveFootballForecastRow } from "./live-football-forecasts";
 
 const game = (prediction: Game["prediction"]): Game => ({
   id: "game-1",
@@ -40,6 +40,39 @@ const liveRow = (index: number, modelId = "football-v1"): LiveFootballForecastRo
 });
 
 describe("live football forecast merge", () => {
+  it("selects reliability bins only from the exact live model edition", () => {
+    const reliability = [{ lower: 0.5, upper: 0.6, games: 10, predicted: 0.55, observed: 0.5 }];
+    expect(exactLiveFootballReliability({
+      models: [
+        { model_id: "old-model", model_summary: { evaluation: { reliability: [] } } },
+        { model_id: "live-model", model_summary: { evaluation: { reliability } } },
+      ],
+    }, "live-model")).toEqual({ modelId: "live-model", reliability });
+    expect(exactLiveFootballReliability({
+      models: [{ model_id: "old-model", model_summary: { evaluation: { reliability } } }],
+    }, "live-model")).toEqual({ modelId: "live-model", reliability: null });
+  });
+
+  it("loads the exact live model reliability catalog", async () => {
+    const originalFetch = globalThis.fetch;
+    let requested = "";
+    globalThis.fetch = (async (input) => {
+      requested = String(input);
+      return new Response(JSON.stringify({
+        models: [{
+          model_id: "live-model",
+          model_summary: { evaluation: { reliability: [{ lower: 0.6, upper: 0.7, games: 12, predicted: 0.64, observed: 0.67 }] } },
+        }],
+      }), { status: 200 });
+    }) as typeof fetch;
+    await expect(loadLiveFootballModelReliability(undefined, "live-model")).resolves.toMatchObject({
+      modelId: "live-model",
+      reliability: [{ lower: 0.6, upper: 0.7, games: 12 }],
+    });
+    expect(requested).toContain("/api/football/research/forecasts?season=2026&meta=1");
+    globalThis.fetch = originalFetch;
+  });
+
   it("can limit landing-page refreshes to the first live page", async () => {
     const originalFetch = globalThis.fetch;
     let calls = 0;

@@ -1,5 +1,6 @@
 import type { Forecast, Game } from "./data";
 import type { Comparison } from "./research-types";
+import type { FootballReliabilityBand } from "./football-model-factors";
 
 export type LiveFootballForecastRow = {
   game_id: string;
@@ -26,6 +27,22 @@ type LiveFootballForecastPage = {
   rows: LiveFootballForecastRow[];
 };
 
+type LiveFootballModelCatalog = {
+  models?: Array<{
+    model_id?: string;
+    model_summary?: {
+      evaluation?: {
+        reliability?: FootballReliabilityBand[];
+      };
+    };
+  }>;
+};
+
+export type LiveFootballModelReliability = {
+  modelId: string;
+  reliability: FootballReliabilityBand[] | null;
+};
+
 function finiteOrNull(value: unknown) {
   return value === null || value === undefined || (typeof value === "number" && Number.isFinite(value));
 }
@@ -48,6 +65,39 @@ export function validLiveFootballForecast(row: LiveFootballForecastRow) {
   if (row.home_margin != null && row.margin_low != null && row.margin_high != null
     && (row.home_margin < row.margin_low || row.home_margin > row.margin_high)) return false;
   return row.prediction_integrity !== "invalid";
+}
+
+/**
+ * Keep held-out reliability attached to the exact live forecast edition. A
+ * static reliability artifact belongs to its own model ID and cannot explain
+ * a newer live row just because the probability bands look compatible.
+ */
+export function exactLiveFootballReliability(
+  catalog: LiveFootballModelCatalog,
+  modelId: string,
+): LiveFootballModelReliability {
+  const model = catalog.models?.find((candidate) => candidate.model_id === modelId);
+  const reliability = model?.model_summary?.evaluation?.reliability;
+  return {
+    modelId,
+    reliability: Array.isArray(reliability) ? reliability : null,
+  };
+}
+
+/** Load the active model's own held-out reliability bins from the Worker. */
+export async function loadLiveFootballModelReliability(
+  signal: AbortSignal | undefined,
+  modelId: string,
+): Promise<LiveFootballModelReliability> {
+  const response = await fetch("/api/football/research/forecasts?season=2026&meta=1", { signal });
+  if (!response.ok) throw new Error("Live football model calibration unavailable.");
+  const payload = await response.json() as LiveFootballModelCatalog;
+  if (!Array.isArray(payload.models)) throw new Error("Live football model catalog is incomplete.");
+  const result = exactLiveFootballReliability(payload, modelId);
+  if (!payload.models.some((candidate) => candidate.model_id === modelId)) {
+    throw new Error("Live football model calibration has no matching edition.");
+  }
+  return result;
 }
 
 type LiveFootballScorecardResponse = {

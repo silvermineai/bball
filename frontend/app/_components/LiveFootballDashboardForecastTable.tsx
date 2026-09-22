@@ -11,6 +11,7 @@ import {
   dashboardFootballMarketComparisons,
   loadLiveFootballForecasts,
   mergeLiveFootballForecasts,
+  loadLiveFootballModelReliability,
 } from "../_lib/live-football-forecasts";
 import {
   sortFootballMatchups,
@@ -137,6 +138,8 @@ export default function LiveFootballDashboardForecastTable({
   const [signal, setSignal] = useState<FootballMatchupSignal>("all");
   const [rowLimit, setRowLimit] = useState<12 | 24 | 48>(12);
   const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]> | null>(null);
+  const [liveModelId, setLiveModelId] = useState<string | null>(null);
+  const [liveReliability, setLiveReliability] = useState<FootballReliabilityBand[] | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -149,16 +152,34 @@ export default function LiveFootballDashboardForecastTable({
       const nextGames = mergeLiveFootballForecasts(initialGames, forecastResult.value);
       setGames(nextGames);
       const modelId = forecastResult.value.find((row) => row.model_id)?.model_id;
-      if (!modelId) return;
-      return loadLiveFootballMarketComparisons(controller.signal, modelId).then((marketResult) => {
-        if (controller.signal.aborted) return;
-        setMarketComparisons(Object.fromEntries(
-          Object.entries(marketResult).map(([gameId, entry]) => [gameId, entry.model_id === modelId ? entry.comparisons : []]),
-        ));
-      });
+      setLiveModelId(modelId || null);
     });
     return () => controller.abort();
   }, [initialGames]);
+
+  useEffect(() => {
+    if (!liveModelId) {
+      setLiveReliability(null);
+      return;
+    }
+    const controller = new AbortController();
+    setLiveReliability(null);
+    Promise.allSettled([
+      loadLiveFootballMarketComparisons(controller.signal, liveModelId),
+      loadLiveFootballModelReliability(controller.signal, liveModelId),
+    ]).then(([marketResult, reliabilityResult]) => {
+      if (controller.signal.aborted) return;
+      if (marketResult.status === "fulfilled") {
+        setMarketComparisons(Object.fromEntries(
+          Object.entries(marketResult.value).map(([gameId, entry]) => [gameId, entry.model_id === liveModelId ? entry.comparisons : []]),
+        ));
+      }
+      if (reliabilityResult.status === "fulfilled" && reliabilityResult.value.modelId === liveModelId) {
+        setLiveReliability(reliabilityResult.value.reliability);
+      }
+    });
+    return () => controller.abort();
+  }, [liveModelId]);
 
   const forecastedGames = games.filter((game) => game.prediction);
   const signalGames = forecastedGames.filter((game) => matchesFootballMatchupSignal(game.prediction, signal));
@@ -214,7 +235,11 @@ export default function LiveFootballDashboardForecastTable({
             const prediction = game.prediction!;
             const market = summarizeMarketLines(dashboardFootballMarketComparisons(game, marketComparisons));
             const factors = dashboardForecastModelFactors(game, model, expectedModelId);
-            const calibration = dashboardForecastCalibration(game, model?.evaluation?.reliability, expectedModelId);
+            const calibration = dashboardForecastCalibration(
+              game,
+              liveReliability || model?.evaluation?.reliability,
+              liveModelId || expectedModelId,
+            );
             return (
               <tr key={game.id}>
                 <th scope="row"><Link href={`/football/matchups/?team=${encodeURIComponent(game.home_name)}`}><strong>{game.away_name}</strong><small>at {game.home_name}</small></Link></th>
@@ -238,6 +263,7 @@ export default function LiveFootballDashboardForecastTable({
                     <strong>{calibration.side} {fmt(calibration.confidence_lower * 100, 0)}–{fmt(calibration.confidence_upper * 100, 0)}%</strong>
                     <small>{calibration.games.toLocaleString()} held-out games · {calibration.observed == null ? "observed rate unavailable" : `${fmt(calibration.observed * 100, 1)}% observed`}</small>
                     <small>{calibration.observed_gap_pp == null ? "Observed-minus-predicted unavailable" : `Observed ${calibration.observed_gap_pp >= 0 ? "+" : ""}${fmt(calibration.observed_gap_pp, 1)} pp`}</small>
+                    <small>{liveModelId ? "Exact live model edition" : "Published page edition"}</small>
                   </> : <span className="note">Unavailable for this edition or division</span>}
                 </td>
                 <td className="numeric">{prediction.home_margin >= 0 ? "+" : ""}{fmt(prediction.home_margin)}</td>
