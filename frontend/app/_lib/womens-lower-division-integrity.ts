@@ -46,6 +46,16 @@ const isHttpsUrl = (value: unknown): value is string => {
   }
 };
 
+const isNCAAWomenStatsUrl = (value: unknown): value is string => {
+  if (!isHttpsUrl(value)) return false;
+  try {
+    const url = new URL(value);
+    return url.hostname === "www.ncaa.com" && /^\/stats\/basketball-women\/d[23](?:\/|$)/.test(url.pathname);
+  } catch {
+    return false;
+  }
+};
+
 const fail = (reason: string): never => {
   throw new Error(`Women’s lower-division release failed integrity validation: ${reason}`);
 };
@@ -61,7 +71,7 @@ function validateStatistic(
   if (typeof value.label !== "string" || typeof value.statistic !== "string") return fail(`D${division} ${kind} statistic has no label or key.`);
   if (!Array.isArray(value.headers) || value.headers.length === 0 || value.headers.some((header) => typeof header !== "string")) return fail(`D${division} ${kind} ${value.statistic} has invalid headers.`);
   if (!Array.isArray(value.rows) || value.rows.some((row) => !isRecord(row))) return fail(`D${division} ${kind} ${value.statistic} has malformed rows.`);
-  if (!isHttpsUrl(value.source_url)) return fail(`D${division} ${kind} ${value.statistic} has no HTTPS source URL.`);
+  if (!isNCAAWomenStatsUrl(value.source_url)) return fail(`D${division} ${kind} ${value.statistic} has no NCAA.com source URL.`);
   const sourcePath = new URL(value.source_url).pathname;
   if (!availablePaths.has(sourcePath)) return fail(`D${division} ${kind} ${value.statistic} source path is absent from the available-statistics ledger.`);
   if (!receiptUrls.has(value.source_url)) return fail(`D${division} ${kind} ${value.statistic} has no matching source receipt.`);
@@ -99,7 +109,7 @@ export function parseWomensLowerDivisionEdition(value: unknown): WomensLowerDivi
     if (!isRecord(current)) return fail(`D${division} division is missing.`);
     const scope = current.source_scope;
     if (!isRecord(scope) || scope.sport !== "basketball" || scope.gender !== "women" || scope.division !== Number(division)) return fail(`D${division} source scope is not exact.`);
-    if (!isHttpsUrl(current.source_url) || !receiptUrls.has(current.source_url)) return fail(`D${division} source URL has no receipt.`);
+    if (!isNCAAWomenStatsUrl(current.source_url) || !receiptUrls.has(current.source_url)) return fail(`D${division} source URL has no NCAA.com receipt.`);
     if (!Number.isInteger(current.season) || typeof current.identity_status !== "string" || typeof current.identity_note !== "string") return fail(`D${division} metadata is incomplete.`);
     if (!isRecord(current.available_statistics) || !Array.isArray(current.available_statistics.individual) || !Array.isArray(current.available_statistics.team)) return fail(`D${division} available-statistics ledger is missing.`);
     const availableStatistics = current.available_statistics as { individual: unknown[]; team: unknown[] };

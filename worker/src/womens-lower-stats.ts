@@ -36,6 +36,14 @@ function isHttps(value: unknown): value is string {
   try { return new URL(value).protocol === "https:"; } catch { return false; }
 }
 
+function isNCAAWomenStatsUrl(value: unknown): value is string {
+  if (!isHttps(value)) return false;
+  try {
+    const url = new URL(value);
+    return url.hostname === "www.ncaa.com" && /^\/stats\/basketball-women\/d[23](?:\/|$)/.test(url.pathname);
+  } catch { return false; }
+}
+
 function validReceipt(value: unknown): value is RecordValue {
   return isRecord(value)
     && isHttps(value.url)
@@ -62,7 +70,7 @@ function validStatistic(value: unknown, sourceUrls: Set<string>, availablePaths:
     || value.headers.some((header) => typeof header !== "string")
     || !Array.isArray(value.rows)
     || value.rows.some((row) => !isRecord(row))
-    || !isHttps(value.source_url)
+    || !isNCAAWomenStatsUrl(value.source_url)
     || !sourceUrls.has(value.source_url)
     || !availablePaths.has(new URL(value.source_url).pathname)) return false;
   return value.rows.every((row) => isRecord(row.source_fields));
@@ -94,7 +102,7 @@ function validateEdition(value: unknown): RecordValue | null {
       || current.source_scope.sport !== "basketball"
       || current.source_scope.gender !== "women"
       || current.source_scope.division !== Number(division)
-      || !isHttps(current.source_url)
+      || !isNCAAWomenStatsUrl(current.source_url)
       || !sourceUrls.has(current.source_url)
       || !Array.isArray(current.individual)
       || !Array.isArray(current.team)

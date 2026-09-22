@@ -53,4 +53,12 @@ describe("women's lower-division release integrity", () => {
     value.receipts[1] = { ...value.receipts[1], sha256: "missing" };
     expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/receipt is malformed/);
   });
+
+  it("rejects a source table hosted outside NCAA.com", () => {
+    const value = edition();
+    const externalUrl = "https://example.com/stats/basketball-women/d2/current/individual/102";
+    value.receipts[1].url = externalUrl;
+    (value.divisions.d2.individual[0] as { source_url: string }).source_url = externalUrl;
+    expect(() => parseWomensLowerDivisionEdition(value)).toThrow(/NCAA\.com source URL/);
+  });
 });

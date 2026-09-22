@@ -93,4 +93,15 @@ describe("women's lower-division stats API", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ code: "release_integrity_failed" });
   });
+
+  it("fails closed when a lower-division table receipt points outside NCAA.com", async () => {
+    const malformed = edition();
+    const externalUrl = "https://example.com/stats/basketball-women/d2/current/individual/1009";
+    malformed.receipts[0].url = externalUrl;
+    malformed.divisions.d2.source_url = externalUrl;
+    malformed.divisions.d2.individual[0].source_url = externalUrl;
+    const response = await womensLowerStats.request("/?division=2", {}, env(malformed));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "release_integrity_failed" });
+  });
 });
