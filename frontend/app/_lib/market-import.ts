@@ -67,6 +67,34 @@ export function marketImportMatchState(row: MarketImportRow, game: ExactSchedule
   return marketImportMatchesGame(row, game) ? "exact" : "identity_or_clock_mismatch";
 }
 
+export type MarketImportScheduleSummary = {
+  exact: number;
+  missingSchedule: number;
+  identityOrClockMismatch: number;
+  ready: boolean;
+};
+
+/**
+ * A valid CSV shape is not enough to qualify an import. Every row must also
+ * join the currently published schedule on source ID, participants and tip
+ * instant. Keep that second gate explicit so the browser cannot label a file
+ * ready while the server would reject it atomically.
+ */
+export function marketImportScheduleSummary(
+  rows: MarketImportRow[],
+  games: ExactScheduleGame[],
+): MarketImportScheduleSummary {
+  const byId = new Map(games.map((game) => [game.id, game]));
+  const summary = rows.reduce((result, row) => {
+    const state = marketImportMatchState(row, byId.get(row.gameId) || null);
+    if (state === "exact") result.exact += 1;
+    else if (state === "missing_schedule") result.missingSchedule += 1;
+    else result.identityOrClockMismatch += 1;
+    return result;
+  }, { exact: 0, missingSchedule: 0, identityOrClockMismatch: 0 });
+  return { ...summary, ready: rows.length > 0 && summary.exact === rows.length };
+}
+
 /** Parse RFC 4180-style CSV locally; the selected file never leaves the browser. */
 export function parseMarketCsv(text: string): string[][] {
   const rows: string[][] = [];

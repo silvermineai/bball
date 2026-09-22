@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { marketImportMatchState, marketImportPrediction, parseMarketImportRows, validateMarketImportCsv, type MarketImportPreflight as Preflight, type MarketImportRow } from "../../_lib/market-import";
+import { marketImportMatchState, marketImportPrediction, marketImportScheduleSummary, parseMarketImportRows, validateMarketImportCsv, type MarketImportPreflight as Preflight, type MarketImportRow } from "../../_lib/market-import";
 import type { BBGame } from "../../_lib/basketball-types";
 
 const fixed = (value: number | null, digits = 1) => value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
@@ -30,9 +30,9 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
         : prediction.home_win_probability - (noVigHome(row) || 0);
     return { row, game, exact, matchState, gap, model: row.market === "spreads" ? prediction.home_margin : row.market === "totals" ? prediction.total : prediction.home_win_probability * 100, estimateType: prediction.estimate_type === "cold_start" ? "cold-start" : "primary" };
   }), [rows, upcoming]);
+  const scheduleSummary = useMemo(() => marketImportScheduleSummary(rows, upcoming), [rows, upcoming]);
   const matched = comparisons.filter((item) => item.exact);
-  const missingSchedule = comparisons.filter((item) => item.matchState === "missing_schedule").length;
-  const mismatched = comparisons.filter((item) => item.matchState === "identity_or_clock_mismatch").length;
+  const rejected = comparisons.filter((item) => !item.exact);
   return (
     <div className="market-import-preflight">
       <div>
@@ -56,15 +56,15 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
           });
         }} />
       </label>
-      {preflight && <div className={`market-import-preflight-result ${preflight.errors.length ? "has-errors" : "is-ready"}`} role="status">
-        {preflight.errors.length ? <><strong>Needs fixes before import</strong><ul>{preflight.errors.map((error) => <li key={error}>{error}</li>)}</ul></> : <><strong>Ready for the server importer</strong><p>{preflight.rows.toLocaleString()} rows · {Object.entries(preflight.markets).map(([market, count]) => `${count} ${market}`).join(" · ")}</p></>}
+      {preflight && <div className={`market-import-preflight-result ${preflight.errors.length || !scheduleSummary.ready ? "has-errors" : "is-ready"}`} role="status">
+        {preflight.errors.length ? <><strong>Needs fixes before import</strong><ul>{preflight.errors.map((error) => <li key={error}>{error}</li>)}</ul></> : scheduleSummary.ready ? <><strong>Ready for the server importer</strong><p>{preflight.rows.toLocaleString()} rows · {Object.entries(preflight.markets).map(([market, count]) => `${count} ${market}`).join(" · ")} · every row joins the published schedule exactly</p></> : <><strong>CSV structure valid; schedule joins need fixes</strong><p>{preflight.rows.toLocaleString()} rows · {scheduleSummary.exact.toLocaleString()} exact · {scheduleSummary.missingSchedule.toLocaleString()} missing schedule IDs · {scheduleSummary.identityOrClockMismatch.toLocaleString()} participant or tip mismatches</p></>}
         {preflight.warnings.length > 0 && <p className="note">{preflight.warnings.length} row warning{preflight.warnings.length === 1 ? "" : "s"}: blank event IDs will be derived by the importer.</p>}
       </div>}
       {rows.length > 0 && <div className="market-import-preview">
         <div className="eyebrow">Private comparison preview / upcoming basketball</div>
         <h4>See the model beside your authorized quote.</h4>
         <p className="note">This preview stays in memory in this browser. It joins only exact game IDs, participant names and start instants from the published 2026–27 schedule; it does not upload, persist or add these rows to the public ledger.</p>
-        <div className="market-import-preview-stats" role="status"><span><strong>{matched.length}</strong> exact upcoming matches</span><span><strong>{missingSchedule}</strong> rows without a current schedule ID</span><span><strong>{mismatched}</strong> ID, participant or clock mismatches</span></div>
+        <div className="market-import-preview-stats" role="status"><span><strong>{scheduleSummary.exact}</strong> exact upcoming matches</span><span><strong>{scheduleSummary.missingSchedule}</strong> rows without a current schedule ID</span><span><strong>{scheduleSummary.identityOrClockMismatch}</strong> participant or tip mismatches</span></div>
         {matched.length > 0 ? <div className="table-scroll">
           <table className="data-table"><thead><tr><th>Game</th><th>Market</th><th>Book</th><th className="numeric">Quote</th><th className="numeric">Model</th><th className="numeric">Difference</th></tr></thead><tbody>
             {matched.slice(0, 40).map(({ row, game, gap, model, estimateType }) => <tr key={`${row.gameId}-${row.market}-${row.bookmaker}-${row.capturedAt}`}>
@@ -78,6 +78,16 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
           </tbody></table>
         </div> : <p className="note" role="status">No rows matched the current upcoming basketball schedule exactly. The preflight remains local and no comparison is shown.</p>}
         {matched.length > 40 && <small className="note">Showing the first 40 exact matches; the selected file remains local and can be imported through the server protocol.</small>}
+        {rejected.length > 0 && <div className="table-scroll" style={{ marginTop: 16 }}>
+          <table className="data-table"><thead><tr><th>Row that needs correction</th><th>Reason</th><th>Published schedule row</th></tr></thead><tbody>
+            {rejected.slice(0, 40).map(({ row, game, matchState }, index) => <tr key={`${row.gameId}-${row.market}-${row.bookmaker}-${row.capturedAt}-${index}`}>
+              <td><strong>{row.awayName} at {row.homeName}</strong><small>{row.gameId || "missing game ID"} · {row.startsAt}</small></td>
+              <td>{matchState === "missing_schedule" ? "Game ID is not in the published upcoming schedule." : "Participant names or tip instant do not match this game ID exactly."}</td>
+              <td>{game ? <><strong>{game.away_name} at {game.home_name}</strong><small>{game.id} · {game.starts_at}</small></> : <span className="muted">No current schedule row</span>}</td>
+            </tr>)}
+          </tbody></table>
+        </div>}
+        {rejected.length > 40 && <small className="note">Showing the first 40 schedule-join failures.</small>}
       </div>}
     </div>
   );

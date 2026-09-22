@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { marketImportMatchState, marketImportMatchesGame, marketImportPrediction, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
+import { marketImportMatchState, marketImportMatchesGame, marketImportPrediction, marketImportScheduleSummary, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
 
 const header = "game_id,market,starts_at,captured_at,updated_at,home_name,away_name,bookmaker,line,home_price,away_price,over_price,under_price,home_american,away_american,over_american,under_american,event_id";
 
@@ -63,6 +63,27 @@ describe("market import preflight", () => {
     expect(marketImportMatchState(row, game)).toBe("exact");
     expect(marketImportMatchState(row, null)).toBe("missing_schedule");
     expect(marketImportMatchState({ ...row, homeName: "Different Home" }, game)).toBe("identity_or_clock_mismatch");
+  });
+
+  it("requires every row to join the published schedule before labeling an import ready", () => {
+    const game = { id: "401", starts_at: "2027-01-01T20:00:00Z", home_name: "North State", away_name: "South State" };
+    expect(marketImportScheduleSummary([previewRow()], [game])).toEqual({
+      exact: 1,
+      missingSchedule: 0,
+      identityOrClockMismatch: 0,
+      ready: true,
+    });
+    expect(marketImportScheduleSummary([
+      previewRow(),
+      previewRow({ gameId: "missing" }),
+      previewRow({ homeName: "North St." }),
+    ], [game])).toEqual({
+      exact: 1,
+      missingSchedule: 1,
+      identityOrClockMismatch: 1,
+      ready: false,
+    });
+    expect(marketImportScheduleSummary([], [game]).ready).toBe(false);
   });
 
   it("rejects provider updates too stale for scorecard comparison", () => {
