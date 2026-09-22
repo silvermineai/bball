@@ -8,6 +8,7 @@ from ncaa_scraper.ncaa_individual import (
     STAT_FALLBACKS,
     SCHEMA,
     decode_html,
+    discover_stat_sequences,
     export_release,
     final_period,
     ensure_schema,
@@ -153,6 +154,14 @@ class NCAAIndividualTests(unittest.TestCase):
         self.assertNotIn("216.0", INDIVIDUAL_STATS)
         self.assertTrue(invalid_ranking_page("b'Invalid ranking period'"))
         self.assertFalse(invalid_ranking_page("<table><tbody><tr><td>1</td></tr></tbody></table>"))
+
+    def test_discovers_current_stat_sequences_from_publisher_navigation(self):
+        html = (
+            '<a href="/rankings/national_ranking?stat_seq=216.0">Assists Per Game</a>'
+            '<a href="/rankings/national_ranking?stat_seq=216.0">Assists Per Game</a>'
+            '<a href="/rankings/national_ranking?stat_seq=605.0">Assists</a>'
+        )
+        self.assertEqual(discover_stat_sequences(html, "Assists Per Game"), ("216.0",))
 
     def test_sparse_same_season_release_does_not_replace_d1_snapshot(self):
         previous = {

@@ -255,6 +255,28 @@ def invalid_ranking_page(html: str) -> bool:
     return bool(re.search(r"invalid ranking period", decode_html(html), re.I))
 
 
+def discover_stat_sequences(html: str, label: str) -> tuple[str, ...]:
+    """Read the publisher's current stat-sequence links from a ranking page.
+
+    NCAA has reused different ``stat_seq`` values for the same measure over
+    time.  A hard-coded fallback can therefore leave a division with an empty
+    field even while the source page advertises a valid link.  Only exact
+    links whose visible label matches the requested measure are accepted; the
+    caller still validates the response and keeps the bounded fallback list.
+    """
+    decoded = decode_html(html)
+    wanted = re.sub(r"\s+", " ", label).strip().casefold()
+    found: list[str] = []
+    for attrs, body in re.findall(r"<a\b([^>]*)>(.*?)</a>", decoded, re.DOTALL | re.IGNORECASE):
+        text = re.sub(r"\s+", " ", htmllib.unescape(TAG_RE.sub("", body))).strip().casefold()
+        if text != wanted:
+            continue
+        href = re.search(r"(?:stat_seq|statSeq)=([0-9]+(?:\.[0-9]+)?)", htmllib.unescape(attrs), re.IGNORECASE)
+        if href and href.group(1) not in found:
+            found.append(href.group(1))
+    return tuple(found)
+
+
 def _json_number(value):
     if isinstance(value, bool) or value is None:
         return None
@@ -492,6 +514,10 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
     # ---- team directory from team scoring offense
     url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={TEAM_SCORING_STAT}"
     html = decode_html(fetcher.fetch(url, cache_key=f"rk_{SPORT}_d{div_int}_teamscoring"))
+    # The team-scoring page carries the source's current navigation links.
+    # Keep those exact sequences available for measures whose identifiers have
+    # changed between NCAA editions (especially assists per game).
+    discovered_sequences = {"apg": discover_stat_sequences(html, "Assists Per Game")}
     headers, rows = parse_table(html)
     count = 0
     for row in rows:
@@ -545,33 +571,34 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
 
     # ---- individual stats
     for stat_seq, slug in INDIVIDUAL_STATS.items():
-        url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={stat_seq}"
-        try:
-            # Include the sequence in the APG cache key so its old invalid
-            # response cannot mask the corrected URL. Preserve established
-            # keys for every other measure so an offline refresh reuses them.
-            cache_key = (
-                f"rk_{SPORT}_d{div_int}_{slug}_{stat_seq.replace('.', '_')}"
-                if slug == "apg"
-                else f"rk_{SPORT}_d{div_int}_{slug}"
-            )
-            html = fetcher.fetch(url, cache_key=cache_key)
-            if invalid_ranking_page(html):
-                raise ValueError("Invalid ranking period")
-        except Exception as exc:
-            html = None
-            for fallback in STAT_FALLBACKS.get(slug, ()):
-                fallback_url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={fallback}"
-                try:
-                    candidate = fetcher.fetch(fallback_url, cache_key=f"rk_{SPORT}_d{div_int}_{slug}_{fallback.replace('.', '_')}")
-                    if not invalid_ranking_page(candidate):
-                        html = candidate
-                        break
-                except Exception:
-                    pass
-            if html is None:
-                print(f"[individual] d{div_int} {slug}: fetch failed {exc}", flush=True)
-                continue
+        sequences = list(discovered_sequences.get(slug, ()))
+        sequences.extend([stat_seq, *STAT_FALLBACKS.get(slug, ())])
+        # Preserve order while avoiding duplicate requests when the source
+        # advertises the same sequence as the configured current value.
+        sequences = list(dict.fromkeys(sequences))
+        html = None
+        last_error: Exception | None = None
+        for candidate_sequence in sequences:
+            url = f"/rankings/national_ranking?academic_year={YEAR}&division={division}&ranking_period={period}&sport_code={SPORT}&stat_seq={candidate_sequence}"
+            try:
+                # Include the sequence in the APG cache key so its old invalid
+                # response cannot mask a corrected URL. Preserve established
+                # keys for every other measure so an offline refresh reuses them.
+                cache_key = (
+                    f"rk_{SPORT}_d{div_int}_{slug}_{candidate_sequence.replace('.', '_')}"
+                    if slug == "apg"
+                    else f"rk_{SPORT}_d{div_int}_{slug}"
+                )
+                candidate_html = fetcher.fetch(url, cache_key=cache_key)
+                if invalid_ranking_page(candidate_html):
+                    raise ValueError("Invalid ranking period")
+                html = candidate_html
+                break
+            except Exception as exc:
+                last_error = exc
+        if html is None:
+            print(f"[individual] d{div_int} {slug}: fetch failed {last_error}", flush=True)
+            continue
         html = decode_html(html)
         headers, rows = parse_table(html)
         # header indices: first 6 are Rank, Player, Cl, Ht, Pos, G
