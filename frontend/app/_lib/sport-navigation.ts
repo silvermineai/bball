@@ -107,6 +107,24 @@ export function divisionDeskHref(sport: Sport): string {
 
 /** Keep lower-division football tabs on the exact-division archive desk. */
 export function divisionAwareNavHref(sport: Sport, division: Division, item: SportNavItem): string {
+  // Women’s D2/D3 already has source-native schedule, team, player and
+  // ranking evidence, but the identity-linked dashboard is intentionally not
+  // published for those cohorts. Keep every shared tab useful by taking the
+  // reader to the exact section of the readiness desk instead of the generic
+  // unavailable shell (which hides the available tables behind a status card).
+  if (sport === "womens-basketball" && division !== "1") {
+    const sectionByLabel: Record<string, string> = {
+      Teams: "wbb-lower-ratings",
+      Players: "wbb-lower-player-stats",
+      Recruiting: "wbb-lower-recruiting",
+      Games: "wbb-lower-schedule",
+      Predictions: "wbb-lower-ratings",
+      Learn: "wbb-division-readiness-title",
+      Rankings: "wbb-lower-ranking",
+    };
+    const section = sectionByLabel[item.label];
+    if (section) return `/basketball/wbb-readiness/#${section}`;
+  }
   if (sport === "football" && division !== "1" && ["Teams", "Predictions", "Rankings"].includes(item.label)) {
     return "/football/matchups/#lower-division-results-title";
   }

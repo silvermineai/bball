@@ -6,6 +6,7 @@ import { divisionPlayerReadiness } from "../_lib/division-player-readiness";
 import WomensLowerDivisionStats from "./WomensLowerDivisionStats";
 import WomensLowerDivisionScheduleReadiness from "./WomensLowerDivisionScheduleReadiness";
 import WomensLowerDivisionRatings from "./WomensLowerDivisionRatings";
+import WomensLowerDivisionRankings from "./WomensLowerDivisionRankings";
 
 type Division = {
   status: string;
@@ -103,9 +104,15 @@ export default function WomensDivisionReadiness({ division }: { division: "2" | 
       </div> : null}
       <details className="paper-panel" style={{ marginTop: 18 }}><summary><strong>What is required before publishing D{division}</strong></summary><ul>{publication.import_contract.next_required_inputs.map((item) => <li key={item}>{item}</li>)}</ul><p className="note">Required scope: {(publication.import_contract.required_scope_fields || ["sport", "gender", "division", "season"]).join(", ")}. Required identities: {(publication.import_contract.required_identity_fields || ["team_id", "team_display_name", "athlete_id", "athlete_display_name"]).join(", ")}. Accepted division values: {(publication.import_contract.accepted_division_values || [2, 3]).join(", ")}.</p><p className="note">The importer also requires explicit division labels, stable identities, receipt hashes, and conflict rejection.</p></details>
       <p className="muted">Readiness ledger captured {date(publication.generated_at)}. Values are source evidence; no D{division} rows are inferred.</p>
+      <section id="wbb-lower-recruiting" className="paper-panel" style={{ marginTop: 18 }} aria-labelledby="wbb-lower-recruiting-title">
+        <div className="eyebrow">RECRUITING · WOMEN&apos;S D{division}</div>
+        <h3 id="wbb-lower-recruiting-title">Recruiting release remains unavailable for this scope</h3>
+        <p className="note">No D{division} recruiting table is published here. The retained lower-division evidence uses source-native names and team slugs, so it cannot support a stable prospect or commitment join without an explicit recruiting identity contract.</p>
+      </section>
       <WomensLowerDivisionScheduleReadiness division={division} />
       <WomensLowerDivisionRatings division={division} />
       <WomensLowerDivisionStats division={division} />
+      <WomensLowerDivisionRankings division={division} />
     </>}
   </section>;
 }

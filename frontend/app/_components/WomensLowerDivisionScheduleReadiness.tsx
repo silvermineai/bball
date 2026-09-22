@@ -88,7 +88,7 @@ export default function WomensLowerDivisionScheduleReadiness({ division }: { div
     downloadCsv(`womens-d${division}-schedule.csv`, toCsv(exported.headers, exported.rows));
   };
 
-  return <div className="paper-panel" style={{ marginTop: 18 }} aria-label={`Women’s D${division} schedule readiness`}>
+  return <div id="wbb-lower-schedule" className="paper-panel" style={{ marginTop: 18 }} aria-label={`Women’s D${division} schedule readiness`}>
     <div className="eyebrow">SCHEDULE EVIDENCE · WOMEN&apos;S D{division}</div>
     <h3>Upcoming games and prediction gate</h3>
     {!loaded ? <p className="muted">Checking for a retained D{division} schedule asset…</p> : error ? <p className="status-error">{error}</p> : !asset ? <>

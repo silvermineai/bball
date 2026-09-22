@@ -51,11 +51,11 @@ export default function WomensLowerDivisionRatings({ division }: { division: "2"
 
   const current = asset?.divisions[`d${division}`];
   const topRatings = useMemo(() => current?.ratings.slice(0, 25) || [], [current]);
-  if (error) return <div className="paper-panel" style={{ marginTop: 18 }}><p className="status-error">{error}</p></div>;
-  if (!current) return <div className="paper-panel" style={{ marginTop: 18 }}><p className="muted">Loading the exact-division ratings evidence…</p></div>;
+  if (error) return <div id="wbb-lower-ratings" className="paper-panel" style={{ marginTop: 18 }}><p className="status-error">{error}</p></div>;
+  if (!current) return <div id="wbb-lower-ratings" className="paper-panel" style={{ marginTop: 18 }}><p className="muted">Loading the exact-division ratings evidence…</p></div>;
   const backtest = current.backtest;
   const blocked = current.target_schedule.status !== "ready" || current.forecast_status !== "published";
-  return <div className="paper-panel" style={{ marginTop: 18 }} aria-label={`Women’s D${division} ratings readiness`}>
+  return <div id="wbb-lower-ratings" className="paper-panel" style={{ marginTop: 18 }} aria-label={`Women’s D${division} ratings readiness`}>
     <div className="eyebrow">RESEARCH RATINGS · WOMEN&apos;S D{division}</div>
     <h3>{blocked ? "Historical strength board; future forecast gate remains closed" : "Women’s D" + division + " forecast"}</h3>
     <p className="note">{current.method} These ratings use only the exact NCAA division and source-local team slugs. They do not create a 2026–27 prediction.</p>

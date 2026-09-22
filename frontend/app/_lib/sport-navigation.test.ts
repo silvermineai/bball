@@ -61,6 +61,24 @@ describe("sport navigation", () => {
     expect(divisionAwareNavHref("mens-basketball", "3", teams)).toBe(teams.href);
   });
 
+  it("routes every women's lower-division tab to published evidence", () => {
+    const config = SPORT_NAVIGATION["womens-basketball"];
+    const expectedSections: Record<string, string> = {
+      Teams: "wbb-lower-ratings",
+      Players: "wbb-lower-player-stats",
+      Recruiting: "wbb-lower-recruiting",
+      Games: "wbb-lower-schedule",
+      Predictions: "wbb-lower-ratings",
+      Learn: "wbb-division-readiness-title",
+      Rankings: "wbb-lower-ranking",
+    };
+    for (const [label, section] of Object.entries(expectedSections)) {
+      const item = config.items.find((candidate) => candidate.label === label)!;
+      expect(divisionAwareNavHref("womens-basketball", "2", item)).toBe(`/basketball/wbb-readiness/#${section}`);
+      expect(divisionAwareNavHref("womens-basketball", "3", item)).toBe(`/basketball/wbb-readiness/#${section}`);
+    }
+  });
+
   it("opens the men’s within-division ranking explorer from every division", () => {
     const rankings = SPORT_NAVIGATION["mens-basketball"].items.find((item) => item.label === "Rankings")!;
     expect(divisionAwareNavHref("mens-basketball", "1", rankings)).toBe("/basketball/ncaa-rankings/");

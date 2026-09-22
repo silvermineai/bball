@@ -96,7 +96,7 @@ export default function WomensLowerDivisionStats({ division }: { division: "2" |
     const exported = womensLowerIndividualExport(current.individual as Statistic[], query, Number(minimumGames) || 0);
     downloadCsv("womens-d" + division + "-individual-leaderboards.csv", toCsv(exported.headers, exported.rows));
   };
-  return <section className="field-card" aria-labelledby="wbb-lower-stats-title" style={{ marginTop: 18 }}>
+  return <section id="wbb-lower-player-stats" className="field-card" aria-labelledby="wbb-lower-stats-title" style={{ marginTop: 18 }}>
     <div className="eyebrow">SOURCE-NATIVE LOWER DIVISION · WOMEN&apos;S D{division}</div>
     <h2 id="wbb-lower-stats-title">D{division} leaderboards are now visible</h2>
     {!current ? <p className={integrityError ? "status-error" : "muted"}>{integrityError || "Loading the lower-division stat tables…"}</p> : <>

@@ -47,7 +47,7 @@ export default function WomensLowerDivisionRankings({ division }: { division: "2
   useEffect(() => setPage(0), [division, statistic, query, minimumGames]);
   const visibleRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  return <section className="field-card womens-lower-ranking-card" aria-labelledby="womens-lower-ranking-title">
+  return <section id="wbb-lower-ranking" className="field-card womens-lower-ranking-card" aria-labelledby="womens-lower-ranking-title">
     <div className="eyebrow">SOURCE-NATIVE RANKINGS · WOMEN&apos;S D{division}</div>
     <h2 id="womens-lower-ranking-title">Rank players within Division {division}</h2>
     {!edition || !current ? <p className={error ? "status-error" : "muted"} role={error ? "alert" : "status"}>{error || "Loading the receipt-backed leaderboard…"}</p> : <>
