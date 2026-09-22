@@ -9,10 +9,12 @@ export type ProspectLearningInput = {
   recordedSchoolCount: number;
   resolvedSchoolCount: number;
   hasPeerContext: boolean;
+  /** Exact-ID prior college production release contains this prospect. */
+  hasProduction: boolean;
 };
 
 export type ProspectLearningCheck = {
-  key: "movement" | "destination" | "fit" | "school-list" | "peers";
+  key: "movement" | "destination" | "fit" | "school-list" | "peers" | "production";
   label: string;
   status: "recorded" | "unavailable";
   detail: string;
@@ -69,6 +71,14 @@ export function prospectLearningChecks(input: ProspectLearningInput): ProspectLe
       detail: input.hasPeerContext
         ? "Exact-position size context is available"
         : "No validated same-edition peer cohort",
+    },
+    {
+      key: "production",
+      label: "Prior college production",
+      status: input.hasProduction ? "recorded" : "unavailable",
+      detail: input.hasProduction
+        ? "Exact-ID production profile is linked"
+        : "No exact-ID production row is linked",
     },
   ];
 }

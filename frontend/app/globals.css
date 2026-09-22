@@ -6597,7 +6597,7 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.08; }
 
 .prospect-learning-queue { background: var(--surface-muted); }
 .prospect-learning-queue .note { line-height: 1.45; }
-.prospect-learning-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.prospect-learning-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
 .prospect-learning-card { display: grid; align-content: start; gap: 7px; min-height: 118px; padding: 12px; border: 1px solid var(--line); background: var(--surface); }
 .prospect-learning-card .eyebrow { color: #087447; font-size: 9px; }
 .prospect-learning-card.is-unavailable .eyebrow { color: #a44732; }

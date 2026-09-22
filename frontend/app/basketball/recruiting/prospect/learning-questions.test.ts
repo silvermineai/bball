@@ -12,11 +12,13 @@ describe("prospect learning queue", () => {
       recordedSchoolCount: 3,
       resolvedSchoolCount: 2,
       hasPeerContext: true,
+      hasProduction: true,
     });
     expect(checks.every((check) => check.status === "recorded")).toBe(true);
     expect(checks[0].detail).toBe("Up 6 places from the prior capture");
     expect(checks[2].detail).toContain("exact team ID");
     expect(checks[3].detail).toBe("3 retained school IDs · 2 directory matches");
+    expect(checks[5]).toMatchObject({ key: "production", status: "recorded" });
   });
 
   it("keeps absent evidence unavailable instead of inferring a recruiting story", () => {
@@ -29,9 +31,10 @@ describe("prospect learning queue", () => {
       recordedSchoolCount: 0,
       resolvedSchoolCount: 0,
       hasPeerContext: false,
+      hasProduction: false,
     });
     expect(checks.map((check) => check.status)).toEqual([
-      "unavailable", "unavailable", "unavailable", "unavailable", "unavailable",
+      "unavailable", "unavailable", "unavailable", "unavailable", "unavailable", "unavailable",
     ]);
     expect(checks[0].detail).toBe("No prior retained rank capture");
     expect(checks[2].detail).toBe("Requires a recorded destination team ID");
@@ -47,11 +50,32 @@ describe("prospect learning queue", () => {
       recordedSchoolCount: 1,
       resolvedSchoolCount: 0,
       hasPeerContext: false,
+      hasProduction: false,
     });
     expect(checks[1].status).toBe("recorded");
     expect(checks[2]).toMatchObject({
       status: "unavailable",
       detail: "Destination ID has no exact program-directory match",
+    });
+  });
+
+  it("keeps prior production separate from recruiting identity evidence", () => {
+    const checks = prospectLearningChecks({
+      rank: 12,
+      previousRank: 12,
+      previousCapturedAt: "2026-08-01T00:00:00Z",
+      committedTeamId: null,
+      committedTeamName: null,
+      recordedSchoolCount: 0,
+      resolvedSchoolCount: 0,
+      hasPeerContext: false,
+      hasProduction: true,
+    });
+    expect(checks.at(-1)).toEqual({
+      key: "production",
+      label: "Prior college production",
+      status: "recorded",
+      detail: "Exact-ID production profile is linked",
     });
   });
 });

@@ -35,11 +35,12 @@ function ProductionTable({ production, context }: { production: ProspectProducti
   return <div className="table-scroll"><table className="data-table"><thead><tr><th>Observed prior production</th><th className="numeric">Value</th><th className="numeric">Within-edition rank</th></tr></thead><tbody>{rows.map(([label, metric, value]) => { const comparison = context[metric]; return <tr key={label}><th scope="row">{label}</th><td className="numeric"><strong>{value}</strong></td><td className="numeric">{comparison ? <><strong>#{comparison.rank}</strong><small>of {comparison.cohort} exact-ID links</small></> : "—"}</td></tr>; })}</tbody></table></div>;
 }
 
-export default function ProspectProductionBridge({ athleteId, season }: { athleteId: string; season: number }) {
+export default function ProspectProductionBridge({ athleteId, season, onAvailabilityChange }: { athleteId: string; season: number; onAvailabilityChange?: (available: boolean) => void }) {
   const [state, setState] = useState<BridgeState>({ release: null, error: "" });
   useEffect(() => {
     const controller = new AbortController();
     setState({ release: null, error: "" });
+    onAvailabilityChange?.(false);
     fetch(`/api/basketball/research/recruiting?season=${season}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The reviewed production release is unavailable.");
@@ -48,17 +49,23 @@ export default function ProspectProductionBridge({ athleteId, season }: { athlet
       .then((payload) => {
         if (!controller.signal.aborted) {
           const release = parseProspectProductionRelease(payload, season, athleteId);
-          if (!release) setState({ release: null, error: "The production release did not pass the exact-ID integrity checks." });
-          else setState({ release, error: "" });
+          if (!release) {
+            onAvailabilityChange?.(false);
+            setState({ release: null, error: "The production release did not pass the exact-ID integrity checks." });
+          } else {
+            onAvailabilityChange?.(release.production != null);
+            setState({ release, error: "" });
+          }
         }
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) {
+          onAvailabilityChange?.(false);
           setState({ release: null, error: reason instanceof Error ? reason.message : "The reviewed production release is unavailable." });
         }
       });
     return () => controller.abort();
-  }, [athleteId, season]);
+  }, [athleteId, onAvailabilityChange, season]);
 
   const production = state.release?.production;
   const release = state.release;

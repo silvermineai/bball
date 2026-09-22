@@ -52,6 +52,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
   const [classContextPayload, setClassContextPayload] = useState<ProspectClassContextPayload | null>(null);
   const [peerContextPayload, setPeerContextPayload] = useState<ProspectPeerContextPayload | null>(null);
   const [rosterBridge, setRosterBridge] = useState<RecruitingRosterBridge | null>(null);
+  const [productionAvailable, setProductionAvailable] = useState<boolean | null>(null);
   const [shortlist, setShortlist] = useState<RecruitingShortlistEntry[]>([]);
   const [mentions, setMentions] = useState<PublisherMention[]>([]);
   const [mentionQuery, setMentionQuery] = useState("");
@@ -74,6 +75,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     setClassContextPayload(null);
     setPeerContextPayload(null);
     setRosterBridge(null);
+    setProductionAvailable(null);
     fetch(`/api/basketball/research/recruiting-rankings?season=${season}&athlete_id=${athleteId}&history=1&page=0`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("The prospect record is unavailable.");
@@ -162,6 +164,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
     recordedSchoolCount: recordedSchools.length,
     resolvedSchoolCount: recordedSchools.filter((school) => school.resolved).length,
     hasPeerContext: peerContext != null,
+    hasProduction: productionAvailable === true,
   }) : [];
   const toggleProspectShortlist = () => {
     if (!prospect) return;
@@ -220,6 +223,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
                 <small>{check.detail}</small>
                 {check.key === "fit" && prospect.committed_team_id ? <Link href={`/basketball/recruiting/fit/?team=${encodeURIComponent(prospect.committed_team_id)}`}>Open exact roster fit →</Link> : null}
                 {check.key === "school-list" && recordedSchools.length ? <Link href="#recorded-schools">Inspect retained school IDs →</Link> : null}
+                {check.key === "production" ? <a href="#production">Open exact-ID production →</a> : null}
               </article>)}
             </div>
           </section>
@@ -238,7 +242,7 @@ export default function ProspectPage({ programs }: { programs: ProspectProgram[]
               <p className="note" style={{ marginTop: 12 }}>The denominator is the complete unfiltered class in this exact edition. Ranked, graded and committed counts describe recorded coverage; they are not scouting grades or enrollment claims. Edition <span className="source-hash">{edition}</span>.</p>
             </> : <p className="empty">A valid unfiltered class denominator is not attached to this exact prospect response. The recorded rank remains visible without an inferred cohort size.</p>}
           </section>
-          <ProspectProductionBridge athleteId={prospect.athlete_id} season={Number(season)} />
+          <ProspectProductionBridge athleteId={prospect.athlete_id} season={Number(season)} onAvailabilityChange={setProductionAvailable} />
           <ProspectRosterBridge bridge={rosterBridge} />
           <section className="paper-panel" aria-label="Prospect position peer context" style={{ marginBottom: 24 }}>
             <div className="section-heading" style={{ marginBottom: 12 }}>
