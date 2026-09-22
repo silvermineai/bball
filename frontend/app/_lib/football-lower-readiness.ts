@@ -9,7 +9,10 @@ export type LowerFootballReadinessRow = {
   scoreCoverage: number | null;
   teamRows: number;
   playerStats: "unavailable";
-  predictions: "recorded" | "unavailable";
+  upcomingForecastRows: number;
+  forecastRows: number;
+  forecastCoverage: number | null;
+  predictions: "recorded" | "partial" | "unavailable";
   receipt: LowerFootballReceiptStatus;
 };
 
@@ -43,6 +46,11 @@ export function lowerFootballReadiness(
   return (["d2", "d3"] as const).map((division) => {
     const scheduleRows = archive.coverage[division]?.games ?? 0;
     const completeScoreRows = archive.coverage[division]?.score_complete ?? 0;
+    const rawUpcomingForecastRows = archive.coverage[division]?.upcoming_games ?? 0;
+    const upcomingForecastRows = Number.isFinite(rawUpcomingForecastRows) && rawUpcomingForecastRows >= 0 ? rawUpcomingForecastRows : 0;
+    const rawForecastRows = archive.coverage[division]?.forecast_games ?? 0;
+    const forecastRows = Number.isFinite(rawForecastRows) && rawForecastRows >= 0 ? rawForecastRows : 0;
+    const forecastCoverage = upcomingForecastRows > 0 && forecastRows <= upcomingForecastRows ? forecastRows / upcomingForecastRows : null;
     return {
       division,
       scheduleRows,
@@ -50,7 +58,14 @@ export function lowerFootballReadiness(
       scoreCoverage: scheduleRows > 0 ? completeScoreRows / scheduleRows : null,
       teamRows: archive.teams[division]?.length ?? 0,
       playerStats: "unavailable",
-      predictions: archive.models[division]?.id && (archive.coverage[division]?.forecast_games ?? 0) > 0 ? "recorded" : "unavailable",
+      upcomingForecastRows,
+      forecastRows,
+      forecastCoverage,
+      predictions: archive.models[division]?.id && forecastRows > 0
+        ? upcomingForecastRows > 0 && forecastRows <= upcomingForecastRows
+          ? forecastRows < upcomingForecastRows ? "partial" : "recorded"
+          : "unavailable"
+        : "unavailable",
       receipt,
     };
   });

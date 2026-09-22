@@ -42,6 +42,9 @@ describe("lower football readiness", () => {
         scoreCoverage: 0.75,
         teamRows: 1,
         playerStats: "unavailable",
+        upcomingForecastRows: 0,
+        forecastRows: 0,
+        forecastCoverage: null,
         predictions: "unavailable",
         receipt: "valid",
       },
@@ -52,6 +55,9 @@ describe("lower football readiness", () => {
         scoreCoverage: null,
         teamRows: 0,
         playerStats: "unavailable",
+        upcomingForecastRows: 0,
+        forecastRows: 0,
+        forecastCoverage: null,
         predictions: "unavailable",
         receipt: "valid",
       },
@@ -68,9 +74,20 @@ describe("lower football readiness", () => {
   it("reports a forecast surface only when a model and forecast rows are published", () => {
     const edition = archive();
     edition.models = { d2: { id: "model-d2" } as LowerFootballResults["models"]["d2"] };
+    edition.coverage.d2.upcoming_games = 1;
     edition.coverage.d2.forecast_games = 1;
     expect(lowerFootballReadiness(edition)[0].predictions).toBe("recorded");
+    edition.coverage.d2.upcoming_games = 3;
+    const partial = lowerFootballReadiness(edition)[0];
+    expect(partial.predictions).toBe("partial");
+    expect(partial.forecastRows).toBe(1);
+    expect(partial.upcomingForecastRows).toBe(3);
+    expect(partial.forecastCoverage).toBeCloseTo(1 / 3);
     edition.coverage.d2.forecast_games = 0;
     expect(lowerFootballReadiness(edition)[0].predictions).toBe("unavailable");
+    edition.coverage.d2.upcoming_games = 1;
+    edition.coverage.d2.forecast_games = 2;
+    expect(lowerFootballReadiness(edition)[0].predictions).toBe("unavailable");
+    expect(lowerFootballReadiness(edition)[0].forecastCoverage).toBeNull();
   });
 });

@@ -88,11 +88,14 @@ export default function LowerDivisionResults({ initialDivision = "d2" }: { initi
               <td className="numeric">{row.scoreCoverage == null ? "—" : `${Math.round(row.scoreCoverage * 100)}%`}</td>
               <td className="numeric">{row.teamRows.toLocaleString()}</td>
               <td>{playerReadiness?.event_archive ? `Partial · ${playerReadiness.event_archive.players_by_division[row.division]?.toLocaleString() || 0} players` : row.playerStats === "unavailable" ? "Unavailable" : "Recorded"}</td>
-              <td>{row.predictions === "unavailable" ? "Unavailable" : "Recorded"}</td>
+              <td>{row.predictions === "unavailable"
+                ? "Unavailable"
+                : <>{row.predictions === "partial" ? "Partial" : "Recorded"}<small>{row.forecastRows.toLocaleString()} of {row.upcomingForecastRows.toLocaleString()} upcoming rows</small></>}</td>
               <td>{row.receipt === "valid" ? "Valid" : <span className="status-error">Unavailable</span>}</td>
             </tr>)}</tbody>
           </table>
         </div>
+        <p className="note">Prediction status is recorded only when the validated forecast count matches the upcoming schedule denominator. Partial shows the exact forecast and schedule counts; an invalid denominator stays unavailable.</p>
         {playerReadiness ? <div className="paper-panel" style={{ marginTop: 20 }} aria-label="Football lower-division player source readiness">
           <div className="eyebrow">PLAYER SOURCE INTAKE · D2/D3</div>
           <h3>{playerReadiness.event_archive ? "Observed event player archive is available." : "No lower-division player rows until the source contract passes."}</h3>
