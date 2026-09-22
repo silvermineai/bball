@@ -138,26 +138,34 @@ function validForecast(value: unknown): value is LowerFootballForecast {
     && validPrediction(row.prediction);
 }
 
-function validModel(value: unknown, division: LowerFootballDivision): value is LowerFootballModel {
+function validModel(value: unknown, division: LowerFootballDivision, season: number): value is LowerFootballModel {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
   const calibration = row.calibration as Record<string, unknown> | undefined;
-  const ratings = Array.isArray(row.ratings) ? row.ratings.filter((item): item is LowerFootballRating => {
+  const ratingsRaw = Array.isArray(row.ratings) ? row.ratings : [];
+  const ratings = ratingsRaw.filter((item): item is LowerFootballRating => {
     if (!item || typeof item !== "object") return false;
     const rating = item as Record<string, unknown>;
     return typeof rating.team_id === "string" && typeof rating.team === "string"
-      && rating.division === division && Number.isInteger(rating.rank)
+      && rating.division === division && Number.isInteger(rating.rank) && Number(rating.rank) > 0
       && finite(rating.rating) != null;
-  }) : [];
+  });
+  // A filtered rating list can look healthy while silently dropping a
+  // malformed row or a duplicate rank. A model is a ranked publication, so
+  // fail closed on any invalid row and keep team/rank identities one-to-one.
+  const teamIds = new Set(ratings.map((rating) => rating.team_id));
+  const ranks = new Set(ratings.map((rating) => rating.rank));
   return typeof row.id === "string" && typeof row.version === "string"
     && row.division === division && typeof row.target_season === "number"
+    && row.target_season === season
     && typeof row.cutoff === "string" && Array.isArray(row.training_seasons)
     && row.training_seasons.every((season) => Number.isInteger(season))
     && Number.isInteger(row.training_games) && Number.isInteger(row.calibration_season)
     && !!calibration && Number.isInteger(calibration.games)
     && finite(calibration.margin_half_width) != null
     && Array.isArray(row.limitations) && row.limitations.every((item) => typeof item === "string")
-    && ratings.length > 0;
+    && ratingsRaw.length > 0 && ratings.length === ratingsRaw.length
+    && teamIds.size === ratings.length && ranks.size === ratings.length;
 }
 
 /** Validate the checked-in archive and fail closed on malformed rows. */
@@ -193,7 +201,7 @@ export function validateLowerFootballResults(value: unknown): LowerFootballResul
   const forecasts = { fcs: [], d2: [], d3: [] } as LowerFootballResults["forecasts"];
   for (const division of archiveDivisions) {
     const sourceModel = raw.models && typeof raw.models === "object" ? (raw.models as Record<string, unknown>)[division] : null;
-    if (validModel(sourceModel, division)) models[division] = sourceModel;
+    if (validModel(sourceModel, division, raw.season)) models[division] = sourceModel;
     const sourceForecasts = raw.forecasts && typeof raw.forecasts === "object" ? (raw.forecasts as Record<string, unknown>)[division] : [];
     forecasts[division] = Array.isArray(sourceForecasts)
       ? sourceForecasts.filter((item): item is LowerFootballForecast => validForecast(item) && item.scope_division === division)

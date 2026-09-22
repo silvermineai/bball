@@ -20,6 +20,16 @@ const forecast = (division: "fcs" | "d2" | "d3", game_id: string, kickoff: strin
   },
 });
 
+const model = (division: "fcs" | "d2" | "d3", ratings = [
+  { team_id: `${division}-home`, team: "Home", division, rating: 4, rank: 1 },
+  { team_id: `${division}-away`, team: "Away", division, rating: -2, rank: 2 },
+]) => ({
+  id: `model-${division}`, version: "ridge", division, target_season: 2026,
+  cutoff: "2026-09-21T00:00:00Z", training_seasons: [2022, 2023, 2024],
+  training_games: 300, calibration_season: 2024,
+  calibration: { games: 100, margin_half_width: 20 }, limitations: [], ratings,
+});
+
 describe("lower-division football results", () => {
   it("keeps D2 and D3 cohorts separate and recomputes coverage", () => {
     const archive = validateLowerFootballResults({
@@ -123,5 +133,32 @@ describe("lower-division football results", () => {
     expect(lowerResultsForDivision(archive, "fcs")).toHaveLength(1);
     expect(lowerForecastsForDivision(archive, "fcs").map((item) => item.game_id)).toEqual(["fcs-only"]);
     expect(lowerDivisionSelection("fcs")).toBe("fcs");
+  });
+
+  it("rejects a division model with duplicate rating identities or malformed rows", () => {
+    const duplicateRank = model("d2", [
+      { team_id: "d2-home", team: "Home", division: "d2", rating: 4, rank: 1 },
+      { team_id: "d2-away", team: "Away", division: "d2", rating: -2, rank: 1 },
+    ]);
+    const malformedRow = model("d3", [
+      { team_id: "d3-home", team: "Home", division: "d3", rating: 4, rank: 1 },
+      { team_id: "d3-away", team: "Away", division: "d3", rating: -2, rank: 0 },
+    ]);
+    const archive = validateLowerFootballResults({
+      schema_version: 2, sport: "football", season: 2026, generated_at: "now",
+      rows: [], teams: { fcs: [], d2: [], d3: [] }, limitations: [],
+      models: { d2: duplicateRank, d3: malformedRow },
+    });
+    expect(archive.models.d2).toBeUndefined();
+    expect(archive.models.d3).toBeUndefined();
+  });
+
+  it("rejects a model from a different target season", () => {
+    const archive = validateLowerFootballResults({
+      schema_version: 2, sport: "football", season: 2026, generated_at: "now",
+      rows: [], teams: { fcs: [], d2: [], d3: [] }, limitations: [],
+      models: { d2: { ...model("d2"), target_season: 2025 } },
+    });
+    expect(archive.models.d2).toBeUndefined();
   });
 });
