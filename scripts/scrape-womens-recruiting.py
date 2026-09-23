@@ -32,6 +32,11 @@ DETAIL_URL = BASE + "/recruits/{athlete_id}?lang=en&region=us"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 
 
+def capture_clock() -> str:
+    """Return an explicit UTC clock for one completed source response."""
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
 def fetch(url: str) -> tuple[dict, bytes]:
     response = requests.get(url, headers={"Accept": "application/json", "User-Agent": "SilvermineResearch/1.0"}, timeout=(5, 30))
     response.raise_for_status()
@@ -128,16 +133,17 @@ def capture(season: int = 2027, workers: int = 8) -> dict:
     # the release so a future refresh can be audited without guessing policy.
     robots_policy = verify_robots_policy(list_url)
     listing, listing_body = fetch(list_url)
+    list_captured_at = capture_clock()
     ids = listed_ids(listing)
-    captured_at = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
     def load(athlete_id: str) -> dict:
         detail, body = fetch(DETAIL_URL.format(athlete_id=athlete_id))
-        return normalize(detail, athlete_id, body, season, captured_at)
+        return normalize(detail, athlete_id, body, season, capture_clock())
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
         records = list(pool.map(load, ids))
     records.sort(key=lambda row: (row["grade"] is None, -(row["grade"] or 0), row["name"], row["athlete_id"]))
+    captured_at = capture_clock()
     edition = hashlib.sha256(json.dumps(records, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return {
         "schema_version": 1,
@@ -151,6 +157,7 @@ def capture(season: int = 2027, workers: int = 8) -> dict:
             "league": "womens-college-basketball",
             "list_url": LIST_URL.format(season=season),
             "list_sha256": hashlib.sha256(listing_body).hexdigest(),
+            "list_captured_at": list_captured_at,
             "detail_url_template": DETAIL_URL,
             "receipt_count": len(records) + 1,
             "robots_policy": robots_policy,

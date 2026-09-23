@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 _module_spec = importlib.util.spec_from_file_location("scrape_womens_recruiting", Path(__file__).parents[2] / "scripts/scrape-womens-recruiting.py")
@@ -56,6 +57,16 @@ class WomensRecruitingCaptureTests(unittest.TestCase):
         self.assertEqual(calls[0][0], "robots")
         self.assertEqual(calls[1][0], "fetch")
         self.assertEqual(artifact["source"]["robots_policy"]["robots_sha256"], "a" * 64)
+        self.assertIsInstance(artifact["source"]["list_captured_at"], str)
+        self.assertIsInstance(artifact["records"][0]["captured_at"], str)
+        self.assertLessEqual(
+            datetime.fromisoformat(artifact["source"]["list_captured_at"].replace("Z", "+00:00")),
+            datetime.fromisoformat(artifact["records"][0]["captured_at"].replace("Z", "+00:00")),
+        )
+        self.assertLessEqual(
+            datetime.fromisoformat(artifact["records"][0]["captured_at"].replace("Z", "+00:00")),
+            datetime.fromisoformat(artifact["captured_at"].replace("Z", "+00:00")),
+        )
 
 
 if __name__ == "__main__":
