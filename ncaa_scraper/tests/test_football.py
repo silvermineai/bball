@@ -81,6 +81,23 @@ class ModelTests(unittest.TestCase):
         pending["completed"] = 0
         self.assertFalse(eligible(pending, cutoff))
 
+    def test_malformed_final_rows_are_excluded_before_model_fit(self):
+        cutoff = "2026-09-04T00:00:00Z"
+        for key, value in (
+            ("home_score", -1),
+            ("away_score", 21.5),
+            ("kickoff", "not-a-timestamp"),
+        ):
+            row = game(1)
+            row[key] = value
+            self.assertFalse(eligible(row, cutoff))
+        duplicate = game(1)
+        duplicate["away_id"] = duplicate["home_id"]
+        self.assertFalse(eligible(duplicate, cutoff))
+        missing_division = game(1)
+        missing_division["away_division"] = None
+        self.assertFalse(eligible(missing_division, cutoff))
+
     def test_holdout_never_enters_evaluation_fit(self):
         rows = [game(i, y) for y in [2022, 2023, 2024, 2025] for i in range(150)]
         with patch("ncaa_scraper.football_model.fit", wraps=fit) as tracked:

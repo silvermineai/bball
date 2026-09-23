@@ -12,6 +12,17 @@ import numpy as np
 MODEL_VERSION = "ridge-team-calibrated-v2"
 
 
+def _valid_score(value) -> bool:
+    """Football final scores must be finite, non-negative whole points."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+        and float(value).is_integer()
+    )
+
+
 def eligible(game: dict, cutoff: str, division: str | None = None) -> bool:
     """Return whether a final belongs in a score model's dated training set.
 
@@ -20,19 +31,24 @@ def eligible(game: dict, cutoff: str, division: str | None = None) -> bool:
     and therefore use the same leakage-safe score design without silently
     mixing FBS, FCS, D2, and D3 teams.
     """
+    home_id, away_id = game.get("home_id"), game.get("away_id")
+    if home_id in (None, "") or away_id in (None, "") or home_id == away_id:
+        return False
+    if not _valid_score(game.get("home_score")) or not _valid_score(game.get("away_score")):
+        return False
+    try:
+        kickoff = datetime.fromisoformat(str(game["kickoff"]).replace("Z", "+00:00"))
+        cutoff_time = datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError):
+        return False
+    home_division = game.get("home_division")
+    away_division = game.get("away_division")
     division_match = (
-        game["home_division"] == game["away_division"] == division
+        home_division == away_division == division
         if division is not None
-        else game["home_division"] == "fbs" and game["away_division"] == "fbs"
+        else home_division == "fbs" and away_division == "fbs"
     )
-    return bool(
-        game["completed"]
-        and game["home_score"] is not None
-        and game["away_score"] is not None
-        and datetime.fromisoformat(game["kickoff"].replace("Z", "+00:00"))
-        < datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
-        and division_match
-    )
+    return bool(game.get("completed") and kickoff < cutoff_time and division_match)
 
 
 def fit(games: list[dict]) -> dict:
