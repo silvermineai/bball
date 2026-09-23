@@ -27,6 +27,9 @@ export type EvaluationMetrics = {
   brier: number | null;
   log_loss: number | null;
   interval_coverage: number | null;
+  /** Coverage of the independent total range, when the edition publishes one. */
+  total_interval_coverage?: number | null;
+  total_interval_games?: number;
   margin_bias: number | null;
 };
 export type ConfidenceMetrics = EvaluationMetrics & {
@@ -150,6 +153,8 @@ export function evaluate(
       brier: null,
       log_loss: null,
       interval_coverage: null,
+      total_interval_coverage: null,
+      total_interval_games: 0,
       margin_bias: null,
     };
   let mae = 0,
@@ -160,6 +165,8 @@ export function evaluate(
     loss = 0,
     covered = 0,
     bias = 0;
+  let totalIntervalGames = 0;
+  let totalIntervalCovered = 0;
   for (const row of rows) {
     const p = row[method],
       actual = row.home_score - row.away_score,
@@ -179,9 +186,23 @@ export function evaluate(
       outcome * Math.log(probability) +
       (1 - outcome) * Math.log(1 - probability);
     covered += +(p.margin_low <= actual && actual <= p.margin_high);
+    if (
+      Number.isFinite(p.total_low)
+      && Number.isFinite(p.total_high)
+      && Number.isFinite(p.total_half_width)
+      && Number.isFinite(p.total)
+      && (p.total_half_width ?? 0) > 0
+      && (p.total_low ?? Number.POSITIVE_INFINITY) <= (p.total ?? Number.NEGATIVE_INFINITY)
+      && (p.total ?? Number.POSITIVE_INFINITY) <= (p.total_high ?? Number.NEGATIVE_INFINITY)
+      && Math.abs((p.total! - p.total_low!) - p.total_half_width!) <= 0.1
+      && Math.abs((p.total_high! - p.total!) - p.total_half_width!) <= 0.1
+    ) {
+      totalIntervalGames += 1;
+      totalIntervalCovered += +((p.total_low ?? 0) <= row.home_score + row.away_score && row.home_score + row.away_score <= (p.total_high ?? 0));
+    }
   }
   const n = rows.length;
-  return {
+  const result: EvaluationMetrics = {
     games: n,
     margin_mae: mae / n,
     margin_rmse: Math.sqrt(mse / n),
@@ -192,6 +213,11 @@ export function evaluate(
     interval_coverage: covered / n,
     margin_bias: bias / n,
   };
+  if (totalIntervalGames > 0) {
+    result.total_interval_coverage = totalIntervalCovered / totalIntervalGames;
+    result.total_interval_games = totalIntervalGames;
+  }
+  return result;
 }
 
 const confidenceBands = [

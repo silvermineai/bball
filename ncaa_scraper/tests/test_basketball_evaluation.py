@@ -178,12 +178,37 @@ class EvaluationTest(unittest.TestCase):
         self.assertEqual(result["brier"], 0.25)
         self.assertEqual(result["winner_accuracy"], 0.5)
         self.assertEqual(result["interval_coverage"], 1)
+        self.assertIsNone(result["total_interval_coverage"])
+        self.assertEqual(result["total_interval_games"], 0)
         delta = paired_difference(rows, replicates=100)
         self.assertEqual(
             (delta["difference"], delta["low"], delta["high"]), (-5.0, -5.0, -5.0)
         )
         self.assertIsNone(metrics([], "weekly")["margin_mae"])
         self.assertIsNone(paired_difference(rows[:1])["low"])
+
+    def test_metrics_counts_valid_total_intervals_before_calculating_coverage(self):
+        rows = []
+        for actual_total, include_interval in ((140, True), (160, True), (150, False)):
+            prediction = {
+                "home_margin": 0,
+                "total": 145,
+                "home_win_probability": 0.5,
+                "margin_low": -5,
+                "margin_high": 5,
+            }
+            if include_interval:
+                prediction.update({"total_low": 135, "total_high": 155, "total_half_width": 10})
+            rows.append({
+                "home_score": actual_total // 2,
+                "away_score": actual_total - actual_total // 2,
+                "starts_at": "2025-01-06T20:00:00Z",
+                "preseason": prediction,
+                "weekly": prediction,
+            })
+        result = metrics(rows, "preseason")
+        self.assertEqual(result["total_interval_games"], 2)
+        self.assertAlmostEqual(result["total_interval_coverage"], 0.5)
 
     def test_confidence_metrics_use_fixed_probability_bands(self):
         def row(probability, actual_margin):

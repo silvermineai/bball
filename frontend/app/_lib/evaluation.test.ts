@@ -93,6 +93,40 @@ describe("same-game model evaluation", () => {
       ),
     ).toBe(true);
   });
+  it("counts valid total ranges before calculating their coverage", () => {
+    const base = games[0];
+    const interval = {
+      total: 145,
+      total_low: 135,
+      total_high: 155,
+      total_half_width: 10,
+    };
+    const rows: EvaluationGame[] = [
+      {
+        ...base,
+        home_score: 70,
+        away_score: 70,
+        preseason: { ...base.preseason, ...interval },
+      },
+      {
+        ...base,
+        id: `${base.id}-missed`,
+        home_score: 80,
+        away_score: 80,
+        preseason: { ...base.preseason, ...interval },
+      },
+      {
+        ...base,
+        id: `${base.id}-missing`,
+        home_score: 75,
+        away_score: 75,
+        preseason: { ...base.preseason },
+      },
+    ];
+    const result = evaluate(rows, "preseason");
+    expect(result.total_interval_games).toBe(2);
+    expect(result.total_interval_coverage).toBe(0.5);
+  });
   it("groups by fixed model certainty without using the final score", () => {
     const sample = games.slice(0, 40);
     const before = confidenceMetrics(sample, "weekly");

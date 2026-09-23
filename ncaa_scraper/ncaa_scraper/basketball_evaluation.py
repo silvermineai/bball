@@ -172,19 +172,33 @@ def metrics(rows, method):
                     "brier",
                     "log_loss",
                     "interval_coverage",
+                    "total_interval_coverage",
+                    "total_interval_games",
                     "margin_bias",
                 )
             },
         }
-    errors, total_errors, probabilities, outcomes, covered = [], [], [], [], []
+    errors, total_errors, probabilities, outcomes, covered, total_interval_covered = [], [], [], [], [], []
+    total_interval_games = 0
     for row in rows:
         p = row[method]
         margin = row["home_score"] - row["away_score"]
+        actual_total = row["home_score"] + row["away_score"]
         errors.append(p["home_margin"] - margin)
-        total_errors.append(abs(p["total"] - row["home_score"] - row["away_score"]))
+        total_errors.append(abs(p["total"] - actual_total))
         probabilities.append(min(1 - 1e-6, max(1e-6, p["home_win_probability"])))
         outcomes.append(float(row["home_score"] > row["away_score"]))
         covered.append(p["margin_low"] <= margin <= p["margin_high"])
+        total_interval_values = [p.get(key) for key in ("total", "total_low", "total_high", "total_half_width")]
+        if (
+            all(isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) for value in total_interval_values)
+            and total_interval_values[3] > 0
+            and total_interval_values[1] <= total_interval_values[0] <= total_interval_values[2]
+            and abs((total_interval_values[0] - total_interval_values[1]) - total_interval_values[3]) <= 0.1
+            and abs((total_interval_values[2] - total_interval_values[0]) - total_interval_values[3]) <= 0.1
+        ):
+            total_interval_games += 1
+            total_interval_covered.append(total_interval_values[1] <= actual_total <= total_interval_values[2])
     errors, probabilities, outcomes = map(np.asarray, (errors, probabilities, outcomes))
     return {
         "games": len(rows),
@@ -201,6 +215,10 @@ def metrics(rows, method):
             )
         ),
         "interval_coverage": float(np.mean(covered)),
+        "total_interval_coverage": (
+            float(np.mean(total_interval_covered)) if total_interval_covered else None
+        ),
+        "total_interval_games": total_interval_games,
     }
 
 
