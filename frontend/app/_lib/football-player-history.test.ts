@@ -9,6 +9,9 @@ const catalog: PlayerCatalog = JSON.parse(
   fs.readFileSync(root + "player-catalog.json", "utf8"),
 );
 const bytes = (data: Buffer) => Uint8Array.from(data).buffer;
+const sha256 = async (data: Buffer) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes(data))))
+  .map((value) => value.toString(16).padStart(2, "0"))
+  .join("");
 describe("football player history", () => {
   it("verifies all season hashes, positive identities and offensive rank cohorts", async () => {
     expect(catalog.seasons.map((s) => s.season)).toEqual(
@@ -66,5 +69,26 @@ describe("football player history", () => {
         seasons: catalog.seasons.map((y) => ({ ...y, player_team_records: 0 })),
       }),
     ).rejects.toThrow("coverage");
+  });
+  it("rejects duplicate exact athlete/team identities before rendering", async () => {
+    const season = catalog.seasons[0];
+    const data = JSON.parse(fs.readFileSync(root + season.file, "utf8"));
+    data.players[1] = { ...data.players[0] };
+    const raw = Buffer.from(JSON.stringify(data));
+    const digest = await sha256(raw);
+    await expect(
+      verifyPlayerIndex(
+        bytes(raw),
+        season.season,
+        {
+          ...catalog,
+          seasons: catalog.seasons.map((entry) =>
+            entry.season === season.season
+              ? { ...entry, sha256: digest }
+              : entry,
+          ),
+        },
+      ),
+    ).rejects.toThrow("duplicate athlete/team identity");
   });
 });
