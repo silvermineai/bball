@@ -5,10 +5,10 @@ import {
   getRosters,
 } from "../_lib/basketball-data";
 import Link from "next/link";
-import { getOverview } from "../_lib/data";
 import { date } from "../_lib/format";
 import { selectBasketballWatchlist } from "../_lib/basketball-watchlist";
 import LiveBasketballJournal from "./LiveBasketballJournal";
+import { basketballBlogHref, publishedBasketballBlogGames } from "./blog-briefs";
 export const metadata = {
   title: "The journal: college basketball and football analysis",
 };
@@ -90,7 +90,6 @@ const guides = [
   ],
 ];
 export default function Page() {
-  const d = getOverview();
   const basketball = getBasketball();
   const recruiting = getRecruiting();
   const rosters = getRosters();
@@ -321,28 +320,27 @@ export default function Page() {
         <div className="section-heading">
           <div>
             <div className="eyebrow">
-              Upcoming games / {date(d.generated_at)} edition
+              Upcoming basketball / {date(basketball.generated_at)} edition
             </div>
             <h2>The matchup briefs.</h2>
           </div>
         </div>
         <div className="article-grid">
-          {d.upcoming
-            .filter((g) => g.prediction)
+          {publishedBasketballBlogGames(basketball.upcoming)
             .slice(0, 24)
             .map((g) => (
               <article className="article-card" key={g.id}>
                 <div className="eyebrow">
-                  Week {g.week} · {date(g.kickoff)} · Model brief
+                  {date(g.starts_at)} · {g.prediction ? "Model brief" : "Fallback estimate"}
                 </div>
                 <h2>
                   {g.away_name} at {g.home_name}
                 </h2>
                 <p>
-                  The projected score, unit efficiency, historical player
-                  leaders and a notebook for the film room.
+                  The projected score, Four Factors, roster evidence and a
+                  notebook for the film room.
                 </p>
-                <Link href={`/blog/game-${g.id}/`}>Open the matchup →</Link>
+                <Link href={basketballBlogHref(g.id)}>Open the matchup →</Link>
               </article>
             ))}
         </div>
