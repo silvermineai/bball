@@ -6,7 +6,7 @@ import { date, fmt } from "../../_lib/format";
 import { normalizeMarketSeason } from "../../_lib/market-view";
 import { marketCaptureNextStep, marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../../_lib/market-availability";
 import { marketCaptureCoverageDetail, marketCaptureDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessState } from "../../_lib/market-readiness";
-import { marketArchiveTimingLabel } from "../../_lib/market-archive-view";
+import { marketArchiveFilterEmptyState, marketArchiveTimingLabel } from "../../_lib/market-archive-view";
 
 type Meta = {
   seasons: number[];
@@ -283,6 +283,7 @@ export default function Markets() {
   const pages = useMemo(() => Math.max(1, Math.ceil((data?.total || 0) / 40)), [data]);
   const captureStatus = meta?.research_capture?.market_status;
   const captureNextStep = marketCaptureNextStep(captureStatus);
+  const filteredEmptyState = marketArchiveFilterEmptyState(market, timing);
   const marketReadiness = marketReadinessState(meta, !meta && !error);
   const readinessDetail = marketReadinessDetail(meta, !meta && !error);
   const captureDiagnostic = marketCaptureDiagnostic(meta);
@@ -389,11 +390,13 @@ export default function Markets() {
         <div className="table-scroll"><table className="data-table"><thead><tr><th>Matchup</th><th>Kickoff</th><th>Market</th><th>Provider / bookmaker</th><th>Observed line / price</th><th>Captured</th><th>Feed update</th><th>Archive status</th></tr></thead><tbody>{data.rows.map((r) => { const implied = homeImplied(r); return <tr key={`${r.game_id}-${r.observed_at}-${r.provider || r.source || "archive"}-${r.bookmaker || "book"}-${r.market || "archive"}`}><td><strong>{r.away_name}</strong><br /><span className="muted">at {r.home_name}</span><small><Link href={`/research/game/?sport=${encodeURIComponent(sport)}&id=${encodeURIComponent(r.game_id)}`}>Open forecast history →</Link></small></td><td>{r.kickoff ? date(r.kickoff) : "—"}</td><td>{r.market || "spread / total"}<small>{marketArchiveTimingLabel(r.is_pregame)}</small></td><td><strong>{r.provider || r.source || "—"}</strong><small>{r.bookmaker || "Bookmaker unavailable"}</small></td><td className="numeric">{r.market === "totals" ? <>{`O/U ${fmt(r.total)}`}<small>Over {price(r.over_price)} · Under {price(r.under_price)}</small></> : r.market === "h2h" ? <>{`Home ${price(r.home_price)} · Away ${price(r.away_price)}`}{implied != null && <small>{`Home implied ${(implied * 100).toFixed(1)}%`}</small>}</> : <>{fmt(r.home_spread)}<small>Home {price(r.home_price)} · Away {price(r.away_price)}</small></>}</td><td>{clock(r.observed_at)}</td><td>{clock(r.updated_at)}{!r.updated_at && <small>Feed clock unavailable</small>}</td><td><span className="status-pill">Archival reference · excluded from prospective evaluation</span></td></tr>; })}</tbody></table></div>
         {!data.rows.length && data.total === 0 && !query.trim() && (
           <div className="paper-panel" role="status" style={{ marginTop: 20 }}>
-            <div className="eyebrow">Connector status</div>
-            <h3>{archiveUnavailable ? "The market archive is temporarily unavailable." : sport === "basketball" ? meta?.research_receipts ? marketCaptureStatusLabel(captureStatus) : "No basketball quote capture has been recorded yet." : "No market observations are connected yet."}</h3>
+            <div className="eyebrow">{filteredEmptyState && !archiveUnavailable ? "Archive filter" : "Connector status"}</div>
+            <h3>{archiveUnavailable ? "The market archive is temporarily unavailable." : filteredEmptyState?.heading || (sport === "basketball" ? meta?.research_receipts ? marketCaptureStatusLabel(captureStatus) : "No basketball quote capture has been recorded yet." : "No market observations are connected yet.")}</h3>
             <p>
               {archiveUnavailable
                 ? "The warehouse did not answer within the read window. Retry later; this response is not a claim about feed coverage."
+                : filteredEmptyState
+                  ? filteredEmptyState.detail
                 : <>{sport === "basketball" && meta?.research_receipts
                   ? <>A connector capture has run{meta.research_latest_capture_at ? ` (latest ${clock(meta.research_latest_capture_at)})` : ""}{meta.research_capture?.summary_count != null ? ` and checked ${meta.research_capture.summary_count.toLocaleString()} future game summaries${meta.research_capture.horizon_days != null ? ` within a ${meta.research_capture.horizon_days}-day window` : ""}; ${(
                     meta.research_capture.summary_with_pickcenter || 0
@@ -403,14 +406,14 @@ export default function Markets() {
               that a game had no line. The prospective scorecard stays clean
               until a feed ID, timing clocks and exact participants arrive.</>}</>}
             </p>
-            <p className="note"><strong>Next lawful step:</strong> {captureNextStep}</p>
+            {(!filteredEmptyState || archiveUnavailable) && <><p className="note"><strong>Next lawful step:</strong> {captureNextStep}</p>
             <div className="button-row">
               <a className="button secondary" href={sport === "basketball" ? "/basketball/forecast-lab/" : "/research/scorecard/?sport=football"}>
                 {sport === "basketball" ? "Open forecast lab + line checker →" : "Open football scorecard →"}
               </a>
               {sport === "basketball" && <a className="button secondary" href="/data/research/market-import-template.csv" download>Download authorized CSV template ↓</a>}
               <a className="hero-link" href="#csv-import">Read the authorized import path →</a>
-            </div>
+            </div></>}
           </div>
         )}
         {!data.rows.length && (data.total > 0 || query.trim()) && <p className="empty">No retained rows match this search.</p>}
