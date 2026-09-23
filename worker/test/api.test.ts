@@ -1271,7 +1271,14 @@ describe("bball api", () => {
               apg: null,
               mpg: 31.5,
               source_receipt_json: sourceReceipt,
-              payload_json: JSON.stringify({ pts: 546, fg_pct: 54.1 }),
+              payload_json: JSON.stringify({
+                pts: 546,
+                fg_pct: 54.1,
+                source_stats: {
+                  ppg: { value: 18.2, rank: 12 },
+                  fg_pct: { value: 54.1, rank: 8 },
+                },
+              }),
             },
             {
               division: 2,
@@ -1294,6 +1301,7 @@ describe("bball api", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as {
       coverage: { players: number; divisions: Record<string, Record<string, number>> };
+      source_coverage: { divisions: Record<string, Record<string, { rows: number; numeric_values: number; ranked: number }>> };
       source_receipts: Array<Record<string, unknown>>;
     };
     expect(body.coverage).toMatchObject({
@@ -1301,6 +1309,17 @@ describe("bball api", () => {
       divisions: {
         "1": { players: 1, ppg: 1, mpg: 1, pts: 1, fg_pct: 1 },
         "2": { players: 1, rpg: 1, pts: 1 },
+      },
+    });
+    expect(body.source_coverage).toMatchObject({
+      divisions: {
+        "1": expect.objectContaining({
+          ppg: { rows: 1, numeric_values: 1, ranked: 1 },
+          fg_pct: { rows: 1, numeric_values: 1, ranked: 1 },
+        }),
+        "2": expect.objectContaining({
+          ppg: { rows: 0, numeric_values: 0, ranked: 0 },
+        }),
       },
     });
     expect(body.source_receipts).toEqual([{

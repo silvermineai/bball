@@ -116,6 +116,13 @@ type NCAALeaderMeta = {
     players: number;
     divisions: Record<"1" | "2" | "3", { players: number } & Partial<Record<NCAAStatKey, number>>>;
   };
+  source_coverage?: {
+    divisions: Record<"1" | "2" | "3", Partial<Record<NCAAStatKey, {
+      rows: number;
+      numeric_values: number;
+      ranked: number;
+    }>>>;
+  };
 };
 
 type Freshness = {
@@ -320,15 +327,20 @@ export default function CoverageLive() {
             {news.releases?.[0]?.feeds?.length ? <details className="note" style={{ marginTop: 14 }}><summary>Open feed scope</summary><ul>{news.releases[0].feeds.map((feed, index) => <li key={`${feed.url || feed.name}-${feed.division || "all"}`}>Permitted feed {index + 1}{feed.division ? ` · ${feed.division}` : " · division-neutral"}</li>)}</ul></details> : null}
           </div>}{ncaaLeaders && <details className="paper-panel" style={{ marginTop: 20 }}>
             <summary><strong>National leader coverage · {ncaaLeaders.season - 1}–{String(ncaaLeaders.season).slice(-2)}</strong></summary>
-            <p className="note" style={{ marginTop: 12 }}>Live D1 counts of finite values in the retained final national-ranking snapshot. The player total is the row count; a lower measure count means that the publisher did not supply that field for every row. Missing source values remain unavailable.</p>
+            <p className="note" style={{ marginTop: 12 }}>Live counts of finite values in the retained final national-ranking snapshot. The main count is the value inventory; the smaller publisher-row annotation shows direct source evidence and rank coverage. A difference identifies an exact-ID fill or another retained derived value. Missing source values remain unavailable.</p>
             <div className="table-scroll" style={{ marginTop: 12 }}>
               <table className="data-table">
                 <thead><tr><th>Measure</th><th className="numeric">Division I</th><th className="numeric">Division II</th><th className="numeric">Division III</th></tr></thead>
                 <tbody>{(Object.keys(ncaaStatLabels) as NCAAStatKey[]).map((stat) => <tr key={stat}>
                   <th scope="row">{ncaaStatLabels[stat]}</th>
-                  <td className="numeric">{(ncaaLeaders.coverage.divisions["1"][stat] ?? 0).toLocaleString()}</td>
-                  <td className="numeric">{(ncaaLeaders.coverage.divisions["2"][stat] ?? 0).toLocaleString()}</td>
-                  <td className="numeric">{(ncaaLeaders.coverage.divisions["3"][stat] ?? 0).toLocaleString()}</td>
+                  {(["1", "2", "3"] as const).map((division) => {
+                    const observed = ncaaLeaders.coverage.divisions[division][stat] ?? 0;
+                    const source = ncaaLeaders.source_coverage?.divisions[division][stat];
+                    return <td className="numeric" key={division}>
+                      {observed.toLocaleString()}
+                      {source?.rows ? <small>{source.rows.toLocaleString()} publisher rows{source.ranked ? ` · ${source.ranked.toLocaleString()} ranked` : ""}</small> : null}
+                    </td>;
+                  })}
                 </tr>)}</tbody>
               </table>
             </div>

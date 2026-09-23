@@ -1216,10 +1216,18 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
       "2": { players: 0 },
       "3": { players: 0 },
     };
+    const sourceCoverage: Record<string, Record<string, { rows: number; numeric_values: number; ranked: number }>> = {
+      "1": {},
+      "2": {},
+      "3": {},
+    };
     for (const key of coverageStats) {
       divisions["1"][key] = 0;
       divisions["2"][key] = 0;
       divisions["3"][key] = 0;
+      sourceCoverage["1"][key] = { rows: 0, numeric_values: 0, ranked: 0 };
+      sourceCoverage["2"][key] = { rows: 0, numeric_values: 0, ranked: 0 };
+      sourceCoverage["3"][key] = { rows: 0, numeric_values: 0, ranked: 0 };
     }
     for (const row of records.results) {
       const bucket = divisions[String(row.division)];
@@ -1236,12 +1244,22 @@ app.get("/api/basketball/research/ncaa-leaders", zValidator("query", ncaaLeaderQ
       for (const key of coverageStats) {
         const value = key === "ppg" ? row.ppg : key === "rpg" ? row.rpg : key === "apg" ? row.apg : key === "mpg" ? row.mpg : payload[key];
         if (typeof value === "number" && Number.isFinite(value)) bucket[key] += 1;
+        const evidence = payload.source_stats && typeof payload.source_stats === "object" && !Array.isArray(payload.source_stats)
+          ? (payload.source_stats as Record<string, unknown>)[key]
+          : null;
+        if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) continue;
+        const sourceRow = evidence as Record<string, unknown>;
+        const sourceSummary = sourceCoverage[String(row.division)][key];
+        sourceSummary.rows += 1;
+        if (typeof sourceRow.value === "number" && Number.isFinite(sourceRow.value)) sourceSummary.numeric_values += 1;
+        if (typeof sourceRow.rank === "number" && Number.isFinite(sourceRow.rank) && sourceRow.rank > 0) sourceSummary.ranked += 1;
       }
     }
     const receipt = ncaaIndividualReceipt(records.results[0]?.source_receipt_json);
     const response = c.json({
       season: 2026,
       coverage: { players: records.results.length, divisions },
+      source_coverage: { divisions: sourceCoverage },
       provenance: { kind: "publisher_snapshot", dataset: "ncaa_final_national_rankings", publisher_rank: true },
       source_receipts: receipt ? [receipt] : [],
     });
