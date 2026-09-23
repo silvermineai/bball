@@ -20,7 +20,18 @@ type Edition = {
   observed_player_season: number;
   generated_at: string;
   model_status: string;
-  coverage: { players: number; teams: number; upcoming_games: number };
+  coverage: {
+    players: number;
+    teams: number;
+    upcoming_games: number;
+    player_season_rows?: number;
+    player_box_rows?: number;
+    player_box_players?: number;
+    player_box_games?: number;
+    player_box_played_rows?: number;
+    player_box_dnp_rows?: number;
+    player_box_teams?: number;
+  };
   leaders: Record<string, { label: string; rows: Leader[] }>;
   players: Array<{ player_id: string; name: string; team: string; position: string; stats: Record<string, number> }>;
   upcoming: Array<{ game_id: string; date?: string; home?: string; away?: string; venue?: string }>;
@@ -29,6 +40,24 @@ type Edition = {
 };
 
 const date = (value?: string) => value ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(value)) : "—";
+
+type SnapshotCoverage = Pick<Edition["coverage"], "player_season_rows" | "player_box_rows" | "player_box_players" | "player_box_games" | "player_box_played_rows" | "player_box_dnp_rows" | "player_box_teams">;
+
+/**
+ * Keep coverage labels tied to explicit release counters. Undefined counters
+ * stay unavailable so a partial edition cannot be presented as zero coverage.
+ */
+export function womensSnapshotCoverageRows(coverage: SnapshotCoverage) {
+  return [
+    { key: "player_season_rows", label: "Player-season rows", value: coverage.player_season_rows, detail: "published season aggregates" },
+    { key: "player_box_players", label: "Unique box players", value: coverage.player_box_players, detail: "exact athlete IDs" },
+    { key: "player_box_rows", label: "Game box rows", value: coverage.player_box_rows, detail: "retained source records" },
+    { key: "player_box_games", label: "Games with boxes", value: coverage.player_box_games, detail: "game IDs represented" },
+    { key: "player_box_played_rows", label: "Played rows", value: coverage.player_box_played_rows, detail: "numeric production rows" },
+    { key: "player_box_dnp_rows", label: "DNP rows", value: coverage.player_box_dnp_rows, detail: "retained unavailable appearances" },
+    { key: "player_box_teams", label: "Box-score teams", value: coverage.player_box_teams, detail: "source team IDs" },
+  ] as const;
+}
 
 export default function WomensBasketballSnapshot() {
   const [edition, setEdition] = useState<Edition | null>(null);
@@ -44,11 +73,21 @@ export default function WomensBasketballSnapshot() {
       <div><span className="eyebrow">WOMEN&apos;S DATA + MODEL · {WOMENS_SOURCE_SCOPE_LABEL}</span><h2>Women&apos;s basketball · source-native edition</h2><p>Player production from the 2026 season, 2027 roster and schedule context, and a separate Silvermine model for each upcoming game. {WOMENS_SOURCE_SCOPE_NOTE}</p></div>
       <div className="scope-snapshot-counts"><strong>{edition.coverage.players.toLocaleString()}</strong><span>players</span><strong>{edition.coverage.teams.toLocaleString()}</strong><span>teams</span><strong>{edition.coverage.upcoming_games}</strong><span>upcoming</span></div>
     </div>
-    <div className="hero-actions" aria-label="Women&apos;s basketball model resources">
+      <div className="hero-actions" aria-label="Women&apos;s basketball model resources">
       <a className="button" href={WOMENS_FORECAST_SLATE_HREF}>Open women&apos;s forecast slate ↗</a>
       <a className="hero-link" href={WOMENS_FORECAST_READINESS_HREF}>Model readiness →</a>
-      <a className="hero-link" href={WOMENS_FORECAST_API_HREF}>Forecast JSON ↗</a>
-    </div>
+        <a className="hero-link" href={WOMENS_FORECAST_API_HREF}>Forecast JSON ↗</a>
+      </div>
+    <section className="field-card" aria-labelledby="womens-player-coverage-title">
+      <div className="section-heading">
+        <div><div className="eyebrow">EXACT-ID PLAYER ARCHIVE · {edition.observed_player_season}</div><h2 id="womens-player-coverage-title">See the player-stat coverage.</h2></div>
+        <div className="button-row"><Link className="hero-link" href="/basketball/players/?gender=women&division=1">Open all player rows →</Link><Link className="hero-link" href="/basketball/rankings/?gender=women&division=1">Open player rankings →</Link></div>
+      </div>
+      <p className="note">The compact table below is a sample of the season aggregate release. The exact-ID game archive retains every observed appearance, including DNP rows; missing or unobserved values stay unavailable.</p>
+      <div className="strip" aria-label="Women&apos;s basketball player archive coverage">
+        {womensSnapshotCoverageRows(edition.coverage).map((item) => <div key={item.key}><strong>{item.value == null ? "—" : item.value.toLocaleString()}</strong><span>{item.label}</span><small>{item.detail}</small></div>)}
+      </div>
+    </section>
     <div className="scope-snapshot-grid">
       {Object.entries(edition.leaders).map(([key, group]) => <section className="field-card" key={key}><div className="eyebrow">{group.label}</div><table className="data-table"><thead><tr><th>Player</th><th>Team</th><th className="numeric">Value</th></tr></thead><tbody>{group.rows.slice(0, 8).map((row) => <tr key={`${key}-${row.player_id}`}><th scope="row"><Link href={womensSnapshotPlayerHref(row.player_id)}>{row.name}</Link><small>Open exact player file →</small></th><td>{row.team}</td><td className="numeric">{row.value.toFixed(1)}</td></tr>)}</tbody></table></section>)}
     </div>
