@@ -533,6 +533,10 @@ def compare(prediction, quote, state):
     }[market]
     implied = [1 / q[key] for key in price_keys]
     output = {
+        # Preserve the immutable archive keys so the static scorecard fallback
+        # has the same quote lineage as the live Worker response.
+        "market_observation_id": quote.get("id"),
+        "market_game_id": quote.get("game_id"),
         "bookmaker": quote["bookmaker"],
         "provider": quote["provider"],
         "market": market,

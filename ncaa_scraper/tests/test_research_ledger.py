@@ -265,6 +265,11 @@ class LedgerTests(unittest.TestCase):
         ingest(self.c, "football", [event()], receipt, [schedule()])
         observe_state(self.c, "football", "123", state(True), END)
         comparisons = {r["market"]: r for r in self.report()["games"][0]["comparisons"]}
+        spread_row = self.c.execute(
+            "SELECT id,game_id FROM audit_markets WHERE market='spreads'"
+        ).fetchone()
+        self.assertEqual(comparisons["spreads"]["market_observation_id"], spread_row["id"])
+        self.assertEqual(comparisons["spreads"]["market_game_id"], spread_row["game_id"])
         version_comparisons = {
             r["market"]
             for r in next(v for v in self.report()["versions"] if v["model_id"] == "v1")["comparisons"]
