@@ -9,6 +9,7 @@ import {
   womensPlayerCsvHeaders,
   womensPlayerCsvRows,
   compareWomensPlayerRows,
+  rankWomensPlayerRows,
   womensPlayerSourceCoverage,
   womensPlayerTableContextFields,
   mergeWomensPlayerStats,
@@ -75,6 +76,21 @@ describe("women's player retained detail", () => {
     ];
     expect(rows.sort((left, right) => compareWomensPlayerRows(left, right, "avgBlocks")).map((row) => row.player_id))
       .toEqual(["leader", "zero", "missing"]);
+  });
+
+  it("assigns competition ranks within the selected metric and leaves missing values unranked", () => {
+    const ranked = rankWomensPlayerRows([
+      { player_id: "1", name: "Alpha", stats: { avgPoints: 20 } },
+      { player_id: "2", name: "Beta", stats: { avgPoints: 20 } },
+      { player_id: "3", name: "Gamma", stats: { avgPoints: 10 } },
+      { player_id: "4", name: "Missing", stats: { avgPoints: null } },
+    ], "avgPoints");
+    expect(ranked.map((row) => [row.player_id, row.rank])).toEqual([
+      ["1", 1],
+      ["2", 1],
+      ["3", 3],
+      ["4", null],
+    ]);
   });
 
   it("prefers finite exact-ID box values while retaining season-only fields", () => {

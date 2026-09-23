@@ -276,6 +276,34 @@ export function compareWomensPlayerRows(
     || String(left.player_id).localeCompare(String(right.player_id));
 }
 
+export type RankedWomensPlayerRow<T extends { player_id: string; name: string; stats: WomensPlayerStats }> = T & {
+  /** Competition rank within the selected, filtered source cohort. */
+  rank: number | null;
+};
+
+/**
+ * Add a descriptive competition rank to the same source order used by the
+ * player table. Equal recorded values share a rank (1, 1, 3); unavailable
+ * values stay at the bottom and receive no rank.
+ */
+export function rankWomensPlayerRows<T extends { player_id: string; name: string; stats: WomensPlayerStats }>(
+  rows: readonly T[],
+  key: string,
+): RankedWomensPlayerRow<T>[] {
+  const sorted = [...rows].sort((left, right) => compareWomensPlayerRows(left, right, key));
+  let previousValue: number | null = null;
+  let rank = 0;
+  return sorted.map((row, index) => {
+    const value = womensPlayerStatValue(row.stats, key);
+    if (value == null) return { ...row, rank: null };
+    if (previousValue === null || value !== previousValue) {
+      rank = index + 1;
+      previousValue = value;
+    }
+    return { ...row, rank };
+  });
+}
+
 /** Format a recorded value without implying that missing data is zero. */
 export function formatWomensPlayerStat(
   stats: WomensPlayerStats,
