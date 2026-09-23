@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { date } from "../_lib/format";
 import { fetchJson } from "../_lib/fetch-json";
-import { footballMarketCaptureDetail, footballMarketStatusDetail } from "../_lib/football-market-status";
+import { footballMarketArchiveDetail, footballMarketCaptureDetail, footballMarketStatusDetail } from "../_lib/football-market-status";
 import { marketCaptureStatusDetail, marketCaptureStatusLabel, type MarketCaptureStatus } from "../_lib/market-availability";
 import { formatMarketComparisonReadiness, modelScopedScorecardPath } from "../_lib/market-readiness";
 
 type MarketMetadata = {
   total?: number;
   pregame?: number;
+  research_receipts?: number;
   research_latest_capture_at?: string | null;
   research_capture?: {
     summary_count?: number;
@@ -100,6 +101,7 @@ export default function LiveFootballMarketStatus() {
       ? archive.unavailable_reason || "The market archive is temporarily unavailable."
       : "";
   const captureDiagnostic = footballMarketCaptureDetail(archive?.research_capture);
+  const archiveDiagnostic = footballMarketArchiveDetail(archive);
   const captureStatus = archive?.research_capture?.market_status;
   const captureStatusNote = captureStatus
     ? ` Capture status: ${marketCaptureStatusLabel(captureStatus)}. ${marketCaptureStatusDetail(captureStatus)}`
@@ -119,7 +121,7 @@ export default function LiveFootballMarketStatus() {
               settledModelGames: metrics?.games || 0,
               winnerAccuracy: metrics?.winner_accuracy ?? null,
               marginMae: metrics?.margin_mae ?? null,
-            })}{modelScope}. {readinessDiagnostic ? `${readinessDiagnostic} ` : ""}{caveat ? `${caveat} ` : ""}{captureDiagnostic ? `${captureDiagnostic} ` : ""}{captureStatusNote}{scorecard.generated_at ? ` Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
+            })}{modelScope}. {readinessDiagnostic ? `${readinessDiagnostic} ` : ""}{archiveDiagnostic ? `${archiveDiagnostic} ` : ""}{caveat ? `${caveat} ` : ""}{captureDiagnostic ? `${captureDiagnostic} ` : ""}{captureStatusNote}{scorecard.generated_at ? ` Checked ${date(scorecard.generated_at)}. ` : ""}<Link href="/research/scorecard/?sport=football">Open the football scorecard →</Link>
           </>
         : status === "fallback"
           ? <>Live market record unavailable; the retained archive remains available. <Link href="/research/scorecard/?sport=football">Open the scorecard →</Link> <button className="text-link" type="button" onClick={() => setRetryNonce((value) => value + 1)}>Retry live check</button></>

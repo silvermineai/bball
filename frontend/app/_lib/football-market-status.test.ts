@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { footballMarketCaptureDetail, footballMarketStatusDetail } from "./football-market-status";
+import { footballMarketArchiveDetail, footballMarketCaptureDetail, footballMarketStatusDetail } from "./football-market-status";
 
 const base = {
   qualifyingMarketObservations: 301,
@@ -40,4 +40,19 @@ describe("football market status", () => {
   it("keeps malformed connector counts unavailable", () => {
     expect(footballMarketCaptureDetail({ summary_count: -1, summary_with_pickcenter: 2 })).toBe("");
   });
+
+  it("keeps the retained archive denominator beside the pregame count", () => {
+    expect(footballMarketArchiveDetail({
+      total: 25405,
+      pregame: 1447,
+      research_receipts: 15,
+      research_latest_capture_at: "2026-09-23T02:00:00Z",
+    })).toBe("The football archive holds 25,405 retained market rows; 1,447 carry a pregame capture flag. The latest capture receipt is 2026-09-23T02:00:00Z.");
+  });
+
+  it("withholds malformed archive counters instead of reporting zero coverage", () => {
+    expect(footballMarketArchiveDetail({ total: -1, pregame: 2 })).toBe("The football archive holds an unavailable number of retained market rows; 2 carry a pregame capture flag.");
+    expect(footballMarketArchiveDetail({ total: -1, pregame: -1 })).toBe("");
+  });
+
 });

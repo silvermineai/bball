@@ -15,6 +15,13 @@ export type FootballMarketCapture = {
   rejected_records?: number;
 };
 
+export type FootballMarketArchiveSnapshot = {
+  total?: number;
+  pregame?: number;
+  research_receipts?: number;
+  research_latest_capture_at?: string | null;
+};
+
 const count = (value: number) => Number.isFinite(value) && value >= 0 ? Math.trunc(value).toLocaleString() : "—";
 const metric = (value: number | null, suffix = "") => value == null || !Number.isFinite(value) ? "—" : `${value.toFixed(1)}${suffix}`;
 
@@ -53,4 +60,24 @@ export function footballMarketCaptureDetail(capture: FootballMarketCapture | nul
   const acceptedText = accepted == null ? "" : `; ${accepted.toLocaleString()} passed validation`;
   const rejectedText = rejected == null || rejected === 0 ? "" : `; ${rejected.toLocaleString()} records were rejected`;
   return `The latest connector capture checked ${checked.toLocaleString()} future game summaries; ${quoteText}${acceptedText}${rejectedText}.`;
+}
+
+/**
+ * Keep the football dashboard's archive denominator visible beside the
+ * model-to-line result. Invalid or negative counters stay unavailable rather
+ * than becoming a misleading zero.
+ */
+export function footballMarketArchiveDetail(archive: FootballMarketArchiveSnapshot | null | undefined): string {
+  const total = Number.isInteger(archive?.total) && (archive?.total || 0) >= 0 ? archive?.total || 0 : null;
+  const pregame = Number.isInteger(archive?.pregame) && (archive?.pregame || 0) >= 0 ? archive?.pregame || 0 : null;
+  if (total == null && pregame == null) return "";
+  const retained = total == null ? "an unavailable number of retained market rows" : `${total.toLocaleString()} retained market rows`;
+  const timing = pregame == null ? "the pregame count is unavailable" : `${pregame.toLocaleString()} carry a pregame capture flag`;
+  const receipts = Number.isInteger(archive?.research_receipts) && (archive?.research_receipts || 0) >= 0
+    ? archive?.research_receipts || 0
+    : null;
+  const capture = archive?.research_latest_capture_at
+    ? ` The latest capture receipt is ${archive.research_latest_capture_at}.`
+    : receipts == null ? "" : receipts > 0 ? " A capture receipt is retained, but its timestamp is unavailable." : " No current capture receipt is retained.";
+  return `The football archive holds ${retained}; ${timing}.${capture}`;
 }
