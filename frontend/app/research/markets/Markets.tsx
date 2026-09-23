@@ -113,7 +113,7 @@ type Row = {
   bookmaker?: string | null;
   provider?: string | null;
 };
-type Result = { season: number | "all"; timing?: "all" | "pregame" | "postgame"; page: number; page_size: number; total: number; rows: Row[]; source?: string; unavailable_reason?: string; unavailable_sources?: string[] };
+type Result = { season: number | "all"; timing?: "all" | "pregame" | "postgame"; market?: "all" | "spreads" | "totals" | "h2h"; page: number; page_size: number; total: number; rows: Row[]; source?: string; unavailable_reason?: string; unavailable_sources?: string[] };
 
 const clock = (value: string | null) =>
   value
@@ -140,6 +140,7 @@ export default function Markets() {
   const [sport, setSport] = useState<"football" | "basketball">("football");
   const [season, setSeason] = useState("2025");
   const [timing, setTiming] = useState<"all" | "pregame" | "postgame">("all");
+  const [market, setMarket] = useState<"all" | "spreads" | "totals" | "h2h">("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
   const [data, setData] = useState<Result | null>(null);
@@ -162,6 +163,8 @@ export default function Markets() {
     if (params.get("season")) setSeason(params.get("season")!);
     const requestedTiming = params.get("timing");
     if (requestedTiming === "all" || requestedTiming === "pregame" || requestedTiming === "postgame") setTiming(requestedTiming);
+    const requestedMarket = params.get("market");
+    if (requestedMarket === "all" || requestedMarket === "spreads" || requestedMarket === "totals" || requestedMarket === "h2h") setMarket(requestedMarket);
     setQuery(params.get("q") || "");
     const requestedPage = Number(params.get("page"));
     if (Number.isInteger(requestedPage) && requestedPage >= 0 && requestedPage < 10000) {
@@ -191,12 +194,14 @@ export default function Markets() {
     url.searchParams.set("season", season);
     if (timing !== "all") url.searchParams.set("timing", timing);
     else url.searchParams.delete("timing");
+    if (market !== "all") url.searchParams.set("market", market);
+    else url.searchParams.delete("market");
     if (query.trim()) url.searchParams.set("q", query.trim());
     else url.searchParams.delete("q");
     if (page) url.searchParams.set("page", String(page));
     else url.searchParams.delete("page");
     window.history.replaceState(window.history.state, "", url);
-  }, [hydrated, page, query, season, sport, timing]);
+  }, [hydrated, market, page, query, season, sport, timing]);
 
   const share = async () => {
     try {
@@ -211,7 +216,7 @@ export default function Markets() {
     const controller = new AbortController();
     setData(null);
     setError("");
-    const params = new URLSearchParams({ sport, season, timing, page: String(page) });
+    const params = new URLSearchParams({ sport, season, timing, market, page: String(page) });
     if (query.trim()) params.set("q", query.trim());
     fetch(`/api/research/markets?${params}`, { signal: controller.signal })
       .then((r) => {
@@ -225,7 +230,7 @@ export default function Markets() {
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => controller.abort();
-  }, [sport, season, timing, query, page]);
+  }, [market, sport, season, timing, query, page]);
 
   // Keep the quote identity in exports. A line without its provider and
   // bookmaker cannot be compared reproducibly when several feeds cover the
@@ -258,7 +263,7 @@ export default function Markets() {
     try {
       const rows: Row[] = [];
       for (let requestedPage = 0; requestedPage < totalPages; requestedPage += 1) {
-        const params = new URLSearchParams({ sport, season, timing, page: String(requestedPage) });
+        const params = new URLSearchParams({ sport, season, timing, market, page: String(requestedPage) });
         if (query.trim()) params.set("q", query.trim());
         const response = await fetch(`/api/research/markets?${params}`);
         if (!response.ok) throw new Error("The complete market archive could not be loaded.");
@@ -372,6 +377,7 @@ export default function Markets() {
         <label className="control"><span>SPORT</span><select value={sport} onChange={(e) => { setSport(e.target.value as typeof sport); setPage(0); setSeason("2025"); }}><option value="football">College football</option><option value="basketball">Men&apos;s college basketball</option></select></label>
         <label className="control"><span>SEASON</span><select value={season} onChange={(e) => { setSeason(e.target.value); setPage(0); }}><option value="all">All retained seasons</option>{(meta?.seasons || [2025]).map((s) => <option key={s}>{s}</option>)}</select></label>
         <label className="control"><span>CAPTURE TIMING</span><select aria-label="Capture timing" value={timing} onChange={(e) => { setTiming(e.target.value as typeof timing); setPage(0); }}><option value="all">All retained rows</option><option value="pregame">Pregame only · usable cohort</option><option value="postgame">Postgame / after tip</option></select></label>
+        <label className="control"><span>MARKET</span><select aria-label="Market type" value={market} onChange={(e) => { setMarket(e.target.value as typeof market); setPage(0); }}><option value="all">All market types</option><option value="spreads">Spreads</option><option value="totals">Totals</option><option value="h2h">Moneyline</option></select></label>
         <label className="control"><span>TEAM OR PROGRAM</span><input type="search" maxLength={120} placeholder="Try Alabama or a program" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} /></label>
         <button className="button secondary" type="button" onClick={download} disabled={!data?.rows.length}>Download page CSV</button>
         <button className="button secondary" type="button" onClick={downloadAll} disabled={!data?.rows.length || exporting}>{exporting ? "Preparing full CSV…" : "Download all matching CSV"}</button>

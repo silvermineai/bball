@@ -367,6 +367,27 @@ describe("market archive metadata", () => {
     expect(sql).toContain("datetime(m.captured_at) < datetime(json_extract(m.payload_json,'$.starts_at'))");
   });
 
+  it("filters the ledger to one market type without weakening timing joins", async () => {
+    const prepare = vi.fn((sql: string) => {
+      const marketFilter = sql.includes("m.market=?");
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn().mockResolvedValue({ total: marketFilter ? 1 : 0 }),
+          all: vi.fn().mockResolvedValue({ results: marketFilter ? [{ game_id: "game-spread", market: "spreads" }] : [] }),
+        })),
+      };
+    });
+    const response = await markets.request(
+      "/?sport=basketball&season=2027&market=spreads&page=0&publication_check=market-filter",
+      {},
+      { DB: { prepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ market: "spreads", total: 1, rows: [{ game_id: "game-spread", market: "spreads" }] });
+    const sql = (prepare.mock.calls as unknown as Array<[string]>).map(([statement]) => statement).join("\n");
+    expect(sql).toContain("m.market=?");
+  });
+
   it("classifies quote validation outcomes from the capture receipt", async () => {
     const makeResponse = async (capture: Record<string, number>) => {
       const batch = vi.fn().mockResolvedValue([

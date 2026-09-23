@@ -14,6 +14,7 @@ const querySchema = z.object({
   // after tip. This is a filter over retained evidence, never a claim that a
   // postgame row was usable for prospective evaluation.
   timing: z.enum(["all", "pregame", "postgame"]).default("all"),
+  market: z.enum(["all", "spreads", "totals", "h2h"]).default("all"),
   page: z.coerce.number().int().min(0).max(1000).default(0),
   meta: z.enum(["0", "1"]).default("0"),
   publication_check: z.string().trim().max(80).optional(),
@@ -321,7 +322,7 @@ function parseArchiveReceipts(value: unknown): ArchiveReceipt[] {
 }
 
 markets.get("/", zValidator("query", querySchema), async (c) => {
-  const { sport, season, q, timing, page, meta } = c.req.valid("query");
+  const { sport, season, q, timing, market, page, meta } = c.req.valid("query");
   const football = sport === "football";
   // ESPN Summary football captures live in the append-only research ledger;
   // the historical SportsDataverse betting archive remains in FOOTBALL_DB.
@@ -453,29 +454,35 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
   const withTiming = (condition: string) => timingPredicate ? `${timingPredicate} AND ${condition}` : condition;
   const withLegacyTiming = (condition: string) => legacyTimingPredicate ? `${legacyTimingPredicate} AND ${condition}` : condition;
   const withLedgerTiming = (condition: string) => ledgerTimingPredicate ? `${ledgerTimingPredicate} AND ${condition}` : condition;
+  const legacyMarketPredicate = market === "all" ? null : market === "spreads" ? "m.home_spread IS NOT NULL" : market === "totals" ? "m.total IS NOT NULL" : "1=0";
+  const ledgerMarketPredicate = market === "all" ? null : "m.market=?";
+  const archiveMarketPredicate = useCombinedFootballArchive ? null : football && !useFootballLedger ? legacyMarketPredicate : ledgerMarketPredicate;
+  const withArchiveFilters = (condition: string) => archiveMarketPredicate ? `${withTiming(condition)} AND ${archiveMarketPredicate}` : withTiming(condition);
+  const withLegacyFilters = (condition: string) => legacyMarketPredicate ? `${withLegacyTiming(condition)} AND ${legacyMarketPredicate}` : withLegacyTiming(condition);
+  const withLedgerFilters = (condition: string) => ledgerMarketPredicate ? `${withLedgerTiming(condition)} AND ${ledgerMarketPredicate}` : withLedgerTiming(condition);
   const seasonClause = season === "all" ? "" : (useFootballLedger ? "json_extract(m.payload_json,'$.season')=? AND " : "g.season=? AND ");
   const where = useFootballLedger
     ? search
-      ? withTiming(`${seasonClause}m.sport=? AND (json_extract(m.payload_json,'$.home_name') LIKE ? OR json_extract(m.payload_json,'$.away_name') LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`)
-      : withTiming(`${seasonClause}m.sport=?`)
+      ? withArchiveFilters(`${seasonClause}m.sport=? AND (json_extract(m.payload_json,'$.home_name') LIKE ? OR json_extract(m.payload_json,'$.away_name') LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`)
+      : withArchiveFilters(`${seasonClause}m.sport=?`)
     : football
     ? search
-      ? withTiming(`${seasonClause}(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)`)
-      : withTiming(season === "all" ? "1=1" : "g.season=?")
+      ? withArchiveFilters(`${seasonClause}(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)`)
+      : withArchiveFilters(season === "all" ? "1=1" : "g.season=?")
     : search
-      ? withTiming(`${seasonClause}m.sport=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`)
-      : withTiming(`${seasonClause}m.sport=?`);
+      ? withArchiveFilters(`${seasonClause}m.sport=? AND (g.home_name LIKE ? OR g.away_name LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)`)
+      : withArchiveFilters(`${seasonClause}m.sport=?`);
   const binds: Array<string | number> = useFootballLedger
     ? search
-      ? [season as number, sport, search, search, search, search]
-      : [season as number, sport]
+      ? [season as number, sport, search, search, search, search, ...(ledgerMarketPredicate ? [market] : [])]
+      : [season as number, sport, ...(ledgerMarketPredicate ? [market] : [])]
     : football
     ? search
       ? (season === "all" ? [search, search, search] : [season, search, search, search])
       : (season === "all" ? [] : [season])
     : search
-      ? (season === "all" ? [sport, search, search, search, search] : [season, sport, search, search, search, search])
-      : (season === "all" ? [sport] : [season, sport]);
+      ? (season === "all" ? [sport, search, search, search, search, ...(ledgerMarketPredicate ? [market] : [])] : [season, sport, search, search, search, search, ...(ledgerMarketPredicate ? [market] : [])])
+      : (season === "all" ? [sport, ...(ledgerMarketPredicate ? [market] : [])] : [season, sport, ...(ledgerMarketPredicate ? [market] : [])]);
   const marketTable = useFootballLedger ? "audit_markets" : (football ? "football_markets" : "audit_markets");
   const gameTable = useFootballLedger ? "" : (football ? "football_games" : "bb_games");
   const queryDb = useFootballLedger ? researchDb(c.env) : db;
@@ -487,8 +494,8 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
     let resultRows: unknown[] = [];
     if (useCombinedFootballArchive) {
       const legacyWhere = search
-        ? withLegacyTiming("(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)")
-        : withLegacyTiming("1=1");
+        ? withLegacyFilters("(g.home_name LIKE ? OR g.away_name LIKE ? OR m.source LIKE ?)")
+        : withLegacyFilters("1=1");
       // The combined archive uses two bindings with different schemas. Keep
       // each timing predicate tied to its own retained clock field.
       const legacyCombinedWhere = legacyWhere;
@@ -496,11 +503,11 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       const ledgerBaseWhere = search
         ? "m.sport=? AND (json_extract(m.payload_json,'$.home_name') LIKE ? OR json_extract(m.payload_json,'$.away_name') LIKE ? OR m.provider LIKE ? OR m.bookmaker LIKE ?)"
         : "m.sport=?";
-      const ledgerWhere = withLedgerTiming(ledgerBaseWhere);
+      const ledgerWhere = withLedgerFilters(ledgerBaseWhere);
       const legacyWhereForCombined = legacyCombinedWhere;
       const ledgerBinds: Array<string | number> = search
-        ? [sport, search, search, search, search]
-        : [sport];
+        ? [sport, search, search, search, search, ...(ledgerMarketPredicate ? [market] : [])]
+        : [sport, ...(ledgerMarketPredicate ? [market] : [])];
       const [legacyCount, ledgerCount] = await Promise.all([
         withTimeout(db.prepare(
           `SELECT count(*) AS total FROM football_markets m JOIN football_games g ON g.id=m.game_id WHERE ${legacyWhereForCombined}`,
@@ -607,6 +614,7 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
       sport,
       season,
       timing,
+      market,
       page,
       page_size: 40,
       total,
