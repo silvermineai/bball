@@ -263,6 +263,11 @@ export type LowerFootballPlayer = {
 
 export type LowerFootballRankingBasis = "total" | "per_game";
 
+export type LowerFootballRankedPlayer = LowerFootballPlayer & {
+  /** Competition rank within the selected exact-division/category cohort. */
+  rank: number;
+};
+
 const finite = (value: number) => Number.isFinite(value);
 
 /**
@@ -398,6 +403,34 @@ export function lowerFootballPlayerRankValue(
   basis: LowerFootballRankingBasis,
 ) {
   return basis === "per_game" ? player.per_game : player.primary;
+}
+
+/**
+ * Apply a deterministic competition rank to an already filtered cohort.
+ * Equal retained totals share a rank (1, 1, 3); IDs and names only break
+ * display ties and never change the rank value.
+ */
+export function rankLowerFootballPlayers(
+  players: readonly LowerFootballPlayer[],
+  basis: LowerFootballRankingBasis,
+): LowerFootballRankedPlayer[] {
+  const sorted = [...players].sort((left, right) =>
+    lowerFootballPlayerRankValue(right, basis) - lowerFootballPlayerRankValue(left, basis)
+    || right.primary - left.primary
+    || left.athlete.localeCompare(right.athlete)
+    || left.athlete_id.localeCompare(right.athlete_id)
+    || left.team_id.localeCompare(right.team_id),
+  );
+  let previousValue: number | null = null;
+  let rank = 0;
+  return sorted.map((player, index) => {
+    const currentValue = lowerFootballPlayerRankValue(player, basis);
+    if (previousValue === null || currentValue !== previousValue) {
+      rank = index + 1;
+      previousValue = currentValue;
+    }
+    return { ...player, rank };
+  });
 }
 
 /**

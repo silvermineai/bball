@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballMetricOptions, lowerFootballPlayerRankValue, lowerFootballPlayerSelectionSearch, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, parseLowerFootballPlayerSelection, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballMetricOptions, lowerFootballPlayerRankValue, lowerFootballPlayerSelectionSearch, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, parseLowerFootballPlayerSelection, rankLowerFootballPlayers, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -72,6 +72,32 @@ describe("lower football player aggregation", () => {
     expect(lowerFootballPlayerRankValue(result[0], "total")).toBe(300);
     expect(lowerFootballPlayerRankValue(result[0], "per_game")).toBe(150);
     expect(lowerFootballPlayerRankValue(result[1], "per_game")).toBe(180);
+  });
+
+  it("uses competition ranks for ties without merging exact athlete and team rows", () => {
+    const players = aggregateLowerFootballPlayers([
+      row(),
+      row({ athlete_id: "a2", athlete: "Equal Total", stats: ["10/20", "200", "0"] }),
+      row({ athlete_id: "a3", athlete: "Lower Total", stats: ["10/20", "100", "0"] }),
+    ], "d2", "passing");
+    expect(rankLowerFootballPlayers(players, "total").map((player) => [player.athlete_id, player.rank])).toEqual([
+      ["a1", 1],
+      ["a2", 1],
+      ["a3", 3],
+    ]);
+  });
+
+  it("ranks the selected per-game value and keeps same totals separate", () => {
+    const players = aggregateLowerFootballPlayers([
+      row({ game_id: "g1" }),
+      row({ athlete_id: "a2", athlete: "Equal Rate", game_id: "g2", stats: ["10/20", "100", "1"] }),
+      row({ athlete_id: "a3", athlete: "Lower Rate", game_id: "g3", stats: ["10/20", "50", "0"] }),
+    ], "d2", "passing");
+    expect(rankLowerFootballPlayers(players, "per_game").map((player) => [player.athlete_id, player.per_game, player.rank])).toEqual([
+      ["a1", 200, 1],
+      ["a2", 100, 2],
+      ["a3", 50, 3],
+    ]);
   });
 
   it("keeps metric columns that appear only on later ranked players", () => {
