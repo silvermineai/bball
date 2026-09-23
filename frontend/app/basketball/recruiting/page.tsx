@@ -27,6 +27,7 @@ import { assessRecruitingCoverage } from "../../_lib/recruiting-coverage";
 import { recruitingPlayerCoverage } from "../../_lib/recruiting-player-coverage";
 import ArchivedTeamOutlook from "./ArchivedTeamOutlook";
 import TransferProductionBoard from "./TransferProductionBoard";
+import RecruitingStudyPath from "./RecruitingStudyPath";
 
 function ProductionEvidence({ player }: { player: RecruitingRosterProductionPlayer | null }) {
   if (!player) return <span className="note">No recorded player in this evidence set</span>;
@@ -149,6 +150,7 @@ export default function Page() {
         <div><strong>{data.coverage.events.toLocaleString()}</strong><span>Dated events</span></div>
         <div><strong>{data.coverage.historical_links.toLocaleString()}</strong><span>Prior stat links</span></div>
       </section>
+      <RecruitingStudyPath />
       <section className="section" aria-labelledby="recruiting-player-coverage">
         <div className="section-heading">
           <div>
