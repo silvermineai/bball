@@ -492,7 +492,7 @@ export default function StatsDashboard() {
       <LiveBasketballProspectStatus />
       <section className="dashboard-section" aria-labelledby="dashboard-games">
         <div className="dashboard-section-heading"><div><span className="eyebrow">01 / GAME CENTER</span><h2 id="dashboard-games">Upcoming games &amp; predictions</h2></div><Link href="/basketball/matchups/">View all {forecasts.length.toLocaleString()} forecasts →</Link></div>
-        <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated range and total. The roster lens adds a second Silvermine model built from recorded continuity and prior workload; it does not overwrite the primary probability or range.</p>
+        <p className="dashboard-caption">Every row below has a Silvermine score projection, win probability, margin, calibrated margin range and total projection. Total range uncertainty is shown only when the published model edition carries independent total calibration. The roster lens adds a second Silvermine model built from recorded continuity and prior workload; it does not overwrite the primary probability or range.</p>
         <LiveDashboardForecastTable initialGames={forecasts} rosterScenarios={rosterModel.scenarios} ratings={overview.ratings} publishedModelId={overview.model.id} calibrationBuckets={calibrationBuckets} calibrationModelId={overview.model.id} />
       </section>
       <div className="dashboard-two-col">
