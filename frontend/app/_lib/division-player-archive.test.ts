@@ -4,6 +4,7 @@ import {
   divisionPlayerArchiveMetricOptions,
   filterDivisionPlayerArchive,
   paginateDivisionPlayerArchive,
+  parseDivisionPlayers,
   rankDivisionPlayerArchiveRows,
 } from "./division-player-archive";
 
@@ -14,6 +15,14 @@ const players = [
 ];
 
 describe("division player archive", () => {
+  it("validates player identity and division before rendering the archive", () => {
+    const parsed = parseDivisionPlayers({ players: players as unknown[] });
+    expect(parsed).toHaveLength(3);
+    expect(() => parseDivisionPlayers({ players: [{ player_id: 1, division: 2 }] })).toThrow("malformed");
+    expect(() => parseDivisionPlayers({ players: [players[0], players[0]] })).toThrow("duplicate");
+    expect(() => parseDivisionPlayers({ players: [{ player_id: 1, division: 4, name: "Wrong division" }] })).toThrow("malformed");
+  });
+
   it("filters by exact division and search before sorting", () => {
     expect(filterDivisionPlayerArchive(players, "2", "north", "ppg").map((player) => player.name)).toEqual(["Beta Guard"]);
     expect(filterDivisionPlayerArchive(players, "2", "", "ppg").map((player) => player.name)).toEqual(["Alpha Wing", "Beta Guard"]);

@@ -10,6 +10,7 @@ import {
   divisionPlayerArchiveMetricOptions,
   filterDivisionPlayerArchive,
   paginateDivisionPlayerArchive,
+  parseDivisionPlayers,
   rankDivisionPlayerArchiveRows,
 } from "../_lib/division-player-archive";
 import {
@@ -43,7 +44,11 @@ export default function DivisionPlayerArchive({ division }: { division: "2" | "3
   useEffect(() => {
     fetch("/data/basketball/ncaa-individual.json")
       .then((response) => response.ok ? response.json() : null)
-      .then((value: Publication | null) => setPublication(value))
+      .then((value: unknown) => {
+        if (!value) return setPublication(null);
+        const parsed = value as Publication;
+        setPublication({ ...parsed, players: parseDivisionPlayers(value) });
+      })
       .catch(() => setPublication(null));
   }, []);
   const filteredPlayers = useMemo(

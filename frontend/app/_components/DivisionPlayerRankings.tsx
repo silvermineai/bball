@@ -19,6 +19,7 @@ import {
 } from "../_lib/division-player-detail";
 import { downloadCsv, toCsv } from "../_lib/csv";
 import { divisionPlayerCsvHeaders, divisionPlayerCsvRows, validateDivisionPlayerExportPage } from "../_lib/division-player-export";
+import { parseDivisionPlayers } from "../_lib/division-player-archive";
 import { fetchWithTransientRetry } from "../_lib/live-basketball-forecasts";
 
 type Publication = { season: number; generated_at: string; players: DivisionPlayerWithEvidence[] };
@@ -98,8 +99,11 @@ export default function DivisionPlayerRankings({ division }: { division: "2" | "
     const controller = new AbortController();
     fetch("/data/basketball/ncaa-individual.json", { signal: controller.signal })
       .then((response) => response.ok ? response.json() : null)
-      .then((value: Publication | null) => {
-        if (!controller.signal.aborted) setPublication(value);
+      .then((value: unknown) => {
+        if (!controller.signal.aborted && value) {
+          const publication = value as Publication;
+          setPublication({ ...publication, players: parseDivisionPlayers(value) });
+        }
       })
       .catch((reason: unknown) => {
         if ((reason as { name?: string })?.name !== "AbortError" && !controller.signal.aborted) setPublication(null);

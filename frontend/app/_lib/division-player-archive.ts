@@ -10,6 +10,32 @@ export const divisionPlayerArchiveMetricOptions = divisionRankingMetrics.map(([k
 
 export const DIVISION_PLAYER_ARCHIVE_PAGE_SIZE = 50;
 
+const validPlayerId = (value: unknown) =>
+  (typeof value === "string" && value.trim().length > 0)
+  || (typeof value === "number" && Number.isFinite(value));
+
+const validDivision = (value: unknown): value is 1 | 2 | 3 | "1" | "2" | "3" =>
+  value === 1 || value === 2 || value === 3 || value === "1" || value === "2" || value === "3";
+
+/** Validate the retained player directory before any division filter or rank runs. */
+export function parseDivisionPlayers(value: unknown): DivisionPlayerWithEvidence[] {
+  if (!value || typeof value !== "object" || !Array.isArray((value as { players?: unknown }).players)) {
+    throw new Error("Player archive has no player rows.");
+  }
+  const seen = new Set<string>();
+  return ((value as { players: unknown[] }).players).map((entry) => {
+    if (!entry || typeof entry !== "object") throw new Error("Player archive contains a malformed row.");
+    const row = entry as Record<string, unknown>;
+    if (!validPlayerId(row.player_id) || !validDivision(row.division) || typeof row.name !== "string" || !row.name.trim()) {
+      throw new Error("Player archive contains a malformed row.");
+    }
+    const playerId = String(row.player_id);
+    if (seen.has(playerId)) throw new Error("Player archive contains duplicate IDs.");
+    seen.add(playerId);
+    return entry as DivisionPlayerWithEvidence;
+  });
+}
+
 export type DivisionPlayerArchiveRankedRow = DivisionPlayerWithEvidence & {
   /** Competition rank within the filtered, exact-division cohort. */
   archive_rank: number | null;
