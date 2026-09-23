@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScopeHref, divisionAwareNavHref, divisionDeskHref, DIVISION_OPTIONS, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
+import { buildScopeHref, divisionAwareNavHref, divisionDeskHref, divisionScopeHref, DIVISION_OPTIONS, isNavItemActive, SPORT_NAVIGATION, sportAvailabilityMessage, sportForPathname, sportSupportsGenderScope } from "./sport-navigation";
 
 describe("sport navigation", () => {
   it("keeps the active sport aligned with the URL and gender scope", () => {
@@ -81,6 +81,20 @@ describe("sport navigation", () => {
     expect(divisionDeskHref("womens-basketball")).toBe("/basketball/wbb-readiness/");
     expect(divisionDeskHref("mens-basketball")).toBe("/research/coverage/?sport=basketball");
     expect(divisionDeskHref("football")).toBe("/research/coverage/?sport=football");
+  });
+
+  it("keeps a division switch on the active shared sub-tab", () => {
+    const mens = SPORT_NAVIGATION["mens-basketball"];
+    const mensPlayers = mens.items.find((item) => item.label === "Players")!;
+    const mensMatches = mens.items.find((item) => item.label === "Matches")!;
+    const womens = SPORT_NAVIGATION["womens-basketball"];
+    const womensPlayers = womens.items.find((item) => item.label === "Players")!;
+    expect(divisionScopeHref("mens-basketball", "1", mensPlayers)).toBe("/basketball/players/");
+    expect(divisionScopeHref("mens-basketball", "2", mensPlayers)).toBe("/basketball/players/");
+    expect(divisionScopeHref("mens-basketball", "2", mensMatches)).toBe("/basketball/matchups/#mens-lower-schedule-2");
+    expect(divisionScopeHref("womens-basketball", "1", womensPlayers)).toBe("/basketball/players/");
+    expect(divisionScopeHref("womens-basketball", "2", womensPlayers)).toBe("/basketball/wbb-readiness/?nav=players#wbb-lower-player-stats");
+    expect(divisionScopeHref("football", "2")).toBe("/football/");
   });
 
   it("keeps football lower-division stat tabs on the exact-division archive", () => {

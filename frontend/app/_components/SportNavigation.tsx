@@ -7,6 +7,7 @@ import {
   buildScopeHref,
   divisionAwareNavHref,
   divisionDeskHref,
+  divisionScopeHref,
   DIVISION_OPTIONS,
   isNavItemActive,
   SPORT_NAVIGATION,
@@ -51,7 +52,16 @@ export default function SportNavigation() {
   // show the correct unavailable state instead of silently falling back to D1.
   const hrefWithScope = (href: string) => buildScopeHref(href, currentSearch, gender, division);
   const scopeHref = (nextGender: Gender, nextDivision: Division) =>
-    buildScopeHref(pathname, currentSearch, nextGender, nextDivision);
+    buildScopeHref(
+      divisionScopeHref(
+        currentSport,
+        nextDivision,
+        config.items.find((item) => isNavItemActive(pathname, item, currentSearch, currentHash)),
+      ),
+      currentSearch,
+      nextGender,
+      nextDivision,
+    );
 
   return (
     <div className="sport-desk-nav" aria-label="Sport navigation">

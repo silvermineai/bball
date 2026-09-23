@@ -164,6 +164,18 @@ export function divisionAwareNavHref(sport: Sport, division: Division, item: Spo
   return item.href;
 }
 
+/**
+ * Resolve a division switch from the currently active shared sub-tab. Lower
+ * division tabs intentionally use evidence desks, so keeping the old
+ * pathname while changing D1/D2/D3 can otherwise land the reader on a
+ * different section or on the wrong division's shell.
+ */
+export function divisionScopeHref(sport: Sport, division: Division, item?: SportNavItem): string {
+  if (!item) return SPORT_NAVIGATION[sport].home;
+  if (item.label === "Division") return divisionDeskHref(sport);
+  return divisionAwareNavHref(sport, division, item);
+}
+
 export function sportForPathname(pathname: string, gender: string | null = null, sport: string | null = null): Sport {
   if (pathname === "/football" || pathname.startsWith("/football/")) return "football";
   if (pathname === "/research/coverage" || pathname.startsWith("/research/coverage/")) {
