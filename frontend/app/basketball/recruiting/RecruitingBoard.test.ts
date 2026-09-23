@@ -15,6 +15,7 @@ import {
   recruitingBoardRequestSearch,
   recruitingExportCsv,
   recruitingPositionOpportunityRows,
+  shortlistProductionEvidence,
   validRecruitingRankDistribution,
   validateRecruitingExportPage,
   type RecruitingBoardResult,
@@ -165,6 +166,14 @@ describe("recruiting production evidence filter", () => {
     expect(filterRecruitingProductionRows(rows, null, "checking", "linked")).toEqual([]);
     expect(filterRecruitingProductionRows(rows, null, "unavailable", "unavailable")).toEqual([]);
     expect(filterRecruitingProductionRows(rows, null, "unavailable", "all")).toEqual(rows);
+  });
+
+  it("exposes exact-ID production beside a saved prospect without inventing missing stats", () => {
+    expect(shortlistProductionEvidence("1", 2027, productionIndex, "live")).toMatchObject({ state: "linked", production: linkedProduction });
+    expect(shortlistProductionEvidence("2", 2027, productionIndex, "live")).toEqual({ state: "missing", production: null });
+    expect(shortlistProductionEvidence("1", 2026, productionIndex, "live")).toEqual({ state: "different_class", production: null });
+    expect(shortlistProductionEvidence("1", 2027, null, "checking")).toEqual({ state: "checking", production: null });
+    expect(shortlistProductionEvidence("1", 2027, null, "unavailable")).toEqual({ state: "unavailable", production: null });
   });
 });
 

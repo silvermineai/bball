@@ -6,7 +6,7 @@ import { downloadCsv, toCsv } from "../../_lib/csv";
 import { fetchJson } from "../../_lib/fetch-json";
 import { fetchWithTransientRetry } from "../../_lib/live-basketball-forecasts";
 import { parseRecruitingRelease } from "../../_lib/recruiting";
-import { buildRecruitingProductionIndex, exactRecruitingProduction, type RecruitingProductionIndex } from "../../_lib/recruiting-production-index";
+import { buildRecruitingProductionIndex, exactRecruitingProduction, type RecruitingProductionIndex, type RecruitingProductionRow } from "../../_lib/recruiting-production-index";
 import { recruitingProductionCoverage } from "../../_lib/recruiting-production-coverage";
 import {
   RECRUITING_SHORTLIST_STORAGE_KEY,
@@ -755,6 +755,25 @@ export function filterRecruitingProductionRows(
   return rows.filter((row) => (exactRecruitingProduction(productionIndex, row.athlete_id) != null) === (filter === "linked"));
 }
 
+export type RecruitingShortlistProductionEvidence = {
+  state: "checking" | "linked" | "unavailable" | "different_class" | "missing";
+  production: RecruitingProductionRow | null;
+};
+
+/** Keep saved prospects comparable while labeling the release state and exact-ID join. */
+export function shortlistProductionEvidence(
+  athleteId: string,
+  shortlistSeason: number,
+  productionIndex: RecruitingProductionIndex | null,
+  productionStatus: "checking" | "live" | "unavailable",
+): RecruitingShortlistProductionEvidence {
+  if (productionStatus === "checking") return { state: "checking", production: null };
+  if (productionStatus === "unavailable" || !productionIndex) return { state: "unavailable", production: null };
+  if (productionIndex.season !== shortlistSeason) return { state: "different_class", production: null };
+  const production = exactRecruitingProduction(productionIndex, athleteId);
+  return production ? { state: "linked", production } : { state: "missing", production: null };
+}
+
 export const recruitingExportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "recorded_school_count", "recorded_schools", "recorded_school_ids", "status", "high_school", "hometown", "athlete_id", "source_edition", "source_captured_at"];
 
 export function recruitingExportCsv(
@@ -1071,7 +1090,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
           <div><div className="eyebrow">Local staff board / browser saved</div><h3>Your prospect shortlist.</h3></div>
           <span className="note">{shortlist.length} saved · available on this browser</span>
         </div>
-        <p className="note">Shortlist entries preserve the class, exact athlete ID and record link. They stay in this browser and do not merge identities across datasets.</p>
+        <p className="note">Shortlist entries preserve the class, exact athlete ID and record link. Prior production appears beside each saved prospect only when the reviewed release contains the same exact ID; missing joins stay labeled and are never treated as zero. They stay in this browser and do not merge identities across datasets.</p>
         <div className="strip" aria-label="Shortlist summary" style={{ marginBottom: 16 }}>
           <div><strong>{shortlist.length.toLocaleString()}</strong><span>Saved prospects</span></div>
           <div><strong>{shortlistRanked.length.toLocaleString()}</strong><span>With recorded rank</span></div>
@@ -1079,12 +1098,13 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
           <div><strong>{shortlistCommitted.toLocaleString()}</strong><span>Recorded commitments</span></div>
         </div>
         {shortlistPositions && <p className="note" style={{ marginBottom: 12 }}>Position mix: {shortlistPositions}. Use the prospect dossiers to verify each entry after a later release.</p>}
-        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Movement</th><th className="numeric">Rank gap</th><th className="numeric">Grade</th><th className="numeric">Grade gap</th><th>Commitment</th><th>Capture / edition</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => {
+        <div className="table-scroll"><table className="data-table"><thead><tr><th>Class</th><th>Prospect</th><th className="numeric">Rank</th><th className="numeric">Movement</th><th className="numeric">Rank gap</th><th className="numeric">Grade</th><th className="numeric">Grade gap</th><th>Commitment</th><th>Prior production</th><th>Capture / edition</th><th>Remove</th></tr></thead><tbody>{shortlist.map((row) => {
           const rankGap = row.rank != null && shortlistBestRankBySeason.has(row.season) ? row.rank - shortlistBestRankBySeason.get(row.season)! : null;
           const gradeGap = row.grade != null && shortlistBestGradeBySeason.has(row.season) ? row.grade - shortlistBestGradeBySeason.get(row.season)! : null;
           const destinationFit = fitHref(row.committed_team_id);
           const editionState = recruitingShortlistEditionState(row, { season, edition: result?.edition });
-          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{recruitingShortlistRankChangeLabel(row)}<small>{row.previous_captured_at ? `prior ${captureLabel(row.previous_captured_at)}` : "Prior rank unavailable"}</small></td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not recorded"}{destinationFit && <small><Link href={destinationFit}>Open destination fit →</Link></small>}</td><td><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className={`shortlist-edition-state is-${editionState}`}>{recruitingShortlistEditionLabel(editionState)}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
+          const productionEvidence = shortlistProductionEvidence(row.athlete_id, Number(row.season), productionIndex, productionStatus);
+          return <tr key={row.key}><td>{row.season}</td><th scope="row"><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}`}>{row.name}</Link><small>{row.position || "Position unavailable"}{row.high_school ? ` · ${row.high_school}` : ""}</small></th><td className="numeric">{number(row.rank)}</td><td className="numeric">{recruitingShortlistRankChangeLabel(row)}<small>{row.previous_captured_at ? `prior ${captureLabel(row.previous_captured_at)}` : "Prior rank unavailable"}</small></td><td className="numeric">{rankGap == null ? "—" : rankGap === 0 ? "Best" : `+${rankGap}`}</td><td className="numeric">{grade(row.grade)}</td><td className="numeric">{gradeGap == null ? "—" : gradeGap === 0 ? "Best" : gradeGap.toFixed(1)}</td><td>{row.committed_team_name || "Not recorded"}{destinationFit && <small><Link href={destinationFit}>Open destination fit →</Link></small>}</td><td>{productionEvidence.state === "linked" && productionEvidence.production ? <><strong>{productionEvidence.production.ppg == null ? "PTS/G unavailable" : `${productionEvidence.production.ppg.toFixed(1)} PTS/G`}</strong><small>{productionEvidence.production.mpg.toFixed(1)} MIN/G · {productionEvidence.production.games.toLocaleString()} GP</small><small><Link href={`/basketball/recruiting/prospect/?season=${row.season}&id=${row.athlete_id}#production`}>Open exact-ID stats →</Link></small></> : productionEvidence.state === "checking" ? <span className="note">Checking reviewed stats…</span> : productionEvidence.state === "unavailable" ? <span className="note">Stats release unavailable</span> : productionEvidence.state === "different_class" ? <span className="note">Different class release<small>Open the matching class to compare</small></span> : <span className="note">No exact-ID link<small>Not a zero</small></span>}</td><td><small>{row.captured_at ? `${captureLabel(row.captured_at)} UTC` : "Capture date unavailable"}</small><small className={`shortlist-edition-state is-${editionState}`}>{recruitingShortlistEditionLabel(editionState)}</small><small className="source-hash">{row.edition || "Edition unavailable"}</small></td><td><button className="button secondary" type="button" onClick={() => removeShortlist(row.key)} aria-label={`Remove ${row.name} from shortlist`}>Remove</button></td></tr>;
         })}</tbody></table></div>
         <p className="note" style={{ marginTop: 12 }}>Rank and grade gaps are measured against the best observed row in the same recruiting class. These are comparison aids within the saved class rows, not Silvermine evaluations.</p>
         <p className="note" style={{ marginTop: 12 }}><button className="text-link" type="button" onClick={() => setShortlist([])}>Clear shortlist</button> · local browser storage only; use the CSV for a portable staff handoff.</p>
