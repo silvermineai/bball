@@ -45,7 +45,21 @@ describe("division team archive", () => {
       { team_ncaa_id: 9, division: 2, name: "Recorded", conference: null, games: 20, wins: 10, losses: 10, ppg: 70 },
     ], "2", "wins").map((team) => [team.rank, team.name])).toEqual([
       [1, "Recorded"],
-      [2, "Missing"],
+      [null, "Missing"],
+    ]);
+  });
+
+  it("uses competition ranks for equal recorded team values", () => {
+    const ranked = rankDivisionTeams([
+      { team_ncaa_id: 8, division: 2, name: "Alpha", conference: null, games: 20, wins: 15, losses: 5, ppg: 70 },
+      { team_ncaa_id: 9, division: 2, name: "Beta", conference: null, games: 20, wins: 15, losses: 5, ppg: 70 },
+      { team_ncaa_id: 10, division: 2, name: "Gamma", conference: null, games: 20, wins: 10, losses: 10, ppg: 70 },
+      { team_ncaa_id: 11, division: 3, name: "Other Division", conference: null, games: 20, wins: 99, losses: 0, ppg: 99 },
+    ], "2", "wins");
+    expect(ranked.map((team) => [team.name, team.rank])).toEqual([
+      ["Alpha", 1],
+      ["Beta", 1],
+      ["Gamma", 3],
     ]);
   });
 });

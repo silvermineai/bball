@@ -98,22 +98,40 @@ function teamComparator(sort: DivisionTeamSort) {
   };
 }
 
-export type RankedDivisionTeam = DivisionTeam & { rank: number };
+export type RankedDivisionTeam = DivisionTeam & { rank: number | null };
 
 /**
- * Assign a deterministic ordinal within the requested division before any
- * search filter is applied. The rank is a view order for the selected
- * recorded field, never an inferred strength rating or cross-division rank.
- * Missing values sort after recorded values, preserving unavailable fields.
+ * Assign a deterministic competition rank within the requested division
+ * before any search filter is applied. Equal recorded values share a rank;
+ * missing numeric values sort after recorded values and remain unranked.
+ * Name order remains a deterministic directory order rather than a numeric
+ * ranking.
  */
 export function rankDivisionTeams(
   teams: readonly DivisionTeam[],
   division: "2" | "3",
   sort: DivisionTeamSort,
 ): RankedDivisionTeam[] {
-  return teams
+  const sorted = teams
     .filter((team) => String(team.division) === division)
     .slice()
-    .sort(teamComparator(sort))
-    .map((team, index) => ({ ...team, rank: index + 1 }));
+    .sort(teamComparator(sort));
+  if (sort === "name") return sorted.map((team, index) => ({ ...team, rank: index + 1 }));
+  let previousValue: number | null = null;
+  let rank = 0;
+  return sorted.map((team, index) => {
+    const value = sort === "wins"
+      ? team.wins
+      : sort === "ppg"
+        ? team.ppg
+        : team.games && team.wins != null
+          ? team.wins / team.games
+          : null;
+    if (value == null || !Number.isFinite(value)) return { ...team, rank: null };
+    if (previousValue === null || value !== previousValue) {
+      rank = index + 1;
+      previousValue = value;
+    }
+    return { ...team, rank };
+  });
 }
