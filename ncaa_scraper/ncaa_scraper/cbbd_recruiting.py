@@ -74,8 +74,15 @@ def fetch_json(
     *,
     opener=urlopen,
     sleep=time.sleep,
-) -> tuple[list[dict], str]:
-    """Fetch one bounded API response and return rows plus its exact URL."""
+    include_digest: bool = False,
+) -> tuple[list[dict], str] | tuple[list[dict], str, str]:
+    """Fetch one bounded API response and return its URL and optional byte digest.
+
+    The default two-value return keeps the shared CBBD lines connector
+    backwards compatible. Recruiting imports opt into the third value so the
+    stored receipt hashes the exact response bytes, before JSON decoding or
+    normalization changes representation.
+    """
     if not token.strip():
         raise ValueError("CBBD_API_KEY is empty")
     if not path.startswith("/"):
@@ -105,6 +112,8 @@ def fetch_json(
             decoded = json.loads(payload.decode("utf-8"))
             if not isinstance(decoded, list) or not all(isinstance(row, dict) for row in decoded):
                 raise RuntimeError("CBBD response must be a JSON array of objects")
+            if include_digest:
+                return decoded, url, hashlib.sha256(payload).hexdigest()
             return decoded, url
         except HTTPError as error:
             if error.code not in (429,) and error.code < 500:
@@ -148,11 +157,19 @@ def normalize_endpoint(
     rows: list[dict],
     source_url: str,
     captured_at: str,
+    source_sha256: str | None = None,
 ) -> list[dict[str, object]]:
     """Normalize API records while retaining the complete provider payload."""
     if kind not in {"portal", "players", "teams"}:
         raise ValueError(f"Unsupported CBBD recruiting endpoint: {kind}")
-    source_sha256 = hashlib.sha256(compact(rows).encode("utf-8")).hexdigest()
+    if source_sha256 is None:
+        # Keep direct unit callers and historical local fixtures usable. Live
+        # recruiting imports pass the exact HTTP-body digest from fetch_json.
+        source_sha256 = hashlib.sha256(compact(rows).encode("utf-8")).hexdigest()
+    else:
+        source_sha256 = str(source_sha256).strip().lower()
+        if len(source_sha256) != 64 or any(char not in "0123456789abcdef" for char in source_sha256):
+            raise ValueError("source_sha256 must be a 64-character hexadecimal digest")
     normalized: list[dict[str, object]] = []
     seen: set[str] = set()
     for index, raw in enumerate(rows):
@@ -270,9 +287,9 @@ def fetch_release(seasons: list[int], token: str | None = None, *, sleep=time.sl
         if not 2025 <= season <= 2035:
             raise ValueError("CBBD recruiting seasons must be between 2025 and 2035")
         for kind, path in (("portal", "/recruiting/portal"), ("players", "/recruiting/players"), ("teams", "/recruiting/teams")):
-            rows, url = fetch_json(path, {"year": season}, token)
+            rows, url, source_sha256 = fetch_json(path, {"year": season}, token, include_digest=True)
             captured = capture_clock()
-            all_rows.extend(normalize_endpoint(kind, season, rows, url, captured))
+            all_rows.extend(normalize_endpoint(kind, season, rows, url, captured, source_sha256))
             sleep(1.0)
     return all_rows
 

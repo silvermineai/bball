@@ -1,4 +1,5 @@
 import unittest
+import hashlib
 from datetime import datetime, timezone
 
 from ncaa_scraper.cbbd_recruiting import fetch_json, normalize_endpoint, sql_export
@@ -39,6 +40,35 @@ class CbbdRecruitingTests(unittest.TestCase):
         self.assertEqual(rows, [{"id": 1}])
         self.assertEqual(url, "https://api.collegebasketballdata.com/recruiting/portal?year=2027")
         self.assertEqual(request["value"].get_header("Authorization"), "Bearer secret")
+
+    def test_fetch_json_can_receipt_exact_response_bytes(self):
+        raw = b'[ {"id": 1} ]\n'
+
+        def opener(req, timeout):
+            return Response(raw)
+
+        rows, url, source_sha256 = fetch_json(
+            "/recruiting/portal",
+            {"year": 2027},
+            "secret",
+            opener=opener,
+            sleep=lambda _: None,
+            include_digest=True,
+        )
+        self.assertEqual(rows, [{"id": 1}])
+        self.assertEqual(url, "https://api.collegebasketballdata.com/recruiting/portal?year=2027")
+        self.assertEqual(source_sha256, hashlib.sha256(raw).hexdigest())
+
+    def test_normalize_endpoint_rejects_invalid_explicit_receipt(self):
+        with self.assertRaisesRegex(ValueError, "64-character hexadecimal"):
+            normalize_endpoint(
+                "teams",
+                2027,
+                [{"teamId": 5, "team": "Example U"}],
+                "https://api.collegebasketballdata.com/recruiting/teams?year=2027",
+                "2026-09-09T12:00:00Z",
+                "not-a-digest",
+            )
 
     def test_normalizes_portal_without_inventing_event_date(self):
         rows = normalize_endpoint(
