@@ -16,6 +16,7 @@ from ncaa_scraper.ncaa_individual import (
     parse_table,
     atomic_write,
     release_is_degraded,
+    record_identity_conflict,
     source_totals,
     to_num,
     parse_player_identity,
@@ -23,6 +24,24 @@ from ncaa_scraper.ncaa_individual import (
 
 
 class NCAAIndividualTests(unittest.TestCase):
+    def test_cross_division_player_id_conflict_is_withheld_and_audited(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript(SCHEMA)
+        conn.execute(
+            "INSERT INTO ncaa_players (player_id,division,name) VALUES (?,?,?)",
+            (77, 1, "Division I Player"),
+        )
+
+        self.assertTrue(record_identity_conflict(conn, 77, 2, "ppg", "Different Player", "D2 School"))
+        self.assertFalse(record_identity_conflict(conn, 77, 1, "rpg", "Division I Player", "D1 School"))
+        self.assertEqual(conn.execute("SELECT division FROM ncaa_players WHERE player_id=77").fetchone()[0], 1)
+        conflict = conn.execute(
+            "SELECT player_id,existing_division,incoming_division,stat_slug FROM ncaa_identity_conflicts"
+        ).fetchone()
+        self.assertEqual(tuple(conflict), (77, 1, 2, "ppg"))
+        self.assertEqual(export_release(conn)["coverage"]["identity_conflicts"], 1)
+        conn.close()
+
     def test_final_period_prefers_publishers_selected_final_statistics_option(self):
         class CachedFetcher:
             def fetch(self, *_args, **_kwargs):

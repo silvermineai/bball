@@ -114,6 +114,16 @@ CREATE TABLE IF NOT EXISTS ncaa_team_directory (
   games INTEGER, wins INTEGER, losses INTEGER, ppg REAL,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS ncaa_identity_conflicts (
+  player_id INTEGER NOT NULL,
+  existing_division INTEGER NOT NULL,
+  incoming_division INTEGER NOT NULL,
+  stat_slug TEXT NOT NULL,
+  name TEXT,
+  team_name TEXT,
+  recorded_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(player_id, existing_division, incoming_division, stat_slug)
+);
 """
 
 CELL_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.DOTALL)
@@ -309,6 +319,37 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def record_identity_conflict(
+    conn: sqlite3.Connection,
+    player_id: int,
+    incoming_division: int,
+    stat_slug: str,
+    name: str | None,
+    team_name: str | None,
+) -> bool:
+    """Record a cross-division ID collision and keep the existing row intact.
+
+    The source player ID is the only stable key available across ranking
+    pages.  A collision can indicate a bad source row or a transfer; either
+    way, overwriting one division with another would corrupt the leaderboard.
+    Preserve the first exact source identity and expose the collision for the
+    next publication audit instead.
+    """
+    existing = conn.execute(
+        "SELECT division FROM ncaa_players WHERE player_id=?",
+        (player_id,),
+    ).fetchone()
+    if not existing or existing[0] is None or int(existing[0]) == int(incoming_division):
+        return False
+    conn.execute(
+        """INSERT OR REPLACE INTO ncaa_identity_conflicts
+           (player_id,existing_division,incoming_division,stat_slug,name,team_name)
+           VALUES (?,?,?,?,?,?)""",
+        (player_id, int(existing[0]), int(incoming_division), stat_slug, name, team_name),
+    )
+    return True
+
+
 def export_release(conn: sqlite3.Connection) -> dict:
     """Create a compact, public derivative of the NCAA national snapshots."""
     team_ids = {
@@ -369,7 +410,8 @@ def export_release(conn: sqlite3.Connection) -> dict:
             "losses": losses,
             "ppg": ppg,
         })
-    coverage = {}
+    conflict_count = conn.execute("SELECT count(*) FROM ncaa_identity_conflicts").fetchone()[0]
+    divisions = {}
     for division in (1, 2, 3):
         rows = [p for p in players if p["division"] == division]
         source_coverage = {}
@@ -391,7 +433,7 @@ def export_release(conn: sqlite3.Connection) -> dict:
                 "max_rank": max((int(rank) for rank in ranks), default=None),
                 "coverage_kind": "qualified_leaderboard",
             }
-        coverage[str(division)] = {
+        divisions[str(division)] = {
             "players": len(rows),
             "team_ncaa_id": sum(p.get("team_ncaa_id") is not None for p in rows),
             "identity_kind": "publisher_player_identity_rows",
@@ -420,7 +462,13 @@ def export_release(conn: sqlite3.Connection) -> dict:
             "source": "https://stats.ncaa.org/rankings/national_ranking",
             "method": "Cached final national-ranking snapshots fetched with robots.txt checks; normalized measures and complete retained source rows are a public derivative, not a page mirror.",
         },
-        "coverage": {"players": len(players), "teams": len(teams), "divisions": coverage},
+        "coverage": {
+            "players": len(players),
+            "teams": len(teams),
+            "identity_conflicts": int(conflict_count),
+            "identity_integrity": "verified" if conflict_count == 0 else "conflicts_withheld",
+            "divisions": divisions,
+        },
         "players": players,
         "teams": teams,
     }
@@ -662,6 +710,11 @@ def scrape_division(fetcher: ScraplingNCAAFetcher, conn: sqlite3.Connection, div
             rank = to_num(cells[0])
             value = to_num(cells[-1])
             games = to_num(cells[5])
+
+            if record_identity_conflict(conn, pid, div_int, slug, pname, tname):
+                # Never let a row from another division overwrite the source
+                # identity already retained for this player ID.
+                continue
 
             # Keep the complete publisher row for audit/export. The normalized
             # columns below power the leaderboard, while this payload retains
