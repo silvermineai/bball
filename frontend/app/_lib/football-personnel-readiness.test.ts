@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { footballPersonnelReadinessRows, personnelReadinessForGame, personnelReadinessStatusLabel } from "./football-personnel-readiness";
+import { footballPersonnelCoverageByDivision, footballPersonnelReadinessRows, personnelReadinessForGame, personnelReadinessStatusLabel } from "./football-personnel-readiness";
 import type { FootballPersonnelReadinessGame } from "./football-personnel-readiness";
 
 const side = (team_id: string, values: Partial<FootballPersonnelReadinessGame["home"]> = {}) => ({
@@ -52,5 +52,23 @@ describe("football personnel readiness context", () => {
     expect(personnelReadinessStatusLabel("conflict")).toBe("Conflicting source rows");
     expect(personnelReadinessStatusLabel("unavailable")).toBe("Context unavailable");
     expect(row.home.talent_composite).toBeNull();
+  });
+
+  it("reconciles exact personnel context coverage by upcoming division", () => {
+    const coverage = footballPersonnelCoverageByDivision([
+      { id: "g1", home_id: "10", away_id: "20", home_division: "FBS", away_division: "FBS" },
+      { id: "g2", home_id: "11", away_id: "21", home_division: "D2", away_division: "Division II" },
+      { id: "g3", home_id: "12", away_id: "22", home_division: "D3", away_division: "D3" },
+      { id: "g4", home_id: "13", away_id: "23", home_division: "D3", away_division: "D3" },
+    ], [
+      row,
+      { ...row, game_id: "g2", home_id: "11", away_id: "21", status: "complete" },
+      { ...row, game_id: "g3", home_id: "12", away_id: "22", status: "conflict" },
+    ]);
+    expect(coverage).toEqual([
+      { division: "d1", scheduled: 1, complete: 0, partial: 1, conflict: 0, unavailable: 0, missing: 0 },
+      { division: "d2", scheduled: 1, complete: 1, partial: 0, conflict: 0, unavailable: 0, missing: 0 },
+      { division: "d3", scheduled: 2, complete: 0, partial: 0, conflict: 1, unavailable: 0, missing: 1 },
+    ]);
   });
 });

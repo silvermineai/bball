@@ -28,7 +28,7 @@ import {
   type FootballMatchupSort,
 } from "../../_lib/football-matchup-view";
 import { footballForecastReadiness } from "../../_lib/football-forecast-readiness";
-import { personnelReadinessForGame, type FootballPersonnelReadinessGame } from "../../_lib/football-personnel-readiness";
+import { footballPersonnelCoverageByDivision, personnelReadinessForGame, type FootballPersonnelReadinessGame } from "../../_lib/football-personnel-readiness";
 import type { FootballReliabilityBand } from "../../_lib/football-model-factors";
 export default function MatchupBrowser({
   games,
@@ -109,6 +109,8 @@ export default function MatchupBrowser({
     activeGames,
     new Set(marketLinkedRows.map(({ game }) => game.id)),
   );
+  const personnelCoverage = footballPersonnelCoverageByDivision(activeGames, personnelReadinessGames);
+  const personnelCoverageByDivision = new Map(personnelCoverage.map((row) => [row.division, row]));
   const linkedComparisons = (game: Game) => applyLiveFootballMarketComparisons(game, liveMarketComparisons, modelId).market_comparisons || [];
   const prepRows = prepIds
     .map((id) => scopedGames.find((game) => game.id === id))
@@ -376,7 +378,7 @@ export default function MatchupBrowser({
         </p>
         <div className="table-scroll">
           <table className="data-table">
-            <thead><tr><th>Division</th><th className="numeric">Scheduled</th><th className="numeric">Validated forecast</th><th className="numeric">Missing / invalid</th><th className="numeric">Model ID missing</th><th className="numeric">Market linked</th></tr></thead>
+            <thead><tr><th>Division</th><th className="numeric">Scheduled</th><th className="numeric">Validated forecast</th><th className="numeric">Missing / invalid</th><th className="numeric">Model ID missing</th><th className="numeric">Market linked</th><th>Personnel context</th></tr></thead>
             <tbody>{forecastReadiness.rows.map((row) => <tr key={row.division}>
               <th scope="row">{row.division === "d1" ? "D1 · FBS/FCS" : row.division.toUpperCase()}</th>
               <td className="numeric">{row.scheduled.toLocaleString()}</td>
@@ -384,6 +386,7 @@ export default function MatchupBrowser({
               <td className="numeric">{row.missing_forecast.toLocaleString()}</td>
               <td className="numeric">{row.unlabeled_forecast.toLocaleString()}</td>
               <td className="numeric">{row.market_linked.toLocaleString()}</td>
+              <td>{(() => { const personnel = personnelCoverageByDivision.get(row.division); if (!personnel) return "—"; const details = [`${personnel.complete} complete`]; if (personnel.partial) details.push(`${personnel.partial} partial`); if (personnel.conflict) details.push(`${personnel.conflict} conflict`); if (personnel.unavailable) details.push(`${personnel.unavailable} unavailable`); if (personnel.missing) details.push(`${personnel.missing} missing`); return details.join(" · "); })()}</td>
             </tr>)}</tbody>
           </table>
         </div>
