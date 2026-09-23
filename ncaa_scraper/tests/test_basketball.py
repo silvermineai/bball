@@ -13,6 +13,7 @@ from ncaa_scraper.basketball import (
     dataset_catalog,
     export_sql,
     export_ncaa_player_box_sql,
+    ensure_legacy_ncaa_player_box_schema,
     ingest,
     matchup_factor_edges,
     ncaa_player_box_field_coverage,
@@ -424,6 +425,30 @@ class BasketballIngestTests(unittest.TestCase):
 
     def tearDown(self):
         self.conn.close()
+
+    def test_legacy_ncaa_player_box_schema_adds_context_without_guessing_identity(self):
+        self.conn.execute(
+            "CREATE TABLE bb_ncaa_player_box ("
+            "season INTEGER, contest_id TEXT, player_id TEXT, stats_json TEXT NOT NULL,"
+            "PRIMARY KEY(season, contest_id, player_id))"
+        )
+        self.conn.execute(
+            "INSERT INTO bb_ncaa_player_box VALUES (?,?,?,?)",
+            (2026, "g1", "p1", json.dumps({"pts": 12})),
+        )
+
+        ensure_legacy_ncaa_player_box_schema(self.conn)
+
+        columns = {
+            row[1]
+            for row in self.conn.execute("PRAGMA table_info(bb_ncaa_player_box)")
+        }
+        self.assertTrue({"team_id", "game_date", "team_name", "opponent_name", "player_name"} <= columns)
+        row = self.conn.execute(
+            "SELECT team_id, stats_json FROM bb_ncaa_player_box"
+        ).fetchone()
+        self.assertIsNone(row[0])
+        self.assertEqual(json.loads(row[1]), {"pts": 12})
 
     def test_unidentified_rows_are_retained_without_guessed_identity(self):
         row = {

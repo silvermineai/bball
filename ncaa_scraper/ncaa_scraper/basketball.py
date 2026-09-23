@@ -45,6 +45,39 @@ def _close_active_connection() -> None:
 
 
 atexit.register(_close_active_connection)
+
+
+def ensure_legacy_ncaa_player_box_schema(conn: sqlite3.Connection) -> None:
+    """Upgrade the pre-team keyed NCAA player archive in place.
+
+    Early local snapshots stored only ``season``, ``contest_id``, ``player_id``
+    and ``stats_json``.  The current publication contract keeps source team
+    and display context as separate columns.  SQLite's ``CREATE TABLE IF NOT
+    EXISTS`` leaves that legacy table untouched, so a refresh would fail while
+    creating the team index and could never rebuild the forecast publication.
+    Add the missing nullable columns before the idempotent migrations run;
+    existing source rows remain intact and the next source refresh fills the
+    fields with source-confirmed values.  Nullable columns are intentional:
+    legacy rows did not contain these facts and must not receive guessed IDs.
+    """
+    table = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='bb_ncaa_player_box'"
+    ).fetchone()
+    if table is None:
+        return
+    columns = {
+        str(row[1]) for row in conn.execute("PRAGMA table_info(bb_ncaa_player_box)")
+    }
+    missing = {
+        "team_id": "TEXT",
+        "game_date": "TEXT",
+        "team_name": "TEXT",
+        "opponent_name": "TEXT",
+        "player_name": "TEXT",
+    }
+    for column, definition in missing.items():
+        if column not in columns:
+            conn.execute(f"ALTER TABLE bb_ncaa_player_box ADD COLUMN {column} {definition}")
 STAT_FIELDS = [
     "minutes",
     "field_goals_made",
@@ -2517,6 +2550,7 @@ def main():
     conn = sqlite3.connect(DB)
     _ACTIVE_CONNECTION = conn
     conn.row_factory = sqlite3.Row
+    ensure_legacy_ncaa_player_box_schema(conn)
     for migration in ("0009_basketball_research.sql", "0017_basketball_team_season.sql", "0018_basketball_boutique.sql", "0019_basketball_lineups.sql", "0020_basketball_player_core.sql", "0021_basketball_ncaa_player_box.sql", "0022_basketball_ncaa_rosters.sql", "0023_basketball_ncaa_shooting.sql", "0027_basketball_possession_style.sql", "0028_basketball_ncaa_game_archive.sql", "0031_basketball_player_crosswalk.sql", "0032_basketball_game_context.sql"):
         conn.executescript((ROOT / "worker/migrations" / migration).read_text())
     if not args.build_only:
