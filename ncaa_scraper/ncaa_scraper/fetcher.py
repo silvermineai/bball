@@ -35,10 +35,19 @@ def verify_robots_policy(
         raise NCAAFetchError("Only HTTPS NCAA URLs are accepted")
     robots_url = f"{parts.scheme}://{parts.netloc}/robots.txt"
     try:
-        response = session.get(robots_url, headers={"User-Agent": user_agent}, timeout=timeout)
+        # A robots check that follows a redirect can silently authorize a
+        # different host. Keep the policy receipt tied to this exact origin;
+        # an operator can review or authorize a redirect explicitly later.
+        response = session.get(
+            robots_url,
+            headers={"User-Agent": user_agent},
+            timeout=timeout,
+            allow_redirects=False,
+        )
     except requests.RequestException as exc:
         raise NCAAFetchError("Cannot verify NCAA robots policy; no page requested") from exc
-    if response.status_code != 200:
+    response_url = getattr(response, "url", robots_url)
+    if response.status_code != 200 or response_url != robots_url:
         raise NCAAFetchError("Cannot verify NCAA robots policy; no page requested")
     policy = RobotFileParser()
     policy.parse(response.text.splitlines())
