@@ -224,7 +224,8 @@ export function forecastAnalysisReadiness(args: {
         : "unavailable";
   const prediction = args.prediction;
   const intervalFields = ["total", "total_low", "total_high", "total_half_width"] as const;
-  const intervalPresent = !!prediction && intervalFields.some((field) => field in prediction);
+  const intervalBounds = ["total_low", "total_high", "total_half_width"] as const;
+  const intervalPresent = !!prediction && intervalBounds.some((field) => field in prediction);
   const totalInterval = args.predictionIntegrity !== "valid"
     ? "invalid"
     : !intervalPresent

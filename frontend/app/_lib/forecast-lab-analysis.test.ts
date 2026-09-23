@@ -78,7 +78,7 @@ describe("forecast lab matchup signals", () => {
       forecast_model_id: "model-current",
       matchup_factors: factors,
       matchup_factors_same_edition: true,
-    })).toEqual({ ok: true, label: "Verified record", missing: [] });
+    })).toEqual({ ok: true, label: "Verified record", total_interval: "unavailable", missing: [] });
   });
 
   it("reviews a row when score and total arithmetic contradict the model margin", () => {
@@ -97,7 +97,7 @@ describe("forecast lab matchup signals", () => {
       forecast_model_id: "model-current",
       matchup_factors: null,
       matchup_factors_same_edition: null,
-    })).toEqual({ ok: false, label: "Review before prep", missing: ["valid prediction values"] });
+    })).toEqual({ ok: false, label: "Review before prep", total_interval: "unavailable", missing: ["valid prediction values"] });
   });
 
   it("surfaces integrity blockers without converting context gaps into model errors", () => {
@@ -115,8 +115,52 @@ describe("forecast lab matchup signals", () => {
     })).toEqual({
       ok: false,
       label: "Review before prep",
+      total_interval: "unavailable",
       missing: ["valid prediction values", "forecast edition", "same-edition factor context"],
     });
+  });
+
+  it("marks a calibrated total range separately from core score integrity", () => {
+    expect(forecastIntegrity({
+      prediction: {
+        home_score: 74,
+        away_score: 70,
+        home_margin: 4,
+        total: 144,
+        total_low: 126,
+        total_high: 162,
+        total_half_width: 18,
+        pace: 68,
+        home_win_probability: 0.65,
+        margin_low: -8,
+        margin_high: 16,
+      },
+      fallback_prediction: null,
+      forecast_model_id: "model-current",
+      matchup_factors: null,
+      matchup_factors_same_edition: null,
+    })).toMatchObject({ ok: true, total_interval: "calibrated", missing: [] });
+  });
+
+  it("reviews a partial or malformed total range", () => {
+    expect(forecastIntegrity({
+      prediction: {
+        home_score: 74,
+        away_score: 70,
+        home_margin: 4,
+        total: 144,
+        total_low: 126,
+        total_half_width: 18,
+        pace: 68,
+        home_win_probability: 0.65,
+        margin_low: -8,
+        margin_high: 16,
+      },
+      fallback_prediction: null,
+      forecast_model_id: "model-current",
+      matchup_factors: null,
+      matchup_factors_same_edition: null,
+    })).toMatchObject({ ok: false, total_interval: "invalid", missing: ["valid total interval"] });
   });
 
   it("labels primary probability strength without turning it into a recommendation", () => {

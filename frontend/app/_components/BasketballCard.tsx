@@ -195,6 +195,7 @@ export default function BasketballCard({
             <small className={integrity.ok ? "analysis-integrity" : "analysis-integrity is-review"}>
               Data integrity: <strong>{integrity.label}</strong>
               {integrity.missing.length ? ` · ${integrity.missing.join(", ")}` : " · prediction and lineage checks passed"}
+              {integrity.total_interval !== "calibrated" ? ` · total uncertainty ${integrity.total_interval}` : ""}
             </small>
             {g.analysis_readiness && (
               <small className={g.analysis_readiness.status === "review" ? "analysis-integrity is-review" : "analysis-integrity"}>

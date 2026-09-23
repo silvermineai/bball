@@ -110,6 +110,7 @@ export type ForecastEvidenceCoverage = {
 export type ForecastIntegrity = {
   ok: boolean;
   label: "Verified record" | "Review before prep";
+  total_interval: "calibrated" | "unavailable" | "invalid";
   missing: string[];
 };
 
@@ -125,6 +126,19 @@ export function forecastIntegrity(
 ): ForecastIntegrity {
   const prediction = game.prediction || game.fallback_prediction;
   const missing: string[] = [];
+  const totalIntervalFields = ["total", "total_low", "total_high", "total_half_width"] as const;
+  const totalIntervalBounds = ["total_low", "total_high", "total_half_width"] as const;
+  const totalIntervalPresent = !!prediction && totalIntervalBounds.some((field) => field in prediction);
+  const totalInterval = !totalIntervalPresent
+    ? "unavailable"
+    : totalIntervalFields.every((field) => typeof prediction?.[field] === "number" && Number.isFinite(prediction[field] as number))
+      && (prediction?.total_half_width as number) > 0
+      && (prediction?.total_low as number) <= (prediction?.total as number)
+      && (prediction?.total as number) <= (prediction?.total_high as number)
+      && Math.abs(((prediction?.total as number) - (prediction?.total_low as number)) - (prediction?.total_half_width as number)) <= 0.1
+      && Math.abs(((prediction?.total_high as number) - (prediction?.total as number)) - (prediction?.total_half_width as number)) <= 0.1
+      ? "calibrated"
+      : "invalid";
   // The compact signal context accepts partial values for backwards-compatible
   // cards. The integrity badge is a stronger claim: require the complete
   // score/total/pace contract and its arithmetic identities before calling a
@@ -138,9 +152,13 @@ export function forecastIntegrity(
   if (game.matchup_factors && game.matchup_factors_same_edition === false) {
     missing.push("same-edition factor context");
   }
+  if (totalInterval === "invalid") {
+    missing.push("valid total interval");
+  }
   return {
     ok: missing.length === 0,
     label: missing.length === 0 ? "Verified record" : "Review before prep",
+    total_interval: totalInterval,
     missing,
   };
 }
