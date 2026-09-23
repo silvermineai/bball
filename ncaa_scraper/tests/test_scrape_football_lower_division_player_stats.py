@@ -104,6 +104,8 @@ def test_source_helpers_reject_other_origins_before_network_access() -> None:
             assert "football API origin" in str(exc)
         else:
             raise AssertionError("source helper must reject a non-API origin")
+    assert not MODULE.is_api_url(MODULE.API + "-mirror/summary?event=1")
+    assert MODULE.is_api_url(MODULE.API + "/summary?event=1")
 
 
 def test_source_response_rejects_redirect_and_hashes_bounded_exact_body() -> None:

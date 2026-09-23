@@ -29,6 +29,20 @@ MAX_ROBOTS_BYTES = 512 * 1024
 MAX_RESPONSE_BYTES = 16 * 1024 * 1024
 
 
+def is_api_url(url: str) -> bool:
+    """Return whether ``url`` is inside the fixed ESPN football API path."""
+
+    parsed = urllib.parse.urlsplit(url)
+    api_parts = urllib.parse.urlsplit(API)
+    return (
+        parsed.scheme == "https"
+        and parsed.netloc == api_parts.netloc
+        and (parsed.path == api_parts.path or parsed.path.startswith(api_parts.path + "/"))
+        and not parsed.username
+        and not parsed.password
+    )
+
+
 def validate_robots(body: str, url: str, user_agent: str = UA) -> dict[str, object]:
     """Validate the publisher policy before a scoreboard or box request.
 
@@ -50,16 +64,9 @@ def validate_robots(body: str, url: str, user_agent: str = UA) -> dict[str, obje
 def verify_robots(url: str = API, user_agent: str = UA) -> dict[str, object]:
     """Require a readable, permissive robots file for the exact API origin."""
 
-    parsed = urllib.parse.urlsplit(url)
-    api_parts = urllib.parse.urlsplit(API)
-    if (
-        parsed.scheme != "https"
-        or parsed.netloc != api_parts.netloc
-        or not parsed.path.startswith(api_parts.path)
-        or parsed.username
-        or parsed.password
-    ):
+    if not is_api_url(url):
         raise RuntimeError("ESPN API URL must use the HTTPS football API origin before robots verification")
+    parsed = urllib.parse.urlsplit(url)
     robots_url = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, "/robots.txt", "", ""))
     request = urllib.request.Request(robots_url, headers={"User-Agent": user_agent, "Accept": "text/plain"})
     try:
@@ -105,15 +112,7 @@ def align_provider_values(keys: list[object], values: list[object]) -> list[str]
 
 
 def get_json(url: str, attempts: int = 3) -> tuple[dict[str, Any], str, str]:
-    parsed = urllib.parse.urlsplit(url)
-    api_parts = urllib.parse.urlsplit(API)
-    if (
-        parsed.scheme != "https"
-        or parsed.netloc != api_parts.netloc
-        or not parsed.path.startswith(api_parts.path)
-        or parsed.username
-        or parsed.password
-    ):
+    if not is_api_url(url):
         raise RuntimeError("ESPN source URL must use the HTTPS football API origin")
     last: Exception | None = None
     for attempt in range(attempts):
