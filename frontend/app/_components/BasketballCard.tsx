@@ -15,6 +15,8 @@ import { resolveForecastEdition } from "../_lib/forecast-edition";
 import { explainBasketballPrediction, publishedScoreArithmetic } from "../_lib/basketball-prediction-explanation";
 import { exactBasketballCalibrationContext, type BasketballCalibrationBucket } from "../_lib/basketball-calibration";
 import { matchupPaceLens } from "../_lib/basketball-pace-lens";
+import { gameMarketReadinessLabel } from "../_lib/game-market-readiness";
+import type { LedgerGame } from "../_lib/research-types";
 import { isUsableBasketballPrediction } from "../_lib/basketball-matchups";
 import RotationWatchPanel from "./RotationWatchPanel";
 
@@ -32,6 +34,7 @@ export default function BasketballCard({
   model,
   calibrationBuckets,
   calibrationModelId,
+  marketReadiness,
 }: {
   game: BBGame;
   homeRoster?: BBRosterSummary;
@@ -46,6 +49,7 @@ export default function BasketballCard({
   model?: Pick<BBOverview["model"], "id" | "teams" | "efficiency" | "tempo" | "evaluation"> | null;
   calibrationBuckets?: readonly BasketballCalibrationBucket[];
   calibrationModelId?: string | null;
+  marketReadiness?: LedgerGame["market_readiness"];
 }) {
   const primaryPrediction = isUsableBasketballPrediction(g.prediction) ? g.prediction : null;
   const fallbackPrediction = isUsableBasketballPrediction(g.fallback_prediction) ? g.fallback_prediction : null;
@@ -475,6 +479,14 @@ export default function BasketballCard({
               ))}
               <small className="factor-source">Pregame quotes are displayed only when the ledger matched the exact game record and captured them before tip. They are market observations, not recommendations.</small>
             </div>
+          ) : marketReadiness ? (
+            <div className="market-quotes" aria-label="Market readiness">
+              <div className="match-detail">
+                <strong>{gameMarketReadinessLabel(marketReadiness)}</strong>
+                <span className="muted">market evidence status</span>
+              </div>
+              <small className="factor-source">{marketReadiness.message} No model edge is inferred from an absent or withheld quote.</small>
+            </div>
           ) : null}
         </>
       ) : (
@@ -488,7 +500,7 @@ export default function BasketballCard({
         {coldStart ? "Cold-start estimate · " : "Preseason baseline · "}
         roster changes are not model features.
         <br />
-        {marketQuotes.length ? "" : "No verified pregame market line imported. "}
+        {marketQuotes.length ? "" : marketReadiness ? `${gameMarketReadinessLabel(marketReadiness)}. ` : "No verified pregame market line imported. "}
         <Link href="/research/scorecard/?sport=basketball">
           Check the forecast record →
         </Link>

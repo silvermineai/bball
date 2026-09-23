@@ -20,7 +20,7 @@ import {
 import {
   forecastModelId,
   loadLiveBasketballForecasts,
-  loadLiveBasketballMarketComparisons,
+  loadLiveBasketballMarketEvidence,
   liveMarketComparisonStatus,
   matchingRosterScenario,
   mergeLiveBasketballForecasts,
@@ -35,6 +35,7 @@ import MatchupPersonnelPanel from "./MatchupPersonnel";
 import { resolveForecastEdition } from "../../_lib/forecast-edition";
 import { selectPublishedForecastModel } from "../../_lib/forecast-lab-view";
 import type { BasketballCalibrationBucket } from "../../_lib/basketball-calibration";
+import type { LedgerGame } from "../../_lib/research-types";
 
 type PublisherRating = { id: string; team: string; value: number | null };
 
@@ -87,6 +88,7 @@ export default function Matchups({
     [liveForecastModelId, setLiveForecastModelId] = useState<string | null>(null),
     [liveGamesError, setLiveGamesError] = useState(""),
     [liveMarketComparisons, setLiveMarketComparisons] = useState<Record<string, NonNullable<BBGame["market_comparisons"]>> | null>(null),
+    [liveMarketReadiness, setLiveMarketReadiness] = useState<Record<string, NonNullable<LedgerGame["market_readiness"]>> | null>(null),
     [liveMarketsError, setLiveMarketsError] = useState(""),
     [publisherRatings, setPublisherRatings] = useState<Record<string, PublisherRating>>({}),
     [publisherRatingsError, setPublisherRatingsError] = useState(""),
@@ -164,16 +166,18 @@ export default function Matchups({
   useEffect(() => {
     if (!liveForecastModelId) {
       setLiveMarketComparisons(null);
+      setLiveMarketReadiness(null);
       setLiveMarketsError("");
       return;
     }
     setLiveMarketComparisons(null);
     setLiveMarketsError("");
     const controller = new AbortController();
-    loadLiveBasketballMarketComparisons(controller.signal, liveForecastModelId)
+    loadLiveBasketballMarketEvidence(controller.signal, liveForecastModelId)
       .then((value) => {
         if (!controller.signal.aborted) {
-          setLiveMarketComparisons(value);
+          setLiveMarketComparisons(value.comparisons);
+          setLiveMarketReadiness(value.readiness);
           setLiveMarketsError("");
         }
       })
@@ -588,6 +592,7 @@ export default function Matchups({
           <div className="matchup-card-wrap" key={g.id}>
             <BasketballCard
                   game={(liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id])?.length ? { ...g, market_comparisons: liveMarketComparisons === null ? marketComparisons[g.id] : liveMarketComparisons[g.id] } : g}
+                  marketReadiness={liveMarketComparisons === null ? undefined : liveMarketReadiness?.[g.id]}
               homeRoster={rosterByTeam.get(g.home_id)}
               awayRoster={rosterByTeam.get(g.away_id)}
               rosterScenario={matchingRosterScenario(g, rosterScenarioByGame.get(g.id), model.id) || undefined}
