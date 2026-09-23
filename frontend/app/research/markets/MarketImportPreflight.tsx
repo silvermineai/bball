@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { marketImportCommand, marketImportMatchState, marketImportPrediction, marketImportScheduleSummary, parseMarketImportRows, validateMarketImportCsv, type MarketImportPreflight as Preflight, type MarketImportRow } from "../../_lib/market-import";
-import type { BBGame } from "../../_lib/basketball-types";
+import { marketImportCommand, marketImportMatchState, marketImportPrediction, marketImportScheduleSummary, parseMarketImportRows, validateMarketImportCsv, type MarketImportGame, type MarketImportPreflight as Preflight, type MarketImportRow, type MarketImportSport } from "../../_lib/market-import";
 
 const fixed = (value: number | null, digits = 1) => value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
 const signed = (value: number | null) => value == null || !Number.isFinite(value) ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
@@ -13,12 +12,14 @@ const noVigHome = (row: MarketImportRow) => {
   return home / (home + away);
 };
 
-export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[] }) {
+export default function MarketImportPreflight({ upcoming }: { upcoming: Record<MarketImportSport, MarketImportGame[]> }) {
+  const [sport, setSport] = useState<MarketImportSport>("basketball");
   const [fileName, setFileName] = useState("");
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [rows, setRows] = useState<MarketImportRow[]>([]);
+  const sportUpcoming = upcoming[sport];
   const comparisons = useMemo(() => rows.map((row) => {
-    const game = upcoming.find((candidate) => candidate.id === row.gameId);
+    const game = sportUpcoming.find((candidate) => candidate.id === row.gameId);
     const matchState = marketImportMatchState(row, game || null);
     const exact = matchState === "exact";
     const prediction = exact ? marketImportPrediction(game || null) : null;
@@ -29,8 +30,8 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
         ? prediction.total - (row.line || 0)
         : prediction.home_win_probability - (noVigHome(row) || 0);
     return { row, game, exact, matchState, gap, model: row.market === "spreads" ? prediction.home_margin : row.market === "totals" ? prediction.total : prediction.home_win_probability * 100, estimateType: prediction.estimate_type === "cold_start" ? "cold-start" : "primary" };
-  }), [rows, upcoming]);
-  const scheduleSummary = useMemo(() => marketImportScheduleSummary(rows, upcoming), [rows, upcoming]);
+  }), [rows, sportUpcoming]);
+  const scheduleSummary = useMemo(() => marketImportScheduleSummary(rows, sportUpcoming), [rows, sportUpcoming]);
   const matched = comparisons.filter((item) => item.exact);
   const rejected = comparisons.filter((item) => !item.exact);
   return (
@@ -40,9 +41,12 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
         <h3>Check an authorized line export before import.</h3>
         <p>Select a licensed feed CSV to validate its exact-match columns, timing clocks, market type and paired prices locally. The file is never uploaded; a clean preflight prepares the durable CLI importer, which still requires feed identity and license URL.</p>
       </div>
+      <div className="button-row" role="tablist" aria-label="Market import sport">
+        {(["basketball", "football"] as const).map((code) => <button className={`button ${sport === code ? "" : "secondary"}`} key={code} type="button" role="tab" aria-selected={sport === code} onClick={() => { setSport(code); setPreflight(null); setRows([]); setFileName(""); }}>{code === "basketball" ? "Basketball" : "Football"}</button>)}
+      </div>
       <label className="button secondary market-import-file">
         {fileName ? `Check ${fileName}` : "Choose authorized market CSV"}
-        <input name="authorized-market-csv" type="file" accept=".csv,text/csv" onChange={(event) => {
+        <input key={sport} name="authorized-market-csv" type="file" accept=".csv,text/csv" onChange={(event) => {
           const file = event.target.files?.[0];
           if (!file) return;
           setFileName(file.name);
@@ -57,11 +61,11 @@ export default function MarketImportPreflight({ upcoming }: { upcoming: BBGame[]
         }} />
       </label>
       {preflight && <div className={`market-import-preflight-result ${preflight.errors.length || !scheduleSummary.ready ? "has-errors" : "is-ready"}`} role="status">
-        {preflight.errors.length ? <><strong>Needs fixes before import</strong><ul>{preflight.errors.map((error) => <li key={error}>{error}</li>)}</ul></> : scheduleSummary.ready ? <><strong>Ready for the durable importer</strong><p>{preflight.rows.toLocaleString()} rows · {Object.entries(preflight.markets).map(([market, count]) => `${count} ${market}`).join(" · ")} · every row joins the published schedule exactly</p><p className="note">Run this command on the operator environment after replacing the provider and license placeholders:</p><code className="market-import-command">{marketImportCommand(fileName)}</code></> : <><strong>CSV structure valid; schedule joins need fixes</strong><p>{preflight.rows.toLocaleString()} rows · {scheduleSummary.exact.toLocaleString()} exact · {scheduleSummary.missingSchedule.toLocaleString()} missing schedule IDs · {scheduleSummary.identityOrClockMismatch.toLocaleString()} participant or tip mismatches</p></>}
+        {preflight.errors.length ? <><strong>Needs fixes before import</strong><ul>{preflight.errors.map((error) => <li key={error}>{error}</li>)}</ul></> : scheduleSummary.ready ? <><strong>Ready for the durable importer</strong><p>{preflight.rows.toLocaleString()} rows · {Object.entries(preflight.markets).map(([market, count]) => `${count} ${market}`).join(" · ")} · every row joins the published schedule exactly</p><p className="note">Run this command on the operator environment after replacing the provider and license placeholders:</p><code className="market-import-command">{marketImportCommand(fileName, sport)}</code></> : <><strong>CSV structure valid; schedule joins need fixes</strong><p>{preflight.rows.toLocaleString()} rows · {scheduleSummary.exact.toLocaleString()} exact · {scheduleSummary.missingSchedule.toLocaleString()} missing schedule IDs · {scheduleSummary.identityOrClockMismatch.toLocaleString()} participant or tip mismatches</p></>}
         {preflight.warnings.length > 0 && <p className="note">{preflight.warnings.length} row warning{preflight.warnings.length === 1 ? "" : "s"}: blank event IDs will be derived by the importer.</p>}
       </div>}
       {rows.length > 0 && <div className="market-import-preview">
-        <div className="eyebrow">Private comparison preview / upcoming basketball</div>
+        <div className="eyebrow">Private comparison preview / upcoming {sport}</div>
         <h4>See the model beside your authorized quote.</h4>
         <p className="note">This preview stays in memory in this browser. It joins only exact game IDs, participant names and start instants from the published 2026–27 schedule; it does not upload, persist or add these rows to the public ledger.</p>
         <div className="market-import-preview-stats" role="status"><span><strong>{scheduleSummary.exact}</strong> exact upcoming matches</span><span><strong>{scheduleSummary.missingSchedule}</strong> rows without a current schedule ID</span><span><strong>{scheduleSummary.identityOrClockMismatch}</strong> participant or tip mismatches</span></div>

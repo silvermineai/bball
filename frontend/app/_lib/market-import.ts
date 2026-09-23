@@ -5,10 +5,12 @@ export const marketImportColumns = [
 
 /** Show the durable, receipt-producing import command without exposing a
  * credential or implying that the browser preflight writes to the ledger. */
-export function marketImportCommand(fileName: string): string {
+export type MarketImportSport = "football" | "basketball";
+
+export function marketImportCommand(fileName: string, sport: MarketImportSport = "basketball"): string {
   const file = fileName.trim() || "licensed-lines.csv";
   const shell = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-  return `PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_csv ${shell(file)} --sport basketball --provider "<provider name>" --license-url "<license URL>"`;
+  return `PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_csv ${shell(file)} --sport ${sport} --provider "<provider name>" --license-url "<license URL>"`;
 }
 
 const requiredColumns = ["game_id", "market", "starts_at", "captured_at", "updated_at", "home_name", "away_name", "bookmaker"] as const;
@@ -43,13 +45,22 @@ type ExactScheduleGame = Pick<
   "id" | "starts_at" | "home_name" | "away_name"
 >;
 
+export type MarketImportPrediction = Pick<import("./basketball-types").BBPrediction, "home_margin" | "total" | "home_win_probability"> & {
+  estimate_type?: "primary" | "cold_start";
+};
+
+export type MarketImportGame = ExactScheduleGame & {
+  prediction?: MarketImportPrediction | null;
+  fallback_prediction?: MarketImportPrediction | null;
+};
+
 type ForecastGame = Pick<
   import("./basketball-types").BBGame,
   "prediction" | "fallback_prediction"
 >;
 
 /** Use the published primary estimate, or its explicitly labelled cold-start fallback. */
-export function marketImportPrediction(game: ForecastGame | null): import("./basketball-types").BBPrediction | null {
+export function marketImportPrediction(game: ForecastGame | MarketImportGame | null): MarketImportPrediction | null {
   return game?.prediction ?? game?.fallback_prediction ?? null;
 }
 

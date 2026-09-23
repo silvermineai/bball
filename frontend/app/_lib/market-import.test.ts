@@ -1,13 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { marketImportCommand, marketImportMatchState, marketImportMatchesGame, marketImportPrediction, marketImportScheduleSummary, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv } from "./market-import";
+import { marketImportCommand, marketImportMatchState, marketImportMatchesGame, marketImportPrediction, marketImportScheduleSummary, parseMarketCsv, parseMarketImportRows, validateMarketImportCsv, type MarketImportGame } from "./market-import";
 
 const header = "game_id,market,starts_at,captured_at,updated_at,home_name,away_name,bookmaker,line,home_price,away_price,over_price,under_price,home_american,away_american,over_american,under_american,event_id";
 
 describe("market import preflight", () => {
   it("shows the durable basketball importer without exposing a credential", () => {
     expect(marketImportCommand("licensed lines.csv")).toBe('PYTHONPATH=ncaa_scraper .venv/bin/python -m ncaa_scraper.market_csv \'licensed lines.csv\' --sport basketball --provider "<provider name>" --license-url "<license URL>"');
+    expect(marketImportCommand("licensed football.csv", "football")).toContain("--sport football");
     expect(marketImportCommand("operator's-lines.csv")).toContain("'operator'\\''s-lines.csv'");
     expect(marketImportCommand("licensed lines.csv")).not.toContain("API_KEY");
+  });
+
+  it("accepts a football schedule row through the same exact-match preview", () => {
+    const game: MarketImportGame = {
+      id: "football-game-1",
+      starts_at: "2026-09-26T19:00:00Z",
+      home_name: "Home State",
+      away_name: "Away State",
+      prediction: { home_margin: 3.5, total: 48, home_win_probability: 0.62 },
+    };
+    const row = {
+      gameId: game.id,
+      market: "spreads",
+      startsAt: game.starts_at,
+      capturedAt: "2026-09-26T12:00:00Z",
+      updatedAt: "2026-09-26T11:00:00Z",
+      homeName: game.home_name,
+      awayName: game.away_name,
+      bookmaker: "licensed-book",
+      line: -2.5,
+      homePrice: 1.91,
+      awayPrice: 1.91,
+      overPrice: null,
+      underPrice: null,
+    };
+    expect(marketImportMatchState(row, game)).toBe("exact");
+    expect(marketImportPrediction(game)).toMatchObject({ home_margin: 3.5, total: 48, home_win_probability: 0.62 });
   });
 
   it("uses the primary forecast before an explicitly labelled cold-start fallback", () => {

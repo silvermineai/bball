@@ -4,6 +4,7 @@ import FootballMarketBenchmark from "./FootballMarketBenchmark";
 import MarketImportPreflight from "./MarketImportPreflight";
 import { getBasketball } from "../../_lib/basketball-data";
 import { getLedger } from "../../_lib/research-data";
+import type { MarketImportGame } from "../../_lib/market-import";
 
 export const metadata = {
   title: "Historical market archive",
@@ -14,6 +15,16 @@ export const metadata = {
 export default function Page() {
   const basketball = getBasketball();
   const ledger = getLedger();
+  const footballUpcoming: MarketImportGame[] = ledger.games
+    .filter((game) => game.sport === "football" && !game.exclusion && !game.time_tbd && (game.status === "scheduled" || game.status === "awaiting_result"))
+    .map((game) => ({
+      id: game.game_id,
+      starts_at: game.starts_at,
+      home_name: game.home_name,
+      away_name: game.away_name,
+      prediction: { home_margin: game.home_margin, total: game.total, home_win_probability: game.home_win_probability },
+      fallback_prediction: null,
+    }));
   const marketCoverage = (["basketball", "football"] as const).map((sport) => {
     const summary = ledger.sports[sport];
     const games = ledger.games.filter((game) => game.sport === sport);
@@ -138,7 +149,7 @@ export default function Page() {
             <a className="button secondary" href="/data/research/market-import-template.csv" download>Download CSV template ↓</a>
             <a className="hero-link" href="/research/scorecard/?sport=basketball">Open basketball scorecard →</a>
           </div>
-          <MarketImportPreflight upcoming={basketball.upcoming} />
+          <MarketImportPreflight upcoming={{ basketball: basketball.upcoming, football: footballUpcoming }} />
           <p className="note" style={{ marginTop: 12 }}>
             The archive toolbar supports both the visible page export and a bounded export of every row matching the active sport, season and search filters.
           </p>
