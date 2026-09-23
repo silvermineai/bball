@@ -466,6 +466,13 @@ def player_board(conn, year):
         "season": year,
         "rankings": boards,
         "players": sorted(players.values(), key=lambda p: p["name"]),
+        # Synthetic team aggregate rows are retained in the source-backed
+        # board for coverage, but are not athlete identities. Publish the
+        # count beside the board so catalog consumers can reconcile it without
+        # inferring from a display name or silently dropping rows.
+        "excluded_team_placeholder_entries": sum(
+            1 for player in players.values() if str(player["id"]).startswith("-")
+        ),
     }
 
 
