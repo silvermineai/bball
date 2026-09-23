@@ -109,6 +109,44 @@ PUBLISHER_LEADER_SPECS = (
 )
 
 
+def rank_impact_rows(rows):
+    """Normalize and rank NCAA impact rows without treating weak samples as ranked.
+
+    RAPM rows retain the source's values, while the published rank is only
+    assigned after both possession thresholds and a finite net value are
+    present. Equal net values share a competition rank, matching the other
+    player leaderboards and avoiding arbitrary ordering claims.
+    """
+    normalized = []
+    for raw in rows:
+        row = dict(raw)
+        for key in ["orapm", "drapm", "rapm_net", "off_poss", "def_poss"]:
+            row[key] = number(row.get(key))
+        row["season"] = row.get("season")
+        row["qualified"] = (row["off_poss"] or 0) >= 500 and (row["def_poss"] or 0) >= 500
+        normalized.append(row)
+    normalized.sort(
+        key=lambda row: (
+            -(row["rapm_net"] if row["rapm_net"] is not None else -999),
+            str(row.get("player_id") or row.get("id") or row.get("player_name") or ""),
+        )
+    )
+    rank = 0
+    qualified_count = 0
+    previous_value = object()
+    for row in normalized:
+        value = row["rapm_net"]
+        row["rank"] = None
+        if not row["qualified"] or value is None:
+            continue
+        if value != previous_value:
+            rank = qualified_count + 1
+            previous_value = value
+        row["rank"] = rank
+        qualified_count += 1
+    return normalized
+
+
 def identity(v):
     if not v:
         raise ValueError("Missing source identifier")
@@ -1934,19 +1972,9 @@ def build(conn, target=2027):
                 "SELECT data_json FROM bb_impact WHERE season=?", (season,)
             )
         ]
+        rows = rank_impact_rows(rows)
         for row in rows:
-            for key in ["orapm", "drapm", "rapm_net", "off_poss", "def_poss"]:
-                row[key] = number(row.get(key))
             row["season"] = season
-            row["qualified"] = (row["off_poss"] or 0) >= 500 and (row["def_poss"] or 0) >= 500
-        rows.sort(key=lambda row: -(row["rapm_net"] if row["rapm_net"] is not None else -999))
-        rank = 0
-        for row in rows:
-            if row["qualified"]:
-                rank += 1
-                row["rank"] = rank
-            else:
-                row["rank"] = None
         return rows
 
     impact_seasons = [

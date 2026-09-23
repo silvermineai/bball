@@ -18,6 +18,7 @@ from ncaa_scraper.basketball import (
     ncaa_player_box_field_coverage,
     player_index,
     player_box_source_integrity,
+    rank_impact_rows,
     _prior_production,
     publisher_leaders,
     publisher_value_leaders,
@@ -64,6 +65,21 @@ def sample(i, season):
 
 
 class BasketballModelTests(unittest.TestCase):
+    def test_impact_ranks_require_sample_and_share_ties(self):
+        rows = rank_impact_rows([
+            {"player_id": "a", "rapm_net": "4.0", "off_poss": 600, "def_poss": 600},
+            {"player_id": "b", "rapm_net": 4, "off_poss": 600, "def_poss": 600},
+            {"player_id": "c", "rapm_net": 2, "off_poss": 600, "def_poss": 600},
+            {"player_id": "d", "rapm_net": 8, "off_poss": 400, "def_poss": 600},
+            {"player_id": "e", "rapm_net": None, "off_poss": 600, "def_poss": 600},
+        ])
+        by_id = {row["player_id"]: row for row in rows}
+        self.assertEqual(by_id["a"]["rank"], 1)
+        self.assertEqual(by_id["b"]["rank"], 1)
+        self.assertEqual(by_id["c"]["rank"], 3)
+        self.assertIsNone(by_id["d"]["rank"])
+        self.assertIsNone(by_id["e"]["rank"])
+
     def test_home_venue_exposure_matches_neutral_site_semantics(self):
         self.assertEqual(home_venue_exposure({"neutral": 0}), 0.5)
         self.assertEqual(home_venue_exposure({"neutral": False}), 0.5)
