@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { date, fmt, kick, signed } from "../../_lib/format";
 import { marketEvidenceState, modelMarketComparisonDetail, modelMarketComparisonLabel, modelMarketComparisonScope, modelReliabilityScope, reasons, type Ledger } from "../../_lib/research-types";
-import { marketCaptureCoverageDetail, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccessLabel, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
+import { marketArchiveContextDetail, marketCaptureCoverageDetail, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccessLabel, modelScopedScorecardPath, type MarketReadinessMetadata } from "../../_lib/market-readiness";
 import { comparisonGapDirectionLabel, comparisonGapLabel, comparisonTimingLabel } from "../../_lib/market-display";
 import { comparisonGateStateLabel, marketComparisonReadinessChecklist } from "../../_lib/market-comparison-readiness";
 import { gameMarketReadinessExport, gameMarketReadinessLabel } from "../../_lib/game-market-readiness";
@@ -238,6 +238,7 @@ export default function Scorecard() {
   const marketCaptureNote = marketCaptureDiagnostic(marketMetadata);
   const marketCaptureHistoryNote = marketCaptureHistoryDiagnostic(marketMetadata);
   const marketCaptureCoverageNote = marketCaptureCoverageDetail(marketMetadata);
+  const marketArchiveContextNote = marketArchiveContextDetail(marketMetadata, sport);
   const marketEditionLabel = (modelId?: string) => modelId && modelId === liveModelId ? "Active edition" : "Historical edition";
   const marketComparisonLineageNote = activeModelMarket.state === "settled_comparisons"
     ? "The active model edition has qualifying settled market comparisons below. Historical editions remain identified by their own immutable model IDs."
@@ -649,6 +650,7 @@ export default function Scorecard() {
           {summary.games_with_comparisons} games with qualifying quotes
         </span>
       </div>
+      {marketArchiveContextNote ? <p className="note" role="status" style={{ marginTop: -8, marginBottom: 16 }}>{marketArchiveContextNote} <Link href={`/research/markets/?sport=${sport}`}>Open the retained market archive →</Link></p> : null}
       {!summary.market_metrics.length ? (
         <div className="paper-panel">
           <h3>

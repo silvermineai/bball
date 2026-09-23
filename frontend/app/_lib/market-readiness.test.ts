@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMarketComparisonReadiness, marketCaptureCoverage, marketCaptureCoverageDetail, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccess, marketSourceAccessLabel, modelScopedScorecardPath } from "./market-readiness";
+import { formatMarketComparisonReadiness, marketArchiveContextDetail, marketCaptureCoverage, marketCaptureCoverageDetail, marketCaptureDiagnostic, marketCaptureHistoryDiagnostic, marketReadinessDetail, marketReadinessLabel, marketReadinessScorecardNote, marketReadinessState, marketSourceAccess, marketSourceAccessLabel, modelScopedScorecardPath } from "./market-readiness";
 
 describe("market connector readiness", () => {
   it("keeps an unavailable archive fail closed", () => {
@@ -206,6 +206,16 @@ describe("market connector readiness", () => {
     const metadata = { research_capture: { summary_count: 12, eligible_games: 10 } };
     expect(marketCaptureCoverage(metadata).returnedRate).toBeNull();
     expect(marketCaptureCoverageDetail(metadata)).toBe("Source responses: 12 of 10 selected; 0 selected requests failed.");
+  });
+
+  it("keeps retained archive rows separate from active comparisons", () => {
+    expect(marketArchiveContextDetail({ total: 25405, pregame: 1447, research_receipts: 15 }, "football")).toBe(
+      "Archive context: football retains 25,405 market observations; 1,447 carry a pregame capture flag. 15 capture receipts are retained. These rows remain historical evidence until the active model and exact pregame comparison gates pass.",
+    );
+    expect(marketArchiveContextDetail({ total: 0, pregame: 0, research_receipts: 49 }, "basketball")).toContain(
+      "basketball retains 0 market observations; 0 carry a pregame capture flag",
+    );
+    expect(marketArchiveContextDetail({ total: -1, pregame: -1 }, "football")).toBeNull();
   });
 
 });

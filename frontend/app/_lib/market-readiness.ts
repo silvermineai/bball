@@ -13,6 +13,8 @@ export function modelScopedScorecardPath(sport: "basketball" | "football", model
 
 export type MarketReadinessMetadata = {
   source?: "partial" | "unavailable";
+  total?: number;
+  pregame?: number;
   research_receipts?: number;
   research_latest_capture_at?: string | null;
   research_capture_summary?: {
@@ -44,6 +46,26 @@ export type MarketReadinessMetadata = {
     market_status?: MarketCaptureStatus;
   };
 };
+
+/**
+ * Put the archive denominator beside the active scorecard state. Retained
+ * observations are historical evidence until the exact model, participants,
+ * kickoff and capture-clock checks qualify them for comparison.
+ */
+export function marketArchiveContextDetail(
+  metadata: MarketReadinessMetadata | null | undefined,
+  sport: "basketball" | "football",
+): string | null {
+  const total = count(metadata?.total);
+  const pregame = count(metadata?.pregame);
+  const receipts = count(metadata?.research_receipts);
+  if (total === null && pregame === null && receipts === null) return null;
+  const label = sport === "basketball" ? "basketball" : "football";
+  const rows = total == null ? "an unavailable number of" : total.toLocaleString();
+  const timing = pregame == null ? "pregame timing is unavailable" : `${pregame.toLocaleString()} carry a pregame capture flag`;
+  const capture = receipts == null ? "" : ` ${receipts.toLocaleString()} capture receipt${receipts === 1 ? " is" : "s are"} retained.`;
+  return `Archive context: ${label} retains ${rows} market observation${total === 1 ? "" : "s"}; ${timing}.${capture} These rows remain historical evidence until the active model and exact pregame comparison gates pass.`;
+}
 
 export type MarketCaptureCoverage = {
   /** Number of source summaries/rows successfully returned by the connector. */
