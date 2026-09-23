@@ -30,6 +30,7 @@ BASE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/womens-col
 LIST_URL = BASE + "/seasons/{season}/recruits?limit=200"
 DETAIL_URL = BASE + "/recruits/{athlete_id}?lang=en&region=us"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_LIST_PAGES = 20
 
 
 def capture_clock() -> str:
@@ -48,16 +49,31 @@ def fetch(url: str) -> tuple[dict, bytes]:
     return value, response.content
 
 
-def listed_ids(payload: dict) -> list[str]:
+def listed_ids(payload: dict, expected_page: int = 1) -> list[str]:
     items = payload.get("items")
+    page_index = payload.get("pageIndex")
+    page_count = payload.get("pageCount")
+    page_size = payload.get("pageSize")
+    count = payload.get("count")
     if (
         not isinstance(items, list)
         or not items
-        or payload.get("count") != len(items)
-        or payload.get("pageIndex") != 1
-        or payload.get("pageCount") != 1
-        or not isinstance(payload.get("pageSize"), int)
-        or payload["pageSize"] < len(items)
+        or not isinstance(page_index, int)
+        or isinstance(page_index, bool)
+        or page_index != expected_page
+        or not isinstance(page_count, int)
+        or isinstance(page_count, bool)
+        or not 1 <= page_count <= MAX_LIST_PAGES
+        or expected_page > page_count
+        or not isinstance(page_size, int)
+        or isinstance(page_size, bool)
+        or not 1 <= page_size <= 200
+        or len(items) > page_size
+        or (expected_page < page_count and len(items) != page_size)
+        or not isinstance(count, int)
+        or isinstance(count, bool)
+        or count < len(items)
+        or count > page_count * page_size
     ):
         raise ValueError("women's recruiting list is incomplete or malformed")
     ids: list[str] = []
@@ -134,7 +150,28 @@ def capture(season: int = 2027, workers: int = 8) -> dict:
     robots_policy = verify_robots_policy(list_url)
     listing, listing_body = fetch(list_url)
     list_captured_at = capture_clock()
-    ids = listed_ids(listing)
+    page_count = listing.get("pageCount")
+    ids = listed_ids(listing, 1)
+    list_receipts = [{
+        "page": 1,
+        "url": list_url,
+        "sha256": hashlib.sha256(listing_body).hexdigest(),
+        "captured_at": list_captured_at,
+    }]
+    for page in range(2, int(page_count) + 1):
+        page_url = f"{list_url}&page={page}"
+        page_payload, page_body = fetch(page_url)
+        page_captured_at = capture_clock()
+        page_ids = listed_ids(page_payload, page)
+        list_receipts.append({
+            "page": page,
+            "url": page_url,
+            "sha256": hashlib.sha256(page_body).hexdigest(),
+            "captured_at": page_captured_at,
+        })
+        ids.extend(page_ids)
+    if len(set(ids)) != len(ids):
+        raise ValueError("women's recruiting list contains duplicate IDs across pages")
 
     def load(athlete_id: str) -> dict:
         detail, body = fetch(DETAIL_URL.format(athlete_id=athlete_id))
@@ -158,8 +195,9 @@ def capture(season: int = 2027, workers: int = 8) -> dict:
             "list_url": LIST_URL.format(season=season),
             "list_sha256": hashlib.sha256(listing_body).hexdigest(),
             "list_captured_at": list_captured_at,
+            "list_pages": list_receipts,
             "detail_url_template": DETAIL_URL,
-            "receipt_count": len(records) + 1,
+            "receipt_count": len(records) + len(list_receipts),
             "robots_policy": robots_policy,
             "identity_policy": "ESPN recruit athlete IDs remain in a women-specific namespace; no men's recruiting row or team identity is joined.",
         },
