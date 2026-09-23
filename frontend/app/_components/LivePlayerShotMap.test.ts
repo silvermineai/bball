@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eligibleShotMapLeaders, playerCardShotLocations, shotMapCoverageLabel, summarizeShotMapTendency } from "./LivePlayerShotMap";
+import { eligibleShotMapLeaders, playerCardShotLocations, shotMapCoverageLabel, shotMapLeaderOptionLabel, summarizeShotMapTendency } from "./LivePlayerShotMap";
 import { recordedPlayerAttemptCount, unreturnedPlayerAttemptCount } from "../_lib/player-shot-locations";
 
 describe("homepage player shot map", () => {
@@ -21,6 +21,21 @@ describe("homepage player shot map", () => {
   it("withholds malformed coverage instead of reporting a complete map", () => {
     expect(shotMapCoverageLabel({ attempts: 4, located_count: 5 })).toBe("Location coverage invalid");
     expect(shotMapCoverageLabel({ attempts: Number.NaN, located_count: 1 })).toBe("Location coverage unavailable");
+  });
+
+  it("puts sample size and coordinate coverage in the player chooser", () => {
+    expect(shotMapLeaderOptionLabel({
+      player_id: "42",
+      player_name: "Mapped Player",
+      team_name: "Example",
+      stats: { attempts: 200, located_count: 198 },
+    })).toBe("Mapped Player · Example · 200 FGA · 198 / 200 located coordinates (99.0%)");
+    expect(shotMapLeaderOptionLabel({
+      player_id: "43",
+      player_name: null,
+      team_name: null,
+      stats: { attempts: 120, located_count: 0 },
+    })).toBe("Player 43 · Team unavailable · 120 FGA · 0 / 120 located coordinates (0.0%)");
   });
 
   it("keeps only exact numeric player identities that have recorded coordinates", () => {

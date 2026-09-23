@@ -9,7 +9,7 @@ import {
 } from "../_lib/player-shot-locations";
 import PlayerShotLocationCourt from "./PlayerShotLocationCourt";
 
-type ShootingLeader = {
+export type ShootingLeader = {
   player_id: string;
   team_id: string;
   player_name: string | null;
@@ -87,6 +87,17 @@ export function shotMapCoverageLabel(stats: ShotCoverageStats) {
   if (located > attempts) return "Location coverage invalid";
   const rate = attempts > 0 ? ` (${((located / attempts) * 100).toFixed(1)}%)` : "";
   return `${located.toLocaleString()} / ${attempts.toLocaleString()} located coordinates${rate}`;
+}
+
+/** Put the sample size and coordinate coverage in the chooser so a reader
+ * can select a useful map before loading the individual player card. */
+export function shotMapLeaderOptionLabel(row: Pick<ShootingLeader, "player_id" | "player_name" | "team_name" | "stats">) {
+  const name = row.player_name || `Player ${row.player_id}`;
+  const team = row.team_name || "Team unavailable";
+  const attempts = typeof row.stats.attempts === "number" && Number.isFinite(row.stats.attempts) && row.stats.attempts >= 0
+    ? `${Math.trunc(row.stats.attempts).toLocaleString()} FGA`
+    : "FGA unavailable";
+  return `${name} · ${team} · ${attempts} · ${shotMapCoverageLabel(row.stats)}`;
 }
 
 export function playerCardShotLocations(
@@ -226,7 +237,7 @@ export default function LivePlayerShotMap({ season }: { season: number }) {
           <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)} disabled={loadingLeaders || !leaders.length}>
             {leaders.map((leader) => (
               <option value={leader.player_id} key={leader.player_id}>
-                {leader.player_name} · {leader.team_name || "Team unavailable"} · {leader.stats.attempts} FGA
+                {shotMapLeaderOptionLabel(leader)}
               </option>
             ))}
           </select>
