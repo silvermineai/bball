@@ -25,6 +25,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football"
 UA = "SilvermineResearch/1.0 (+https://bball.silvermine.dev)"
+MAX_ROBOTS_BYTES = 512 * 1024
+MAX_RESPONSE_BYTES = 16 * 1024 * 1024
 
 
 def validate_robots(body: str, url: str, user_agent: str = UA) -> dict[str, object]:
@@ -49,17 +51,37 @@ def verify_robots(url: str = API, user_agent: str = UA) -> dict[str, object]:
     """Require a readable, permissive robots file for the exact API origin."""
 
     parsed = urllib.parse.urlsplit(url)
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise RuntimeError("ESPN API URL must use HTTPS before robots verification")
+    api_parts = urllib.parse.urlsplit(API)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != api_parts.netloc
+        or not parsed.path.startswith(api_parts.path)
+        or parsed.username
+        or parsed.password
+    ):
+        raise RuntimeError("ESPN API URL must use the HTTPS football API origin before robots verification")
     robots_url = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, "/robots.txt", "", ""))
     request = urllib.request.Request(robots_url, headers={"User-Agent": user_agent, "Accept": "text/plain"})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            body = response.read().decode("utf-8", "replace")
+            # urllib follows redirects by default. A redirect can move the
+            # policy check to another host, so require the exact origin and
+            # bound the policy body before parsing it.
+            final_url = response.geturl()
+            if final_url != robots_url:
+                raise RuntimeError("ESPN robots policy redirected; no page requested")
+            body_bytes = response.read(MAX_ROBOTS_BYTES + 1)
+            if len(body_bytes) > MAX_ROBOTS_BYTES:
+                raise RuntimeError("ESPN robots policy exceeds the 512 KB bound")
+            body = body_bytes.decode("utf-8", "replace")
     except Exception as exc:  # pragma: no cover - network behavior varies
+        if isinstance(exc, RuntimeError) and str(exc).startswith("ESPN robots policy"):
+            raise
         raise RuntimeError("Cannot verify ESPN robots policy; no page requested") from exc
     policy = validate_robots(body, url, user_agent)
-    policy.update({"robots_url": robots_url, "robots_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest()})
+    # Keep the digest over the exact bytes received; decoding is only for
+    # RobotFileParser and must not change the receipt identity.
+    policy.update({"robots_url": robots_url, "robots_sha256": hashlib.sha256(body_bytes).hexdigest()})
     return policy
 
 
@@ -83,12 +105,29 @@ def align_provider_values(keys: list[object], values: list[object]) -> list[str]
 
 
 def get_json(url: str, attempts: int = 3) -> tuple[dict[str, Any], str, str]:
+    parsed = urllib.parse.urlsplit(url)
+    api_parts = urllib.parse.urlsplit(API)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != api_parts.netloc
+        or not parsed.path.startswith(api_parts.path)
+        or parsed.username
+        or parsed.password
+    ):
+        raise RuntimeError("ESPN source URL must use the HTTPS football API origin")
     last: Exception | None = None
     for attempt in range(attempts):
         try:
             request = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
             with urllib.request.urlopen(request, timeout=30) as response:
-                body = response.read()
+                # A successful HTTP response may still be a redirect target or
+                # an unexpectedly large document. Retain only the exact
+                # requested URL and a bounded body for the receipt digest.
+                if response.geturl() != url:
+                    raise RuntimeError("ESPN source response redirected; no row accepted")
+                body = response.read(MAX_RESPONSE_BYTES + 1)
+                if len(body) > MAX_RESPONSE_BYTES:
+                    raise RuntimeError("ESPN source response exceeds the 16 MB bound")
             return json.loads(body), url, hashlib.sha256(body).hexdigest()
         except Exception as exc:  # pragma: no cover - network behavior varies
             last = exc

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts/scrape-football-lower-division-player-stats.py"
@@ -61,6 +63,88 @@ def test_robots_policy_fails_closed_when_endpoint_is_disallowed() -> None:
         assert "no page requested" in str(exc)
     else:
         raise AssertionError("disallowed API request must fail closed")
+
+
+class _Response:
+    def __init__(self, url: str, body: bytes):
+        self._url = url
+        self._body = body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return None
+
+    def geturl(self):
+        return self._url
+
+    def read(self, limit=-1):
+        return self._body if limit < 0 else self._body[:limit]
+
+
+def test_robots_policy_rejects_redirected_policy_origin() -> None:
+    requested = MODULE.API + "/robots.txt"
+    redirected = "https://www.espn.com/robots.txt"
+    response = _Response(redirected, b"User-agent: *\nAllow: /\n")
+    with patch.object(MODULE.urllib.request, "urlopen", return_value=response):
+        try:
+            MODULE.verify_robots(MODULE.API)
+        except RuntimeError as exc:
+            assert "redirected" in str(exc)
+        else:
+            raise AssertionError("redirected robots policy must fail closed")
+
+
+def test_source_helpers_reject_other_origins_before_network_access() -> None:
+    for helper in (MODULE.verify_robots, MODULE.get_json):
+        try:
+            helper("https://www.espn.com/college-football")
+        except RuntimeError as exc:
+            assert "football API origin" in str(exc)
+        else:
+            raise AssertionError("source helper must reject a non-API origin")
+
+
+def test_source_response_rejects_redirect_and_hashes_bounded_exact_body() -> None:
+    requested = MODULE.API + "/summary?event=1"
+    with patch.object(
+        MODULE.urllib.request,
+        "urlopen",
+        return_value=_Response(requested, json.dumps({"ok": True}).encode()),
+    ):
+        payload, url, sha256 = MODULE.get_json(requested, attempts=1)
+    assert payload == {"ok": True}
+    assert url == requested
+    assert sha256 == MODULE.hashlib.sha256(json.dumps({"ok": True}).encode()).hexdigest()
+
+    with patch.object(
+        MODULE.urllib.request,
+        "urlopen",
+        return_value=_Response("https://redirected.example/summary?event=1", b"{}"),
+    ):
+        try:
+            MODULE.get_json(requested, attempts=1)
+        except RuntimeError as exc:
+            assert "redirected" in str(exc)
+        else:
+            raise AssertionError("redirected source response must fail closed")
+
+
+def test_source_response_has_a_bounded_body() -> None:
+    requested = MODULE.API + "/summary?event=1"
+    oversized = b"{" + b"x" * MODULE.MAX_RESPONSE_BYTES + b"}"
+    with patch.object(
+        MODULE.urllib.request,
+        "urlopen",
+        return_value=_Response(requested, oversized),
+    ):
+        try:
+            MODULE.get_json(requested, attempts=1)
+        except RuntimeError as exc:
+            assert "16 MB bound" in str(exc)
+        else:
+            raise AssertionError("oversized source response must fail closed")
 
 
 def test_default_window_tracks_the_current_college_season() -> None:
