@@ -127,6 +127,16 @@ describe("lower football player aggregation", () => {
     expect(ranked.map((player) => [player.athlete_id, player.primary])).toEqual([["a2", 4], ["a1", 2]]);
   });
 
+  it("keeps source-recorded zeroes while excluding absent metrics", () => {
+    const players = aggregateLowerFootballPlayers([
+      row({ category: "interceptions", keys: ["interceptions"], stats: ["0"] }),
+      row({ athlete_id: "a2", athlete: "Missing Interceptions", category: "interceptions", keys: ["interceptions"], stats: [""] }),
+    ], "d2", "interceptions");
+    expect(players).toHaveLength(1);
+    expect(players[0]).toMatchObject({ athlete_id: "a1", primary: 0, per_game: 0 });
+    expect(rankLowerFootballPlayers(players, "total")[0].rank).toBe(1);
+  });
+
   it("fails closed across divisions and categories", () => {
     expect(aggregateLowerFootballPlayers([row({ division: "d3" })], "d2", "passing")).toEqual([]);
     expect(aggregateLowerFootballPlayers([row()], "d2", "rushing")).toEqual([]);

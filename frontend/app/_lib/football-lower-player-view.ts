@@ -389,7 +389,11 @@ export function aggregateLowerFootballPlayers(
       ...player,
       per_game: player.games > 0 ? player.primary / player.games : 0,
     }))
-    .filter((player) => Object.prototype.hasOwnProperty.call(player.metrics, rankMetric) && player.primary > 0)
+    // A source-recorded zero is a real observation (for example, zero
+    // interceptions). Keep it in the cohort; only an absent metric is
+    // unavailable. The field-presence check prevents the default primary=0
+    // from turning a missing source value into a fabricated zero.
+    .filter((player) => Object.prototype.hasOwnProperty.call(player.metrics, rankMetric) && Number.isFinite(player.primary))
     .sort((left, right) => right.primary - left.primary || left.athlete.localeCompare(right.athlete) || left.athlete_id.localeCompare(right.athlete_id));
 }
 
