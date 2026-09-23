@@ -44,6 +44,13 @@
       "required": "scheduled games with stable game and team IDs"
     },
     {
+      "key": "target_schedule_alignment",
+      "label": "2027 WBB forecast-to-schedule alignment",
+      "status": "ready",
+      "detail": "2,283 pregame source rows reconcile to the published forecast IDs and participant IDs.",
+      "required": "one forecast row for every retained pregame source row with matching game and participant IDs"
+    },
+    {
       "key": "published_forecast_contract",
       "label": "Published WBB forecast contract",
       "status": "ready",
@@ -153,6 +160,15 @@
     }
   ],
   "missing_inputs": [],
+  "target_schedule_alignment": {
+    "source_rows": 2283,
+    "invalid_rows": 0,
+    "duplicate_ids": 0,
+    "forecast_rows": 2283,
+    "missing_forecasts": 0,
+    "extra_forecasts": 0,
+    "participant_mismatches": 0
+  },
   "next_steps": [
     "Import and hash-verify the 2023–26 women’s schedule and team-box releases under their exact release tags.",
     "Join only on stable game and team IDs; retain unmatched, duplicate and invalid rows in the audit output.",
