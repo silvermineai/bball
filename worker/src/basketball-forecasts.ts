@@ -249,7 +249,7 @@ export function forecastAnalysisReadiness(args: {
   if (estimateType === "cold_start") openItems.push("trained team history");
   const status = missing.some((item) => item === "valid prediction" || item === "forecast model edition")
     ? "review"
-    : missing.length
+    : missing.length || estimateType === "cold_start"
       ? "partial"
       : "ready";
   return {

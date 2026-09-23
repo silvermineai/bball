@@ -49,6 +49,26 @@ describe("basketball forecast availability", () => {
     });
   });
 
+  it("keeps a cold-start row partial even when descriptive context is present", () => {
+    expect(forecastAnalysisReadiness({
+      predictionIntegrity: "valid",
+      prediction: { home_margin: 4, estimate_type: "cold_start", total: 140, total_low: 113, total_high: 167, total_half_width: 27 },
+      forecastModelId: "model-2027",
+      matchupFactorsIntegrity: "valid",
+      matchupFactorsModelId: "model-2027",
+      matchupFactorsSameEdition: true,
+      startsAt: "2026-11-02T05:00:00Z",
+      sourceStart: "2026-11-02T05:00:00Z",
+      sourceTimeValid: true,
+      timeTbd: 0,
+    })).toMatchObject({
+      status: "partial",
+      estimate_type: "cold_start",
+      missing: [],
+      open_items: ["trained team history"],
+    });
+  });
+
   it("marks malformed or unlabelled forecast rows for review", () => {
     expect(forecastAnalysisReadiness({
       predictionIntegrity: "invalid",
