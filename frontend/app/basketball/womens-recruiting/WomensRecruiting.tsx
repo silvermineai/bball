@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { downloadCsv, toCsv, type CsvCell } from "../../_lib/csv";
+import { downloadCsv, toCsv } from "../../_lib/csv";
+import { womensRecruitingBoardCsvHeaders, womensRecruitingBoardCsvRows } from "../../_lib/womens-recruiting-board-export";
 import {
   rankWomensRecruitingProspects,
   womensRecruitingGradeBands,
   womensRecruitingPositionSupply,
-  type WomensRecruitingProspect,
   type WomensRecruitingHistory,
   type WomensRecruitingRelease,
 } from "../../_lib/womens-recruiting-intel";
@@ -20,27 +20,6 @@ function display(value: string | number | null | undefined) {
 function capturedLabel(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value.slice(0, 10) : date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
-}
-
-function exportRows(records: readonly WomensRecruitingProspect[], release: WomensRecruitingRelease): CsvCell[][] {
-  return records.map((record) => [
-    release.season,
-    record.athlete_id,
-    record.name,
-    record.position ?? null,
-    record.rank ?? null,
-    record.grade ?? null,
-    record.status ?? null,
-    record.committed_team_id ?? null,
-    record.committed_team_name ?? null,
-    record.high_school ?? null,
-    record.hometown ?? null,
-    record.height_inches ?? null,
-    record.weight_pounds && record.weight_pounds > 0 ? record.weight_pounds : null,
-    release.edition,
-    release.captured_at,
-    release.source.list_sha256,
-  ]);
 }
 
 export default function WomensRecruiting({ release: initialRelease, history }: { release: WomensRecruitingRelease; history?: WomensRecruitingHistory | null }) {
@@ -130,13 +109,17 @@ export default function WomensRecruiting({ release: initialRelease, history }: {
           </div>
           <span className="note">No national rank inferred</span>
         </div>
-        <p className="note">Rows are ordered by recorded grade, then name and athlete ID. Ties stay ties; the table does not manufacture ordinal ranks. The current release carries no source-ranked national ranks or destination IDs.</p>
+        <p className="note">Rows are ordered by recorded grade, then name and athlete ID. Ties stay ties; the table does not manufacture ordinal ranks. Source national, position, state and region ranks remain separate fields and show as unavailable when the release does not return them.</p>
         <div className="table-scroll">
           <table className="data-table">
-            <thead><tr><th>Prospect</th><th>Position</th><th className="numeric">Source grade</th><th>Status</th><th>Destination</th></tr></thead>
+            <thead><tr><th>Prospect</th><th>Position</th><th className="numeric">National rank</th><th className="numeric">Position rank</th><th className="numeric">State rank</th><th className="numeric">Region rank</th><th className="numeric">Source grade</th><th>Status</th><th>Destination</th></tr></thead>
             <tbody>{gradeLeaders.map((record) => <tr key={record.athlete_id}>
               <th scope="row"><strong>{record.name}</strong><small>Athlete ID {record.athlete_id}</small></th>
               <td>{display(record.position)}</td>
+              <td className="numeric">{record.rank == null ? "—" : `#${record.rank}`}</td>
+              <td className="numeric">{record.position_rank == null ? "—" : `#${record.position_rank}`}</td>
+              <td className="numeric">{record.state_rank == null ? "—" : `#${record.state_rank}`}</td>
+              <td className="numeric">{record.region_rank == null ? "—" : `#${record.region_rank}`}</td>
               <td className="numeric"><strong>{display(record.grade)}</strong></td>
               <td>{display(record.status)}</td>
               <td>{record.committed_team_name || "Unavailable"}</td>
@@ -152,9 +135,7 @@ export default function WomensRecruiting({ release: initialRelease, history }: {
           <h2 id="womens-recruiting-board">Recorded prospect board.</h2>
         </div>
         <div className="button-row">
-          <button className="button secondary" type="button" onClick={() => downloadCsv(`womens-prospects-${release.season}.csv`, toCsv([
-            "Class", "Athlete ID", "Prospect", "Position", "National rank", "Grade", "Status", "Destination ID", "Destination", "High school", "Hometown", "Height (in)", "Weight (lb)", "Release edition", "Captured", "List receipt SHA-256",
-          ], exportRows(filtered, release)))}>Download filtered CSV ↓</button>
+          <button className="button secondary" type="button" onClick={() => downloadCsv(`womens-prospects-${release.season}.csv`, toCsv([...womensRecruitingBoardCsvHeaders], womensRecruitingBoardCsvRows(filtered, release)))}>Download filtered CSV ↓</button>
         </div>
       </div>
       <div className="filter-row" style={{ marginBottom: 16 }}>
@@ -163,14 +144,17 @@ export default function WomensRecruiting({ release: initialRelease, history }: {
         <label className="control"><span>STATUS</span><select aria-label="Women's prospect status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option>{statuses.map((value) => <option key={value}>{value}</option>)}</select></label>
         <label className="control"><span>ROWS</span><select aria-label="Women's prospect rows" value={showRows} onChange={(event) => setShowRows(Number(event.target.value) as typeof showRows)}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select></label>
       </div>
-      <p className="note">{filtered.length.toLocaleString()} prospects match · sorted by recorded grade, then name. A missing rank or destination remains unavailable.</p>
+      <p className="note">{filtered.length.toLocaleString()} prospects match · sorted by recorded grade, then name. Missing source rank dimensions or destinations remain unavailable.</p>
       <div className="table-scroll">
         <table className="data-table">
-          <thead><tr><th>Prospect</th><th>Position</th><th className="numeric">National rank</th><th className="numeric">Grade</th><th>Status</th><th>Destination</th><th>High school / hometown</th><th className="numeric">Size</th></tr></thead>
+          <thead><tr><th>Prospect</th><th>Position</th><th className="numeric">National rank</th><th className="numeric">Position rank</th><th className="numeric">State rank</th><th className="numeric">Region rank</th><th className="numeric">Grade</th><th>Status</th><th>Destination</th><th>High school / hometown</th><th className="numeric">Size</th></tr></thead>
           <tbody>{visible.map((record) => <tr key={record.athlete_id}>
             <th scope="row"><strong>{record.name}</strong><small>Athlete ID {record.athlete_id}</small></th>
             <td>{display(record.position)}</td>
             <td className="numeric">{display(record.rank)}</td>
+            <td className="numeric">{display(record.position_rank)}</td>
+            <td className="numeric">{display(record.state_rank)}</td>
+            <td className="numeric">{display(record.region_rank)}</td>
             <td className="numeric">{display(record.grade)}</td>
             <td>{display(record.status)}</td>
             <td>{display(record.committed_team_name)}</td>
