@@ -96,6 +96,34 @@ class EspnPickcenterTests(unittest.TestCase):
         self.assertTrue(receipt["capture_truncated"])
         self.assertEqual(receipt["selection_strategy"], "nearest_two_thirds_plus_uniform_tail")
 
+    def test_successful_capture_keeps_response_and_run_clocks(self):
+        class SuccessfulResponse:
+            status_code = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def iter_content(self, chunk_size):
+                yield json.dumps(summary()).encode("utf-8")
+
+        games = [GAME]
+        with tempfile.TemporaryDirectory() as directory, \
+            patch.object(collector, "schedules", return_value=games), \
+            patch.object(collector, "_future_games", return_value=games), \
+            patch.object(collector, "verify_robots_policy", return_value={"robots_url": "https://site.web.api.espn.com/robots.txt", "robots_status": 200, "robots_sha256": "a" * 64, "crawl_delay_seconds": None}), \
+            patch.object(collector.requests, "get", return_value=SuccessfulResponse()), \
+            patch.object(collector, "CACHE", Path(directory)):
+            summaries, receipt = collector.fetch_upcoming(season=2027, horizon_days=30, limit=1)
+        self.assertEqual(len(summaries), 1)
+        item_clock = datetime.fromisoformat(summaries[0]["captured_at"].replace("Z", "+00:00"))
+        started = datetime.fromisoformat(receipt["capture_started_at"].replace("Z", "+00:00"))
+        completed = datetime.fromisoformat(receipt["captured_at"].replace("Z", "+00:00"))
+        self.assertLessEqual(started, item_clock)
+        self.assertLessEqual(item_clock, completed)
+
     def test_bounded_capture_samples_the_later_horizon_without_losing_near_term_games(self):
         games = [{**GAME, "id": str(index)} for index in range(10)]
         selected = select_capture_games(games, 6)
@@ -322,6 +350,25 @@ class EspnPickcenterTests(unittest.TestCase):
         self.assertEqual(receipt_payload["rejected_records"], 0)
         payload = json.loads(self.conn.execute("SELECT payload_json FROM audit_markets WHERE market='spreads'").fetchone()[0])
         self.assertEqual(payload["event_id"], GAME["id"])
+
+    def test_ingest_uses_item_clock_to_reject_a_post_tip_summary(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.executescript("""
+            CREATE TABLE audit_markets (
+              id TEXT PRIMARY KEY, sport TEXT NOT NULL, game_id TEXT NOT NULL,
+              provider TEXT NOT NULL, bookmaker TEXT NOT NULL, market TEXT NOT NULL,
+              captured_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload_json TEXT NOT NULL
+            );
+            CREATE TABLE audit_receipts (
+              id TEXT PRIMARY KEY, captured_at TEXT NOT NULL, provider TEXT NOT NULL,
+              payload_json TEXT NOT NULL
+            );
+        """)
+        receipt = {"captured_at": "2026-11-09T20:00:00Z", "sha256": "fixture"}
+        item = {"event_id": GAME["id"], "summary": summary(), "captured_at": "2026-11-10T02:00:01Z"}
+        result = ingest(self.conn, [item], receipt, [GAME], receipt["captured_at"])
+        self.assertEqual(result, {"accepted_markets": 0, "rejected_records": 1})
+        self.assertEqual(self.conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 0)
 
     def test_ingest_does_not_call_unpriced_summaries_rejected(self):
         self.conn = sqlite3.connect(":memory:")

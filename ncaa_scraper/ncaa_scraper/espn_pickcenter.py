@@ -215,9 +215,10 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
             pickcenter = item.get("summary", {}).get("pickcenter")
             if not isinstance(pickcenter, list) or not pickcenter:
                 continue
-            for bookmaker, market, updated, payload in parse_pickcenter(item["summary"], game, captured, receipt_id):
-                key = digest([SPORT, game["id"], PROVIDER, bookmaker, market, captured, payload])
-                conn.execute("INSERT OR IGNORE INTO audit_markets VALUES (?,?,?,?,?,?,?,?,?)", (key, SPORT, game["id"], PROVIDER, bookmaker, market, captured, updated, encoded(payload)))
+            item_captured = timestamp(item.get("captured_at") or receipt["captured_at"])
+            for bookmaker, market, updated, payload in parse_pickcenter(item["summary"], game, item_captured, receipt_id):
+                key = digest([SPORT, game["id"], PROVIDER, bookmaker, market, item_captured, payload])
+                conn.execute("INSERT OR IGNORE INTO audit_markets VALUES (?,?,?,?,?,?,?,?,?)", (key, SPORT, game["id"], PROVIDER, bookmaker, market, item_captured, updated, encoded(payload)))
                 accepted += 1
         except (KeyError, TypeError, ValueError):
             rejected += 1
@@ -412,16 +413,23 @@ def fetch_upcoming(
                     fetch_failures += 1
                     continue
                 (CACHE / f"espn-summary-{event_id}.json").write_bytes(body)
-                summaries.append({"event_id": event_id, "summary": summary, "url": url})
+                # ESPN does not expose a quote-update clock. Capture the
+                # response clock after the body has been read so a long,
+                # bounded slate capture cannot reuse its initial clock for a
+                # response that arrived after tip.
+                item_captured = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+                summaries.append({"event_id": event_id, "summary": summary, "url": url, "captured_at": item_captured})
         except (requests.RequestException, ValueError, json.JSONDecodeError):
             fetch_failures += 1
             continue
     diagnostics = summary_capture_diagnostics(summaries)
+    completed_at = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     receipt = {
         "provider": PROVIDER,
         "sport": SPORT,
         "season": season,
-        "captured_at": captured,
+        "captured_at": completed_at,
+        "capture_started_at": captured,
         "horizon_days": horizon_days,
         "event_ids": [item["event_id"] for item in summaries],
         "urls": [item["url"] for item in summaries],

@@ -212,16 +212,22 @@ def fetch_upcoming(season: int = 2026, horizon_days: int = DEFAULT_HORIZON_DAYS,
                     fetch_failures += 1
                     continue
                 (CACHE / f"espn-football-summary-{event_id}.json").write_bytes(body)
-                summaries.append({"event_id": event_id, "summary": summary, "url": url})
+                # Keep the actual response clock with each summary. Reusing
+                # the run-start clock could let a response fetched after tip
+                # qualify as a pregame quote during a long capture.
+                item_captured = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+                summaries.append({"event_id": event_id, "summary": summary, "url": url, "captured_at": item_captured})
         except (requests.RequestException, ValueError, json.JSONDecodeError):
             fetch_failures += 1
             continue
     summary_count, pickcenter_count = summary_capture_counts(summaries)
+    completed_at = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
     receipt = {
         "provider": PROVIDER,
         "sport": SPORT,
         "season": season,
-        "captured_at": captured,
+        "captured_at": completed_at,
+        "capture_started_at": captured,
         "horizon_days": horizon_days,
         "event_ids": [item["event_id"] for item in summaries],
         "urls": [item["url"] for item in summaries],
@@ -251,7 +257,8 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
         try:
             event_id = str(item["event_id"])
             game = by_id[event_id]
-            for bookmaker, market, updated, payload in parse_football_pickcenter(item["summary"], game, captured, receipt_id):
+            item_captured = timestamp(item.get("captured_at") or receipt["captured_at"])
+            for bookmaker, market, updated, payload in parse_football_pickcenter(item["summary"], game, item_captured, receipt_id):
                 # Football schedules live in the dedicated FOOTBALL_DB. Keep
                 # bounded display context in the ledger payload so the public
                 # market archive can read these rows without a cross-D1 join.
@@ -261,10 +268,10 @@ def ingest(conn: sqlite3.Connection, summaries: list[dict], receipt: dict, games
                     "home_name": str(game.get("home_name") or game["home_id"]),
                     "away_name": str(game.get("away_name") or game["away_id"]),
                 }
-                key = digest([SPORT, game["id"], PROVIDER, bookmaker, market, captured, payload])
+                key = digest([SPORT, game["id"], PROVIDER, bookmaker, market, item_captured, payload])
                 conn.execute(
                     "INSERT OR IGNORE INTO audit_markets VALUES (?,?,?,?,?,?,?,?,?)",
-                    (key, SPORT, game["id"], PROVIDER, bookmaker, market, captured, updated, encoded(payload)),
+                    (key, SPORT, game["id"], PROVIDER, bookmaker, market, item_captured, updated, encoded(payload)),
                 )
                 accepted += 1
         except (KeyError, TypeError, ValueError):

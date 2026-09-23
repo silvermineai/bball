@@ -184,6 +184,25 @@ class EspnFootballPickcenterTests(unittest.TestCase):
         self.assertEqual(receipt["summary_fetch_failures"], 2)
         self.assertEqual(receipt["summary_count"], 0)
 
+    def test_ingest_uses_item_clock_to_reject_a_post_tip_summary(self):
+        conn = sqlite3.connect(":memory:")
+        conn.executescript("""
+            CREATE TABLE audit_markets (
+              id TEXT PRIMARY KEY, sport TEXT NOT NULL, game_id TEXT NOT NULL,
+              provider TEXT NOT NULL, bookmaker TEXT NOT NULL, market TEXT NOT NULL,
+              captured_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload_json TEXT NOT NULL
+            );
+            CREATE TABLE audit_receipts (
+              id TEXT PRIMARY KEY, captured_at TEXT NOT NULL, provider TEXT NOT NULL,
+              payload_json TEXT NOT NULL
+            );
+        """)
+        receipt = {"captured_at": "2026-09-19T20:00:00Z", "sha256": "fixture"}
+        item = {"event_id": GAME["id"], "summary": summary(), "captured_at": "2026-09-20T19:00:01Z"}
+        result = ingest(conn, [item], receipt, [GAME], receipt["captured_at"])
+        self.assertEqual(result, {"accepted_markets": 0, "rejected_records": 1})
+        self.assertEqual(conn.execute("SELECT count(*) FROM audit_markets").fetchone()[0], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
