@@ -21,7 +21,11 @@ FORECAST = ROOT / "frontend/public/data/basketball/womens-forecast.json"
 
 
 def main() -> None:
-    result = assess(CACHE, forecast_path=FORECAST)
+    result = assess(
+        CACHE,
+        forecast_path=FORECAST,
+        target_schedule_path=CACHE / "wbb_schedule_2027.parquet",
+    )
     OUT.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     print(
         f"WBB forecast readiness: {result['status']} "
