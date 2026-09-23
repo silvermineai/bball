@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchJson } from "../../../_lib/fetch-json";
+import type { RecruitingPerson } from "../../../_lib/recruiting";
 import {
   combineProgramProspectClasses,
   loadProgramProspectClass,
@@ -23,12 +24,31 @@ export type MatchupRecruitingSummary = {
   listed: number;
   ranked: number;
   bestRank: number | null;
-  topProspects: Array<{ athleteId: string; name: string; rank: number; position: string | null; evidence: ProgramProspectRow["evidence"] }>;
+  topProspects: Array<{
+    athleteId: string;
+    name: string;
+    rank: number;
+    position: string | null;
+    evidence: ProgramProspectRow["evidence"];
+    production: NonNullable<RecruitingPerson["stats"]> | null;
+  }>;
 };
+
+/** Keep prior production attached only through a unique exact source ID. */
+export function exactMatchupProduction(
+  people: RecruitingPerson[],
+  athleteId: string,
+): NonNullable<RecruitingPerson["stats"]> | null {
+  if (!/^\d{1,15}$/.test(athleteId)) return null;
+  const matches = people.filter((person) => person.stats?.id === athleteId);
+  return matches.length === 1 ? matches[0].stats : null;
+}
 
 export function summarizeMatchupRecruiting(
   rows: ProgramProspectRow[],
   seasons: readonly number[] = [2026, 2027],
+  productionPeople: RecruitingPerson[] = [],
+  productionSeason = 2027,
 ): MatchupRecruitingSummary[] {
   return seasons.map((season) => {
     const classRows = rows.filter((row) => row.season === season);
@@ -43,6 +63,7 @@ export function summarizeMatchupRecruiting(
         rank: row.rank as number,
         position: row.position,
         evidence: row.evidence,
+        production: season === productionSeason ? exactMatchupProduction(productionPeople, row.athlete_id) : null,
       }));
     return {
       season,
@@ -95,11 +116,15 @@ export default function MatchupRecruitingContext({
   homeName,
   awayId,
   awayName,
+  productionPeople = [],
+  productionSeason = 2027,
 }: {
   homeId: string;
   homeName: string;
   awayId: string;
   awayName: string;
+  productionPeople?: RecruitingPerson[];
+  productionSeason?: number;
 }) {
   const [state, setState] = useState<LoadState>("loading");
   const [teams, setTeams] = useState<TeamResult[]>([]);
@@ -130,6 +155,9 @@ export default function MatchupRecruitingContext({
       <p className="note">
         The table joins the retained 2026 and 2027 prospect classes to each exact program ID. Recorded commitments and listed-school rows stay separate; neither establishes enrollment, eligibility, availability or a forecast role.
       </p>
+      <p className="note">
+        Prior production appears only for the reviewed {productionSeason} class release and a unique exact athlete ID. Games, minutes and rates describe the retained prior record; an unavailable link is not a zero.
+      </p>
       {state === "loading" ? (
         <p className="empty" role="status">Loading exact program recruiting records…</p>
       ) : state === "unavailable" ? (
@@ -151,7 +179,7 @@ export default function MatchupRecruitingContext({
             </thead>
             <tbody>
               {teams.flatMap((team) => {
-                const summaries = summarizeMatchupRecruiting(team.rows, CLASSES);
+                const summaries = summarizeMatchupRecruiting(team.rows, CLASSES, productionPeople, productionSeason);
                 return summaries.map((summary) => (
                   <tr key={`${team.teamId}-${summary.season}`}>
                     <th scope="row">
@@ -168,6 +196,7 @@ export default function MatchupRecruitingContext({
                       {summary.topProspects.length ? summary.topProspects.map((prospect) => (
                         <span className="table-inline-item" key={prospect.athleteId}>
                           <Link href={`/basketball/recruiting/prospect/?season=${summary.season}&id=${encodeURIComponent(prospect.athleteId)}`}>{prospect.name}</Link> <small>#{prospect.rank} · {prospect.position || "position unavailable"}</small>
+                          {prospect.production ? <small>{prospect.production.games} GP · {prospect.production.mpg == null ? "MIN/G unavailable" : `${prospect.production.mpg.toFixed(1)} MIN/G`} · {prospect.production.ppg == null ? "PTS/G unavailable" : `${prospect.production.ppg.toFixed(1)} PTS/G`} · {prospect.production.ts == null ? "TS% unavailable" : `${(prospect.production.ts * 100).toFixed(1)}% TS`}</small> : <small>Prior production unavailable for this exact ID</small>}
                         </span>
                       )) : <span className="muted">No ranked row retained</span>}
                     </td>

@@ -528,6 +528,8 @@ export default async function Page({
         homeName={g.home_name}
         awayId={g.away_id}
         awayName={g.away_name}
+        productionPeople={recruiting.people}
+        productionSeason={recruiting.season}
       />
       <section className="section brief-analysis-packet" aria-labelledby="brief-analysis-packet-title">
         <div className="section-heading">
