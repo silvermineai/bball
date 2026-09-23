@@ -612,6 +612,10 @@ def compare(prediction, quote, state):
                     else model_result or "pass"
                 ),
             )
+            if model_result is not None:
+                output["model_winner_correct"] = model_result == "win"
+            if market_result is not None:
+                output["market_winner_correct"] = market_result == "win"
     return output
 
 
@@ -838,6 +842,11 @@ def build_report(conn, now):
                     ].append(q)
         market_metrics = []
         for (model_id, provider, book, market), qs in sorted(grouped.items()):
+            paired_errors = [
+                (q["model_absolute_error"], q["market_absolute_error"])
+                for q in qs
+                if "model_absolute_error" in q and "market_absolute_error" in q
+            ]
             market_metrics.append(
                 {
                     "model_id": model_id,
@@ -872,6 +881,22 @@ def build_report(conn, now):
                     "model_results": dict(
                         Counter(q["model_result"] for q in qs if "model_result" in q)
                     ),
+                    "model_winner_accuracy": mean(
+                        int(q["model_winner_correct"])
+                        for q in qs
+                        if "model_winner_correct" in q
+                    ),
+                    "market_winner_accuracy": mean(
+                        int(q["market_winner_correct"])
+                        for q in qs
+                        if "market_winner_correct" in q
+                    ),
+                    "error_comparison": {
+                        "compared": len(paired_errors),
+                        "model_better": sum(model < market for model, market in paired_errors),
+                        "line_better": sum(market < model for model, market in paired_errors),
+                        "ties": sum(model == market for model, market in paired_errors),
+                    },
                 }
             )
         summaries[sport] = {
