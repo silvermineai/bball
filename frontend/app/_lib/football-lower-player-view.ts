@@ -31,6 +31,8 @@ export type LowerFootballPlayerArchive = {
     summary_url_template: string;
     team_url_template: string;
     receipt_count: number;
+    /** Counts by capture stage for releases produced with typed receipts. */
+    receipt_counts?: Record<LowerFootballReceiptKind, number>;
     receipt_sha256: string;
   };
   coverage: {
@@ -43,7 +45,7 @@ export type LowerFootballPlayerArchive = {
     rows_by_division: Record<"d2" | "d3", number>;
     players_by_division: Record<"d2" | "d3", number>;
   };
-  receipts: Array<{ url: string; fetched_at: string; sha256: string }>;
+  receipts: Array<{ kind?: LowerFootballReceiptKind; url: string; fetched_at: string; sha256: string }>;
   games: Array<{
     game_id: string;
     date: string | null;
@@ -56,9 +58,12 @@ export type LowerFootballPlayerArchive = {
 };
 
 const archiveDivisions = ["d2", "d3"] as const;
+const archiveReceiptKinds = ["scoreboard", "team", "summary"] as const;
+type LowerFootballReceiptKind = typeof archiveReceiptKinds[number];
 const sha256 = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
 const integer = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0;
 const text = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
+const receiptKind = (value: unknown): value is LowerFootballReceiptKind => archiveReceiptKinds.includes(value as LowerFootballReceiptKind);
 const dateString = (value: unknown) => value == null || (typeof value === "string" && !Number.isNaN(Date.parse(value)));
 
 function validLowerPlayerRow(value: unknown, season: number, gameIds: ReadonlySet<string>): value is LowerFootballRawRow {
@@ -97,14 +102,38 @@ export function validateLowerFootballPlayerArchive(value: unknown): LowerFootbal
     || !text(source.team_url_template) || !integer(source.receipt_count) || !sha256(source.receipt_sha256)) {
     throw new Error("Lower-division football player archive has an unsupported edition.");
   }
-  const receipts = Array.isArray(raw.receipts) ? raw.receipts.filter((item): item is { url: string; fetched_at: string; sha256: string } => {
+  const receipts = Array.isArray(raw.receipts) ? raw.receipts.filter((item): item is { kind?: LowerFootballReceiptKind; url: string; fetched_at: string; sha256: string } => {
     if (!item || typeof item !== "object") return false;
     const receipt = item as Record<string, unknown>;
-    return text(receipt.url) && text(receipt.fetched_at) && !Number.isNaN(Date.parse(receipt.fetched_at as string)) && sha256(receipt.sha256);
+    return (receipt.kind == null || receiptKind(receipt.kind))
+      && text(receipt.url) && text(receipt.fetched_at)
+      && !Number.isNaN(Date.parse(receipt.fetched_at as string)) && sha256(receipt.sha256);
   }) : [];
   if (receipts.length !== source.receipt_count || receipts.length === 0
     || receipts.some((receipt) => !sha256(receipt.sha256))) {
     throw new Error("Lower-division football player archive has incomplete source receipts.");
+  }
+  // New captures classify every response used to build the release. A legacy
+  // release may omit this metadata, but a partial or mismatched declaration
+  // must not make an archive look fully sourced when a capture stage is absent.
+  const declaredReceiptCounts = source.receipt_counts;
+  const hasTypedReceipts = receipts.some((receipt) => receipt.kind != null);
+  if (declaredReceiptCounts != null || hasTypedReceipts) {
+    const counts = declaredReceiptCounts as Record<string, unknown> | undefined;
+    if (!counts || typeof counts !== "object" || Array.isArray(counts)
+      || Object.keys(counts).some((kind) => !archiveReceiptKinds.includes(kind as LowerFootballReceiptKind))
+      || !archiveReceiptKinds.every((kind) => integer(counts[kind]))
+      || receipts.some((receipt) => receipt.kind == null)) {
+      throw new Error("Lower-division football player archive has incomplete typed source receipts.");
+    }
+    const actualReceiptCounts = Object.fromEntries(archiveReceiptKinds.map((kind) => [
+      kind,
+      receipts.filter((receipt) => receipt.kind === kind).length,
+    ]));
+    if (archiveReceiptKinds.some((kind) => counts[kind] !== actualReceiptCounts[kind])
+      || archiveReceiptKinds.reduce((total, kind) => total + (counts[kind] as number), 0) !== source.receipt_count) {
+      throw new Error("Lower-division football player archive receipt counts do not match its receipts.");
+    }
   }
   // The builder computes the aggregate digest from sorted response hashes.
   // The static client validates the digest shape and every receipt identity;

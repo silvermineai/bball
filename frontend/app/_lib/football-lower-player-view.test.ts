@@ -42,6 +42,21 @@ describe("lower football player aggregation", () => {
     expect(() => validateLowerFootballPlayerArchive({ ...validArchive(), coverage: { ...validArchive().coverage, players: 2 } })).toThrow(/coverage does not match/);
   });
 
+  it("validates typed receipt stages when a release declares them", () => {
+    const typed = validArchive();
+    typed.source.receipt_counts = { scoreboard: 0, team: 0, summary: 1 };
+    typed.receipts[0].kind = "summary";
+    expect(validateLowerFootballPlayerArchive(typed).receipts[0].kind).toBe("summary");
+    expect(() => validateLowerFootballPlayerArchive({
+      ...typed,
+      source: { ...typed.source, receipt_counts: { scoreboard: 1, team: 0, summary: 0 } },
+    })).toThrow(/receipt counts do not match/);
+    expect(() => validateLowerFootballPlayerArchive({
+      ...typed,
+      receipts: [{ ...typed.receipts[0], kind: undefined }],
+    })).toThrow(/incomplete typed source receipts/);
+  });
+
   it("rejects rows when source keys cannot be paired to exactly one raw value", () => {
     expect(() => validateLowerFootballPlayerArchive({
       ...validArchive(),
