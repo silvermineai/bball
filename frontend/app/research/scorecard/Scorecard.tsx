@@ -10,6 +10,7 @@ import { comparisonGateStateLabel, marketComparisonReadinessChecklist } from "..
 import { gameMarketReadinessExport, gameMarketReadinessLabel } from "../../_lib/game-market-readiness";
 import { timingQualifiedFootballMarketMetrics, type FootballMarketBenchmarkMetric } from "../../_lib/football-market-benchmark";
 import { downloadCsv, toCsv } from "../../_lib/csv";
+import { matchesMarketQueueFilter, summarizeMarketQueue, type MarketQueueFilter } from "../../_lib/market-queue";
 const exportHeaders = ["Sport", "Season", "Game ID", "Away", "Home", "Scheduled start", "Model", "Estimate type", "Generated", "Registered", "Status", "Home margin", "Total", "Home win probability", "Margin low", "Margin high", "Actual margin", "Actual total", "Market status", "Market readiness", "Retained market observations", "Eligible market observations", "Comparable market observations", "Selected market comparisons", "Quote count", "Quotes JSON"];
 const exportRow = (sport: "football" | "basketball", g: Ledger["games"][number]) => [sport, g.season, g.game_id, g.away_name, g.home_name, g.starts_at, g.model_id, g.estimate_type || "unknown", g.generated_at, g.registered_at, reasons[g.status] || g.status, g.home_margin, g.total, g.home_win_probability, g.margin_low, g.margin_high, g.actual_margin, g.actual_total, ...gameMarketReadinessExport(g.market_readiness), g.comparisons.length, JSON.stringify(g.comparisons)];
 type RetrospectiveBenchmark = {
@@ -81,6 +82,10 @@ export default function Scorecard() {
   const [liveForecastCoverage, setLiveForecastCoverage] = useState<ForecastCatalog["coverage"] | null>(null);
   const [query, setQuery] = useState(params.get("q") || ""),
     [status, setStatus] = useState(params.get("status") || "all"),
+    [marketQueue, setMarketQueue] = useState<MarketQueueFilter>(() => {
+      const value = params.get("market_queue");
+      return value === "qualified" || value === "needs_capture" || value === "withheld" || value === "unavailable" || value === "excluded" ? value : "all";
+    }),
     [page, setPage] = useState(() => {
       const value = Number(params.get("page") || 0);
       return Number.isInteger(value) && value > 0 ? value : 0;
@@ -112,9 +117,10 @@ export default function Scorecard() {
     const next = new URLSearchParams({ sport });
     if (query.trim()) next.set("q", query.trim());
     if (status !== "all") next.set("status", status);
+    if (marketQueue !== "all") next.set("market_queue", marketQueue);
     if (page) next.set("page", String(page));
     window.history.replaceState(null, "", `${window.location.pathname}?${next}`);
-  }, [sport, query, status, page]);
+  }, [sport, query, status, marketQueue, page]);
   const refresh = () => {
     const c = new AbortController();
     setRefreshing(true);
@@ -215,11 +221,13 @@ export default function Scorecard() {
     (g) =>
       g.sport === sport &&
       (status === "all" || g.status === status) &&
+      matchesMarketQueueFilter(g, marketQueue) &&
       (g.home_name + " " + g.away_name)
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
   const pendingMarketMetrics = summary.pending_market_metrics || [];
+  const marketQueueSummary = summarizeMarketQueue(data.games.filter((game) => game.sport === sport));
   const qualifiedBenchmark = timingQualifiedFootballMarketMetrics(benchmark?.metrics.timing_qualified);
   const marketReadiness = marketReadinessState(
     marketMetadata,
@@ -606,6 +614,25 @@ export default function Scorecard() {
           </p>
         )}
       </section>
+      <section className="paper-panel" style={{ marginTop: 24 }} aria-labelledby="market-queue-title">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Upcoming forecast slate / line capture</div>
+            <h2 id="market-queue-title">Know which games still need market evidence.</h2>
+          </div>
+          <span className="note">{marketQueueSummary.upcoming.toLocaleString()} scheduled or awaiting result</span>
+        </div>
+        <p className="note">
+          This queue describes the exact forecast rows that can receive a pregame quote. A missing quote is left missing; these counts never infer a line from the model or schedule. Use the market queue filter below to open the corresponding forecast rows.
+        </p>
+        <div className="ledger-metrics" style={{ marginTop: 16 }} aria-label="Upcoming market queue counts">
+          <span>Qualified quote <b>{marketQueueSummary.qualified.toLocaleString()}</b></span>
+          <span>Needs capture <b>{marketQueueSummary.needs_capture.toLocaleString()}</b></span>
+          <span>Quote withheld <b>{marketQueueSummary.withheld.toLocaleString()}</b></span>
+          <span>Readiness unavailable <b>{marketQueueSummary.unavailable.toLocaleString()}</b></span>
+          <span>Forecast excluded <b>{marketQueueSummary.excluded.toLocaleString()}</b></span>
+        </div>
+      </section>
       {!m.games && (
         <p className="empty">
           No eligible registered games have a verified final in this data
@@ -795,7 +822,7 @@ export default function Scorecard() {
                 setPage(0);
               }}
             >
-              <option value="all">All registered games</option>
+            <option value="all">All registered games</option>
               {[
                 "scheduled",
                 "awaiting_result",
@@ -808,6 +835,23 @@ export default function Scorecard() {
                   {reasons[s]}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="control">
+            <span>MARKET QUEUE</span>
+            <select
+              value={marketQueue}
+              onChange={(e) => {
+                setMarketQueue(e.target.value as MarketQueueFilter);
+                setPage(0);
+              }}
+            >
+              <option value="all">All market states</option>
+              <option value="qualified">Qualified quote</option>
+              <option value="needs_capture">Needs capture</option>
+              <option value="withheld">Quote withheld</option>
+              <option value="unavailable">Readiness unavailable</option>
+              <option value="excluded">Forecast excluded</option>
             </select>
           </label>
         </div>
