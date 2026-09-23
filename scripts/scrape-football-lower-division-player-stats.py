@@ -97,6 +97,30 @@ def get_json(url: str, attempts: int = 3) -> tuple[dict[str, Any], str, str]:
     raise RuntimeError(f"ESPN request failed: {url}: {last}")
 
 
+def typed_receipts(
+    results: list[tuple[dict[str, Any], str, str]],
+    kind: str,
+    fetched_at: str,
+) -> list[dict[str, str]]:
+    """Turn every response used by a capture into an auditable receipt.
+
+    Discovery and classification responses are evidence too.  Keeping their
+    URL and digest beside summary receipts prevents a later consumer from
+    verifying the player rows while losing the exact scoreboard or team
+    release that put an event in scope.
+    """
+
+    return [
+        {
+            "kind": kind,
+            "url": url,
+            "fetched_at": fetched_at,
+            "sha256": digest,
+        }
+        for _, url, digest in results
+    ]
+
+
 def dates_between(start: dt.date, end: dt.date):
     current = start
     while current <= end:
@@ -143,10 +167,13 @@ def capture(start: dt.date, end: dt.date, workers: int) -> dict[str, Any]:
         summary_results = list(pool.map(get_json, summary_urls))
     rows: list[dict[str, Any]] = []
     games: list[dict[str, Any]] = []
-    receipts: list[dict[str, str]] = []
     fetched_at = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+    receipts = (
+        typed_receipts(day_results, "scoreboard", fetched_at)
+        + typed_receipts(team_results, "team", fetched_at)
+        + typed_receipts(summary_results, "summary", fetched_at)
+    )
     for (payload, url, digest), (event_id, event) in zip(summary_results, sorted(valid_events.items())):
-        receipts.append({"url": url, "fetched_at": fetched_at, "sha256": digest})
         competition = event.get("competitions", [{}])[0]
         competitors = competition.get("competitors", [])
         games.append({
@@ -188,6 +215,10 @@ def capture(start: dt.date, end: dt.date, workers: int) -> dict[str, Any]:
                         "stats": aligned_values,
                     })
     digest = hashlib.sha256("".join(sorted(item["sha256"] for item in receipts)).encode()).hexdigest()
+    receipt_counts = {
+        kind: sum(item["kind"] == kind for item in receipts)
+        for kind in ("scoreboard", "team", "summary")
+    }
     return {
         "schema_version": 1,
         "sport": "football",
@@ -196,8 +227,8 @@ def capture(start: dt.date, end: dt.date, workers: int) -> dict[str, Any]:
         "generated_at": fetched_at,
         "scope": "ESPN group-35 events classified by exact ESPN team group IDs 57 (D2) and 58 (D3)",
         "source_policy": "Only rows with stable ESPN athlete/team IDs and an exact source team group enter the release; missing categories remain missing.",
-        "source": {"publisher": "ESPN", "scoreboard_url": f"{API}/scoreboard?dates={{yyyymmdd}}&groups=35", "summary_url_template": f"{API}/summary?event={{event_id}}", "team_url_template": f"{API}/teams/{{team_id}}", "receipt_count": len(receipts), "receipt_sha256": digest, **robots},
-        "coverage": {"events_discovered": len(events), "events_with_d2_d3_team": len(valid_events), "games": len(games), "player_rows": len(rows), "players": len({row["athlete_id"] for row in rows}), "teams": len({row["team_id"] for row in rows}), "rows_by_division": {"d2": sum(row["division"] == "d2" for row in rows), "d3": sum(row["division"] == "d3" for row in rows)}, "players_by_division": {"d2": len({row["athlete_id"] for row in rows if row["division"] == "d2"}), "d3": len({row["athlete_id"] for row in rows if row["division"] == "d3"})}},
+        "source": {"publisher": "ESPN", "scoreboard_url": f"{API}/scoreboard?dates={{yyyymmdd}}&groups=35", "summary_url_template": f"{API}/summary?event={{event_id}}", "team_url_template": f"{API}/teams/{{team_id}}", "receipt_count": len(receipts), "receipt_counts": receipt_counts, "receipt_sha256": digest, **robots},
+        "coverage": {"events_discovered": len(events), "events_with_d2_d3_team": len(valid_events), "games": len(games), "player_rows": len(rows), "players": len({row["athlete_id"] for row in rows}), "teams": len({row["team_id"] for row in rows}), "rows_by_division": {"d2": sum(row["division"] == "d2" for row in rows), "d3": sum(row["division"] == "d3" for row in rows)}, "players_by_division": {"d2": len({row["athlete_id"] for row in rows if row["division"] == "d2"}), "d3": len({row["athlete_id"] for row in rows if row["division"] == "d3"})}, "receipt_counts": receipt_counts},
         "receipts": receipts,
         "games": games,
         "rows": rows,

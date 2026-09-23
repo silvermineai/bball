@@ -29,6 +29,18 @@ def test_provider_values_are_padded_without_inventing_values() -> None:
     assert MODULE.align_provider_values(["yards"], [None]) == [""]
 
 
+def test_all_discovery_and_capture_responses_get_typed_receipts() -> None:
+    results = [
+        ({"events": []}, "https://example.test/scoreboard", "a" * 64),
+        ({"team": {}}, "https://example.test/teams/1", "b" * 64),
+    ]
+    receipts = MODULE.typed_receipts(results, "team", "2026-09-22T00:00:00Z")
+    assert receipts == [
+        {"kind": "team", "url": "https://example.test/scoreboard", "fetched_at": "2026-09-22T00:00:00Z", "sha256": "a" * 64},
+        {"kind": "team", "url": "https://example.test/teams/1", "fetched_at": "2026-09-22T00:00:00Z", "sha256": "b" * 64},
+    ]
+
+
 def test_robots_policy_requires_permission_for_the_exact_api_origin() -> None:
     body = "User-agent: *\nAllow: /apis/site/v2/\nCrawl-delay: 2\n"
     result = MODULE.validate_robots(
