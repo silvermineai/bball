@@ -34,6 +34,7 @@ from .basketball_model import (
     fit,
     forecast,
     raw_predict,
+    valid_total_interval,
 )
 from .basketball_sources import client
 from .football_sources import ROOT, utcnow
@@ -189,16 +190,9 @@ def metrics(rows, method):
         probabilities.append(min(1 - 1e-6, max(1e-6, p["home_win_probability"])))
         outcomes.append(float(row["home_score"] > row["away_score"]))
         covered.append(p["margin_low"] <= margin <= p["margin_high"])
-        total_interval_values = [p.get(key) for key in ("total", "total_low", "total_high", "total_half_width")]
-        if (
-            all(isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) for value in total_interval_values)
-            and total_interval_values[3] > 0
-            and total_interval_values[1] <= total_interval_values[0] <= total_interval_values[2]
-            and abs((total_interval_values[0] - total_interval_values[1]) - total_interval_values[3]) <= 0.1
-            and abs((total_interval_values[2] - total_interval_values[0]) - total_interval_values[3]) <= 0.1
-        ):
+        if valid_total_interval(p):
             total_interval_games += 1
-            total_interval_covered.append(total_interval_values[1] <= actual_total <= total_interval_values[2])
+            total_interval_covered.append(p["total_low"] <= actual_total <= p["total_high"])
     errors, probabilities, outcomes = map(np.asarray, (errors, probabilities, outcomes))
     return {
         "games": len(rows),

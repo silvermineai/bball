@@ -206,6 +206,26 @@ class EvaluationTest(unittest.TestCase):
                 "preseason": prediction,
                 "weekly": prediction,
             })
+        # The production artifact accepts only a symmetric interval within
+        # the publication tolerance.  This used to pass the looser rolling
+        # evaluator tolerance and inflate its coverage denominator.
+        malformed = {
+            "home_margin": 0,
+            "total": 145,
+            "total_low": 134.92,
+            "total_high": 155,
+            "total_half_width": 10,
+            "home_win_probability": 0.5,
+            "margin_low": -5,
+            "margin_high": 5,
+        }
+        rows.append({
+            "home_score": 75,
+            "away_score": 75,
+            "starts_at": "2025-01-06T20:00:00Z",
+            "preseason": malformed,
+            "weekly": malformed,
+        })
         result = metrics(rows, "preseason")
         self.assertEqual(result["total_interval_games"], 2)
         self.assertAlmostEqual(result["total_interval_coverage"], 0.5)
