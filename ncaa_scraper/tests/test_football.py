@@ -81,6 +81,18 @@ class ModelTests(unittest.TestCase):
         pending["completed"] = 0
         self.assertFalse(eligible(pending, cutoff))
 
+    def test_calibrated_forecast_reports_independent_total_interval(self):
+        model = fit([game(i) for i in range(160)])
+        model["calibration"] = {
+            "logistic_coefficients": [0.0, 0.1],
+            "margin_half_width": 10.0,
+            "total_half_width": 18.0,
+        }
+        prediction = forecast(model, game(1))
+        self.assertEqual(prediction["total_half_width"], 18.0)
+        self.assertAlmostEqual(prediction["total_low"], prediction["total"] - 18.0, delta=0.1)
+        self.assertAlmostEqual(prediction["total_high"], prediction["total"] + 18.0, delta=0.1)
+
     def test_malformed_final_rows_are_excluded_before_model_fit(self):
         cutoff = "2026-09-04T00:00:00Z"
         for key, value in (
@@ -109,6 +121,8 @@ class ModelTests(unittest.TestCase):
             {g["season"] for g in tracked.call_args_list[1].args[0]}, {2022, 2023, 2024}
         )
         self.assertEqual(model["evaluation"]["games"], 150)
+        self.assertEqual(model["evaluation"]["total_interval_games"], model["evaluation"]["games"])
+        self.assertIsNotNone(model["evaluation"]["total_interval_coverage"])
         self.assertEqual(model["evaluation"]["training_seasons"], [2022, 2023, 2024])
 
     def test_future_results_cannot_change_the_model(self):

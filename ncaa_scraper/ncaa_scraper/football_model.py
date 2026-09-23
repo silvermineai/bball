@@ -127,6 +127,9 @@ def calibrate(games: list[dict], model: dict) -> dict:
     if not np.all(np.isfinite(coef)) or coef[1] <= 0:
         raise ValueError("Calibration must increase with projected home margin")
     errors = [abs(p[0] - g["home_score"] + g["away_score"]) for g, p in pairs]
+    total_errors = [
+        abs(p[1] - (g["home_score"] + g["away_score"])) for g, p in pairs
+    ]
     return {
         "season": min(g["season"] for g, _ in pairs),
         "games": len(pairs),
@@ -135,6 +138,9 @@ def calibrate(games: list[dict], model: dict) -> dict:
         "logistic_coefficients": coef.tolist(),
         "logistic_penalty": 0.01,
         "margin_half_width": float(np.quantile(errors, 0.8)),
+        # Total-score uncertainty is calibrated independently from margin
+        # uncertainty on the same dated games.
+        "total_half_width": float(np.quantile(total_errors, 0.8)),
         "training_seasons": model["training_seasons"],
         "latest_training_kickoff": model["latest_training_kickoff"],
         "latest_calibration_kickoff": max(g["kickoff"] for g, _ in pairs),
@@ -245,6 +251,22 @@ def train_and_evaluate(
                         ]
                     )
                 ),
+                "total_interval_coverage": float(
+                    np.mean(
+                        [
+                            p["total_low"]
+                            <= g["home_score"] + g["away_score"]
+                            <= p["total_high"]
+                            for g, p in predicted
+                            if "total_low" in p and "total_high" in p
+                        ]
+                    )
+                )
+                if any("total_low" in p and "total_high" in p for _, p in predicted)
+                else None,
+                "total_interval_games": sum(
+                    "total_low" in p and "total_high" in p for _, p in predicted
+                ),
                 "reliability": bins,
                 "design": "Fixed preseason holdout; no holdout games used to fit coefficients. Hyperparameters fixed in code; not tuned on holdout.",
                 "probability_note": "Logistic probabilities and empirical 80% ranges are calibrated on the preceding season, then evaluated on this separate holdout. Ties are excluded from binary metrics.",
@@ -254,6 +276,7 @@ def train_and_evaluate(
                 "Team identity, home field and historical scores only; preseason roster changes can be material.",
                 "Unseen teams and non-FBS opponents receive no prediction.",
                 "A prior-season 80th-percentile absolute error sets the symmetric margin range; its nominal level is not a future guarantee.",
+                "A separate prior-season 80th-percentile total-score error sets the total range; it is not reused from the margin range.",
                 "Calibration and fixed preseason evaluation are retrospective; production may include completed current-season games.",
                 "Historical results may include source corrections published after games.",
             ],
@@ -316,7 +339,7 @@ def forecast(model: dict, game: dict) -> dict | None:
         # Retained v1 model artifacts must still reproduce their original forecasts.
         probability = 0.5 * (1 + math.erf(margin / (model["sigma"] * math.sqrt(2))))
         width = 1.281552 * model["sigma"]
-    return {
+    result = {
         "home_margin": round(margin, 2),
         "total": round(total, 2),
         "home_score": round((total + margin) / 2, 1),
@@ -325,6 +348,21 @@ def forecast(model: dict, game: dict) -> dict | None:
         "margin_low": round(margin - width, 1),
         "margin_high": round(margin + width, 1),
     }
+    total_width = model.get("calibration", {}).get("total_half_width")
+    if (
+        isinstance(total_width, (int, float))
+        and not isinstance(total_width, bool)
+        and math.isfinite(total_width)
+        and total_width > 0
+    ):
+        result.update(
+            {
+                "total_low": round(total - total_width, 1),
+                "total_high": round(total + total_width, 1),
+                "total_half_width": round(total_width, 1),
+            }
+        )
+    return result
 
 
 def train_division_model(
