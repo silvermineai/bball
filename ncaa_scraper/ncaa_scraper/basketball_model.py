@@ -346,6 +346,18 @@ def calibrate_fallback_total_width(games, model, default):
     )
 
 
+def valid_total_interval(prediction):
+    """Return whether a prediction carries a finite, symmetric total range."""
+    values = [prediction.get(key) for key in ("total", "total_low", "total_high", "total_half_width")]
+    return (
+        all(isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) for value in values)
+        and values[3] > 0
+        and values[1] <= values[0] <= values[2]
+        and abs((values[0] - values[1]) - values[3]) <= 0.05
+        and abs((values[2] - values[0]) - values[3]) <= 0.05
+    )
+
+
 def forecast(model, game):
     p = raw_predict(model, game)
     if p is None:
@@ -443,6 +455,11 @@ def train(games, cutoff, target_season=2027):
     errors = np.array(
         [p["home_margin"] - (g["home_score"] - g["away_score"]) for g, p in scored]
     )
+    total_interval_rows = [
+        (g, p)
+        for g, p in scored
+        if valid_total_interval(p)
+    ]
     y = np.array([float(g["home_score"] > g["away_score"]) for g, _ in scored])
     probs = np.clip([p["home_win_probability"] for _, p in scored], 1e-6, 1 - 1e-6)
     baseline = np.mean(
@@ -477,15 +494,19 @@ def train(games, cutoff, target_season=2027):
                 "interval_coverage": float(
                     np.mean(np.abs(errors) <= calibration["margin_half_width"])
                 ),
-                "total_interval_coverage": float(
-                    np.mean(
-                        [
-                            abs(p["total"] - g["home_score"] - g["away_score"])
-                            <= calibration["total_half_width"]
-                            for g, p in scored
-                        ]
+                "total_interval_coverage": (
+                    float(
+                        np.mean(
+                            [
+                                p["total_low"] <= g["home_score"] + g["away_score"] <= p["total_high"]
+                                for g, p in total_interval_rows
+                            ]
+                        )
                     )
+                    if total_interval_rows
+                    else None
                 ),
+                "total_interval_games": len(total_interval_rows),
                 "baseline_margin_mae": float(
                     np.mean(
                         [

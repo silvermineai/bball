@@ -253,6 +253,8 @@ class BasketballModelTests(unittest.TestCase):
         )
         self.assertEqual(model["calibration"]["season"], 2025)
         self.assertEqual(model["evaluation"]["season"], 2026)
+        self.assertEqual(model["evaluation"]["total_interval_games"], model["evaluation"]["games"])
+        self.assertIsNotNone(model["evaluation"]["total_interval_coverage"])
         self.assertEqual(model, train(games + [sample(1, 2027)], cutoff))
         changed = [
             {**g, "home_score": g["home_score"] + 50} if g["season"] == 2026 else g
