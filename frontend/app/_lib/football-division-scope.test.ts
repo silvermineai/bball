@@ -14,7 +14,7 @@ describe("football division publication boundary", () => {
     expect(footballDivisionAvailability("2")).toEqual({
       division: "2",
       scheduleRows: true,
-      playerStats: false,
+      playerStats: "partial",
       teamStats: true,
       rankings: true,
       predictions: true,

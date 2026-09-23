@@ -10,7 +10,7 @@ export default function FootballDivisionAvailability({ division }: { division: L
       <div className="eyebrow">MEN&apos;S FOOTBALL · D{availability.division}</div>
       <h2 id="football-division-availability-title">D{availability.division} schedule and observed records</h2>
       <p>
-        The retained football edition includes upcoming Division {availability.division} schedule rows, completed scores, source-derived team records, and an exact-division Silvermine rating and forecast when the training gate passes. The model uses only dated scores, venue, and team identity; player stats and player rankings remain a separate source surface.
+        The retained football edition includes upcoming Division {availability.division} schedule rows, completed scores, source-derived team records, and an exact-division Silvermine rating and forecast when the training gate passes. An exact-ID observed player archive and within-division production rankings are also available from retained game summaries. That archive is partial: unobserved games, missing categories and the canonical national player-stat release remain unavailable, and the model uses only dated scores, venue and team identity.
       </p>
       <DivisionCoverageMatrix sport="football" gender="men" division={availability.division} />
       <LowerDivisionResults initialDivision={availability.division === "3" ? "d3" : "d2"} />

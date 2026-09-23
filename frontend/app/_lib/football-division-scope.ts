@@ -5,7 +5,10 @@ export type LowerFootballDivision = "2" | "3";
 /**
  * Lower football divisions currently have schedule rows and score-derived
  * team records in the retained edition. Keep the boundary explicit so UI
- * links never imply player-stat coverage or opponent-adjusted ratings.
+ * links never imply complete national player-stat coverage or opponent-adjusted
+ * ratings. The retained lower-division event archive does provide exact-ID
+ * observed production rows, so the public scope describes those rows as
+ * partial rather than unavailable.
  */
 export function lowerFootballDivision(
   sport: "basketball" | "football",
@@ -19,7 +22,7 @@ export function footballDivisionAvailability(division: LowerFootballDivision) {
   return {
     division,
     scheduleRows: true,
-    playerStats: false,
+    playerStats: "partial" as const,
     teamStats: true,
     rankings: true,
     // The current retained lower-division release has independently gated

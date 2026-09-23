@@ -31,6 +31,16 @@ export default function Page() {
     models?: Record<"d2" | "d3", { id?: string } | null>;
     source?: { fetched_at?: string | null; sha256?: string | null };
   };
+  const lowerFootballPlayerStats = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "public/data/football/lower-division-player-stats-2026.json"), "utf8"),
+  ) as {
+    coverage: {
+      player_rows: number;
+      players: number;
+      rows_by_division: Record<"d2" | "d3", number>;
+      players_by_division: Record<"d2" | "d3", number>;
+    };
+  };
   const footballPlayerCatalog = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "public/data/football/player-catalog.json"), "utf8"),
   ) as {
@@ -541,8 +551,8 @@ export default function Page() {
               <tr><td><strong>Women&apos;s basketball</strong></td><td>D2</td><td className="numeric">{count(womensLowerSourceRows("d2"))}</td><td>Source-native individual leaderboard rows; names and team slugs only, with no stable-ID archive or D1 substitution</td><td><Link href="/basketball/?gender=women&division=2">View D2 tables →</Link></td></tr>
               <tr><td><strong>Women&apos;s basketball</strong></td><td>D3</td><td className="numeric">{count(womensLowerSourceRows("d3"))}</td><td>Source-native individual leaderboard rows; names and team slugs only, with no stable-ID archive or D1 substitution</td><td><Link href="/basketball/?gender=women&division=3">View D3 tables →</Link></td></tr>
               <tr><td><strong>Football</strong></td><td>D1 (FBS/FCS)</td><td className="numeric">{count(footballScopeRows.d1)}</td><td>Player archive, team ratings, forecasts and game evidence</td><td><Link href="/football/">Open desk →</Link></td></tr>
-              <tr><td><strong>Football</strong></td><td>D2</td><td className="numeric">{count(footballScopeRows.d2)}</td><td>{count(lowerFootballResults.coverage.d2.score_complete)} completed score rows; {count(lowerFootballResults.coverage.d2.forecast_games ?? 0)} model forecasts and ratings when the exact-division history gate passes; player tables remain separate</td><td><Link href="/football/matchups/?division=2">Open D2 results →</Link></td></tr>
-              <tr><td><strong>Football</strong></td><td>D3</td><td className="numeric">{count(footballScopeRows.d3)}</td><td>{count(lowerFootballResults.coverage.d3.score_complete)} completed score rows; {count(lowerFootballResults.coverage.d3.forecast_games ?? 0)} model forecasts and ratings when the exact-division history gate passes; player tables remain separate</td><td><Link href="/football/matchups/?division=3">Open D3 results →</Link></td></tr>
+              <tr><td><strong>Football</strong></td><td>D2</td><td className="numeric">{count(lowerFootballPlayerStats.coverage.rows_by_division.d2)}</td><td>{count(lowerFootballPlayerStats.coverage.players_by_division.d2)} exact-ID players across {count(lowerFootballPlayerStats.coverage.rows_by_division.d2)} observed production rows; {count(lowerFootballResults.coverage.d2.score_complete)} completed score rows and {count(lowerFootballResults.coverage.d2.forecast_games ?? 0)} model forecasts when the exact-division history gate passes. Player coverage is partial.</td><td><Link href="/football/?division=2">Open D2 desk →</Link></td></tr>
+              <tr><td><strong>Football</strong></td><td>D3</td><td className="numeric">{count(lowerFootballPlayerStats.coverage.rows_by_division.d3)}</td><td>{count(lowerFootballPlayerStats.coverage.players_by_division.d3)} exact-ID players across {count(lowerFootballPlayerStats.coverage.rows_by_division.d3)} observed production rows; {count(lowerFootballResults.coverage.d3.score_complete)} completed score rows and {count(lowerFootballResults.coverage.d3.forecast_games ?? 0)} model forecasts when the exact-division history gate passes. Player coverage is partial.</td><td><Link href="/football/?division=3">Open D3 desk →</Link></td></tr>
             </tbody>
           </table>
         </div>
