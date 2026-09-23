@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballMetricOptions, lowerFootballPlayerRankValue, lowerFootballPlayerSelectionSearch, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, parseLowerFootballPlayerSelection, rankLowerFootballPlayers, validateLowerFootballPlayerArchive } from "./football-lower-player-view";
+import { aggregateLowerFootballPlayers, isRankableLowerFootballPlayer, lowerFootballGameContext, lowerFootballMetricKeys, lowerFootballMetricOptions, lowerFootballPlayerRankValue, lowerFootballPlayerSelectionSearch, lowerFootballRawExport, lowerFootballSourceFieldCoverage, lowerFootballSourceFields, lowerFootballSourceRows, parseLowerFootballPlayerSelection, rankLowerFootballPlayers, validateLowerFootballPlayerArchive, type LowerFootballPlayerArchive } from "./football-lower-player-view";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   season: 2026,
@@ -17,7 +17,7 @@ const row = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("lower football player aggregation", () => {
-  const validArchive = () => ({
+  const validArchive = (): LowerFootballPlayerArchive => ({
     schema_version: 1, sport: "football", gender: "men", season: 2026,
     generated_at: "2026-09-21T10:00:00Z", scope: "exact D2/D3 event archive",
     source_policy: "stable IDs only",
