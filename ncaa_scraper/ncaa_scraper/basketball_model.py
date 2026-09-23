@@ -49,8 +49,31 @@ def valid_count(value):
 
 
 def game_features(game, boxes):
-    """Require two valid final box scores. Missing values are not imputed to zero."""
-    if not game["completed"] or game["periods"] is None or game["periods"] < 2:
+    """Require a structurally valid final game and two complete box scores.
+
+    The efficiency model is especially sensitive to a bad schedule row: a
+    negative score, fractional period count, or a self-matchup can otherwise
+    make it into the fitted ratings while still producing finite arithmetic.
+    Reject those rows here, alongside the existing missing-box safeguards.
+    Missing values are never imputed to zero.
+    """
+    if not game.get("completed"):
+        return None
+    periods = game.get("periods")
+    if (
+        not valid_count(periods)
+        or not float(periods).is_integer()
+        or periods < 2
+    ):
+        return None
+    home_id, away_id = game.get("home_id"), game.get("away_id")
+    if home_id in (None, "") or away_id in (None, "") or home_id == away_id:
+        return None
+    if any(
+        not valid_count(game.get(key))
+        or not float(game[key]).is_integer()
+        for key in ("home_score", "away_score")
+    ):
         return None
     sides = []
     for side in ["home", "away"]:
@@ -93,7 +116,7 @@ def game_features(game, boxes):
             + box["turnovers"]
         )
     possessions = sum(sides) / 2
-    minutes = 40 + max(0, game["periods"] - 2) * 5
+    minutes = 40 + max(0, int(periods) - 2) * 5
     pace = possessions * 40 / minutes
     if not 35 <= pace <= 100:
         return None

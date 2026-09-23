@@ -258,6 +258,29 @@ class BasketballModelTests(unittest.TestCase):
             boxes[(game["id"], game["home_id"])][key] = value
             self.assertIsNone(game_features(game, boxes))
 
+    def test_possessions_withhold_structurally_invalid_schedule_rows(self):
+        game = sample(3, 2026)
+        box = {
+            "field_goals_attempted": 60,
+            "free_throws_attempted": 20,
+            "offensive_rebounds": 10,
+            "turnovers": 12,
+        }
+        boxes = {
+            (game["id"], game["home_id"]): box,
+            (game["id"], game["away_id"]): box,
+        }
+        for key, value in (
+            ("home_score", -1),
+            ("away_score", 70.5),
+            ("periods", 2.5),
+            ("periods", 1),
+        ):
+            self.assertIsNone(game_features({**game, key: value}, boxes))
+        self.assertIsNone(
+            game_features({**game, "away_id": game["home_id"]}, boxes)
+        )
+
     def test_three_windows_are_separate_and_future_results_cannot_leak(self):
         games = [sample(i, y) for y in [2024, 2025, 2026] for i in range(180)]
         cutoff = "2026-09-05T00:00:00Z"
