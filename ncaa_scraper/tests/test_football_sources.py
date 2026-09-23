@@ -9,6 +9,31 @@ from ncaa_scraper.football_sources import ReleaseClient, SourceUnavailable
 
 
 class ReleaseClientTests(unittest.TestCase):
+    def test_mismatched_cache_is_refetched_without_conditional_header(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "recruits_2026.csv"
+            path.write_bytes(b"id,name\n1,Corrupted\n")
+            receipt = root / "recruits_2026.csv.receipt.json"
+            receipt.write_text(json.dumps({
+                "dataset": "recruits",
+                "season": 2026,
+                "etag": "stale-etag",
+                "sha256": hashlib.sha256(b"id,name\n1,Returning Player\n").hexdigest(),
+            }))
+            response = Mock(
+                status_code=200,
+                headers={"ETag": "fresh-etag"},
+                content=b"id,name\n1,Returning Player\n",
+            )
+            client = ReleaseClient(root, {"recruits": ("test", "recruits_{year}.csv")})
+            client.session.get = Mock(return_value=response)
+            with patch("ncaa_scraper.football_sources.time.sleep"):
+                rows, returned = client.load("recruits", 2026)
+            self.assertEqual(rows, [{"id": "1", "name": "Returning Player"}])
+            self.assertEqual(returned["sha256"], hashlib.sha256(response.content).hexdigest())
+            self.assertEqual(client.session.get.call_args.kwargs["headers"], {})
+
     def test_transient_source_failure_uses_hash_verified_cache(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

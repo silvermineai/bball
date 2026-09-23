@@ -77,6 +77,17 @@ class ReleaseClient:
         )
         self.last_request = 0.0
 
+    @staticmethod
+    def _cache_matches_receipt(path: Path, receipt: dict) -> bool:
+        """Accept a local release only when its bytes match its receipt."""
+        expected = receipt.get("sha256")
+        if not path.exists() or not isinstance(expected, str) or len(expected) != 64:
+            return False
+        try:
+            return hashlib.sha256(path.read_bytes()).hexdigest() == expected
+        except OSError:
+            return False
+
     def _cached_after_transient_failure(
         self,
         path: Path,
@@ -117,10 +128,11 @@ class ReleaseClient:
         receipt_path = self.cache / (name + ".receipt.json")
         receipt = json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
         url = f"{RELEASES}/{tag}/{name}"
-        if refresh or not path.exists() or not receipt:
+        cache_verified = self._cache_matches_receipt(path, receipt)
+        if refresh or not cache_verified:
             headers = (
                 {"If-None-Match": receipt["etag"]}
-                if path.exists() and receipt.get("etag")
+                if cache_verified and receipt.get("etag")
                 else {}
             )
             # Release assets occasionally return a short-lived 5xx while the
