@@ -185,6 +185,7 @@ export type ForecastAnalysisReadiness = {
   model_edition: "matched" | "unavailable";
   matchup_factors: "same_edition" | "other_edition" | "unavailable";
   schedule: "source_confirmed" | "scheduled" | "time_tbd" | "unavailable";
+  total_interval: "calibrated" | "unavailable" | "invalid";
   missing: string[];
   open_items: string[];
 };
@@ -221,11 +222,27 @@ export function forecastAnalysisReadiness(args: {
       : args.startsAt
         ? "scheduled"
         : "unavailable";
+  const prediction = args.prediction;
+  const intervalFields = ["total", "total_low", "total_high", "total_half_width"] as const;
+  const intervalPresent = !!prediction && intervalFields.some((field) => field in prediction);
+  const totalInterval = args.predictionIntegrity !== "valid"
+    ? "invalid"
+    : !intervalPresent
+      ? "unavailable"
+      : intervalFields.every((field) => typeof prediction?.[field] === "number" && Number.isFinite(prediction[field] as number))
+        && (prediction?.total_half_width as number) > 0
+        && (prediction?.total_low as number) <= (prediction?.total as number)
+        && (prediction?.total as number) <= (prediction?.total_high as number)
+        && Math.abs(((prediction?.total as number) - (prediction?.total_low as number)) - (prediction?.total_half_width as number)) <= 0.1
+        && Math.abs(((prediction?.total_high as number) - (prediction?.total as number)) - (prediction?.total_half_width as number)) <= 0.1
+        ? "calibrated"
+        : "invalid";
   const missing: string[] = [];
   if (args.predictionIntegrity !== "valid") missing.push("valid prediction");
   if (modelEdition === "unavailable") missing.push("forecast model edition");
   if (matchupFactors === "unavailable") missing.push("same-edition Four Factor context");
   if (matchupFactors === "other_edition") missing.push("same-edition Four Factor context");
+  if (totalInterval !== "calibrated") missing.push("calibrated total range");
   const openItems: string[] = [];
   if (schedule !== "source_confirmed") openItems.push("source-confirmed tip");
   if (estimateType === "cold_start") openItems.push("trained team history");
@@ -241,6 +258,7 @@ export function forecastAnalysisReadiness(args: {
     model_edition: modelEdition,
     matchup_factors: matchupFactors,
     schedule,
+    total_interval: totalInterval,
     missing,
     open_items: openItems,
   };

@@ -5,7 +5,7 @@ describe("basketball forecast availability", () => {
   it("publishes ready primary analysis when the exact context is present", () => {
     expect(forecastAnalysisReadiness({
       predictionIntegrity: "valid",
-      prediction: { home_margin: 4 },
+      prediction: { home_margin: 4, total: 140, total_low: 122, total_high: 158, total_half_width: 18 },
       forecastModelId: "model-2027",
       matchupFactorsIntegrity: "valid",
       matchupFactorsModelId: "model-2027",
@@ -21,6 +21,7 @@ describe("basketball forecast availability", () => {
       model_edition: "matched",
       matchup_factors: "same_edition",
       schedule: "source_confirmed",
+      total_interval: "calibrated",
       missing: [],
       open_items: [],
     });
@@ -29,7 +30,7 @@ describe("basketball forecast availability", () => {
   it("keeps cold-start rows partial and names the missing evidence", () => {
     expect(forecastAnalysisReadiness({
       predictionIntegrity: "valid",
-      prediction: { home_margin: 4, estimate_type: "cold_start" },
+      prediction: { home_margin: 4, estimate_type: "cold_start", total: 140, total_low: 113, total_high: 167, total_half_width: 27 },
       forecastModelId: "model-2027",
       matchupFactorsIntegrity: "unavailable",
       matchupFactorsModelId: null,
@@ -42,6 +43,7 @@ describe("basketball forecast availability", () => {
       model_edition: "matched",
       matchup_factors: "unavailable",
       schedule: "time_tbd",
+      total_interval: "calibrated",
       missing: ["same-edition Four Factor context"],
       open_items: ["source-confirmed tip", "trained team history"],
     });
@@ -62,7 +64,25 @@ describe("basketball forecast availability", () => {
       model_edition: "unavailable",
       matchup_factors: "unavailable",
       schedule: "unavailable",
-      missing: ["valid prediction", "forecast model edition", "same-edition Four Factor context"],
+      total_interval: "invalid",
+      missing: ["valid prediction", "forecast model edition", "same-edition Four Factor context", "calibrated total range"],
+    });
+  });
+
+  it("marks a partial total interval as invalid instead of treating the total as calibrated", () => {
+    expect(forecastAnalysisReadiness({
+      predictionIntegrity: "valid",
+      prediction: { home_margin: 4, total: 140, total_low: 122, total_half_width: 18 },
+      forecastModelId: "model-2027",
+      matchupFactorsIntegrity: "valid",
+      matchupFactorsModelId: "model-2027",
+      matchupFactorsSameEdition: true,
+      startsAt: "2026-11-02T05:00:00Z",
+      timeTbd: 0,
+    })).toMatchObject({
+      status: "partial",
+      total_interval: "invalid",
+      missing: ["calibrated total range"],
     });
   });
 
@@ -252,7 +272,8 @@ describe("basketball forecast availability", () => {
         model_edition: "matched",
         matchup_factors: "other_edition",
         schedule: "scheduled",
-        missing: ["same-edition Four Factor context"],
+        total_interval: "unavailable",
+        missing: ["same-edition Four Factor context", "calibrated total range"],
         open_items: ["source-confirmed tip"],
       },
     });

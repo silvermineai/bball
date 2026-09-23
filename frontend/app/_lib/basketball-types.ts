@@ -39,6 +39,7 @@ export type BBForecastAnalysisReadiness = {
   model_edition: "matched" | "unavailable";
   matchup_factors: "same_edition" | "other_edition" | "unavailable";
   schedule: "source_confirmed" | "scheduled" | "time_tbd" | "unavailable";
+  total_interval: "calibrated" | "unavailable" | "invalid";
   missing: string[];
   open_items: string[];
 };
