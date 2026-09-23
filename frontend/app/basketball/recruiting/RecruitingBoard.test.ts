@@ -12,6 +12,7 @@ import {
   classSnapshotReceipt,
   currentRecruitingBoardResult,
   filterRecruitingProductionRows,
+  recruitingCoverageGap,
   recruitingBoardRequestSearch,
   recruitingExportCsv,
   recruitingPositionOpportunityRows,
@@ -55,6 +56,19 @@ describe("recruiting position opportunity", () => {
       position_opportunity: [{ position: "PG", total: 10, committed_total: 8, uncommitted_total: 2, ranked_total: 8, top100_total: 3, uncommitted_ranked_total: 2, uncommitted_top100_total: 1, best_uncommitted_rank: null, average_uncommitted_grade: 94 }],
     }))).toEqual([]);
     expect(recruitingPositionOpportunityRows(result({ edition: null }))).toEqual([]);
+  });
+});
+
+describe("recruiting field coverage", () => {
+  it("keeps the present and missing counts tied to the active denominator", () => {
+    expect(recruitingCoverageGap(72, 100)).toEqual({ present: 72, total: 100, missing: 28, share: 0.72 });
+  });
+
+  it("withholds malformed or zero denominators instead of filling gaps", () => {
+    expect(recruitingCoverageGap(101, 100)).toBeNull();
+    expect(recruitingCoverageGap(-1, 100)).toBeNull();
+    expect(recruitingCoverageGap(0, 0)).toBeNull();
+    expect(recruitingCoverageGap(72.5, 100)).toBeNull();
   });
 });
 

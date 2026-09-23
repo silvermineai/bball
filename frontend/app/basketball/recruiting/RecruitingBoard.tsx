@@ -736,7 +736,18 @@ const size = (height: number | null, weight: number | null) => {
   return [heightLabel, weightLabel].filter(Boolean).join(" · ") || "—";
 };
 const rate = (part: number, total: number) => total > 0 ? `${((part / total) * 100).toFixed(0)}%` : "—";
-const coverageRate = (part: number | undefined, total: number | undefined) => total ? `${Math.round(((part || 0) / total) * 100)}%` : "—";
+export type RecruitingCoverageGap = { present: number; total: number; missing: number; share: number };
+
+/** Keep field coverage tied to a valid source denominator; never coerce bad counts into coverage. */
+export function recruitingCoverageGap(part: number | undefined, total: number | undefined): RecruitingCoverageGap | null {
+  if (typeof part !== "number" || typeof total !== "number" || !Number.isSafeInteger(part) || !Number.isSafeInteger(total) || total <= 0 || part < 0 || part > total) return null;
+  return { present: part, total, missing: total - part, share: part / total };
+}
+
+export const coverageRate = (part: number | undefined, total: number | undefined) => {
+  const coverage = recruitingCoverageGap(part, total);
+  return coverage ? `${Math.round(coverage.share * 100)}% · ${coverage.missing.toLocaleString()} missing` : "Unavailable";
+};
 const captureLabel = (value: string | null) => value
   ? new Date(value).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
   : "capture date unavailable";
