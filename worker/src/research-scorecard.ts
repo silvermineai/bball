@@ -177,6 +177,12 @@ function settlementResult(outcome: number): "win" | "loss" | "push" {
   return "push";
 }
 
+/** Return the settled result for a decisive home/away probability pick. */
+function winnerSideResult(probabilityValue: number | null, homeWon: boolean): "win" | "loss" | null {
+  if (probabilityValue === null || probabilityValue === 0.5) return null;
+  return (probabilityValue > 0.5) === homeWon ? "win" : "loss";
+}
+
 function eligibility(row: Json, state: Json | null): string | null {
   if (!state) return "missing_schedule";
   const payload = parse(row.payload_json) || {};
@@ -457,6 +463,12 @@ function compare(prediction: Json, quote: Json, state: Json): Json | null {
       const marketPick = winnerPickCorrect(Number(output.market_home_probability), outcome === 1);
       if (modelPick !== null) output.model_winner_correct = modelPick;
       if (marketPick !== null) output.market_winner_correct = marketPick;
+      // Keep moneyline settlements in the same side-result funnel as spreads
+      // and totals. A 50/50 probability has no directional pick, so it is a
+      // pass rather than a fabricated win or loss.
+      output.model_result = winnerSideResult(modelWin, outcome === 1) || "pass";
+      output.line_result = winnerSideResult(Number(output.market_home_probability), outcome === 1) || "pass";
+      output.direction_result = Math.abs(Number(output.model_difference)) < 1e-9 ? "pass" : output.model_result;
     }
   }
   return output;

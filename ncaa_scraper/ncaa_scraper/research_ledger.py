@@ -587,9 +587,30 @@ def compare(prediction, quote, state):
             )
         elif margin != 0:
             outcome = int(margin > 0)
+            model_result = (
+                None
+                if p["home_win_probability"] == 0.5
+                else "win"
+                if (p["home_win_probability"] > 0.5) == bool(outcome)
+                else "loss"
+            )
+            market_result = (
+                None
+                if output["market_home_probability"] == 0.5
+                else "win"
+                if (output["market_home_probability"] > 0.5) == bool(outcome)
+                else "loss"
+            )
             output.update(
                 model_brier=(p["home_win_probability"] - outcome) ** 2,
                 market_brier=(output["market_home_probability"] - outcome) ** 2,
+                model_result=model_result or "pass",
+                line_result=market_result or "pass",
+                direction_result=(
+                    "pass"
+                    if abs(output["model_difference"]) < 1e-9
+                    else model_result or "pass"
+                ),
             )
     return output
 
@@ -844,6 +865,12 @@ def build_report(conn, now):
                         Counter(
                             q["direction_result"] for q in qs if "direction_result" in q
                         )
+                    ),
+                    "line_results": dict(
+                        Counter(q["line_result"] for q in qs if "line_result" in q)
+                    ),
+                    "model_results": dict(
+                        Counter(q["model_result"] for q in qs if "model_result" in q)
                     ),
                 }
             )

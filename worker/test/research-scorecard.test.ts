@@ -240,6 +240,9 @@ describe("live research scorecard", () => {
       away_price: 2.2,
       over_price: null,
       under_price: null,
+      line_result: "win",
+      model_result: "win",
+      direction_result: "win",
     })]);
     expect(body.sports.basketball.market_metrics).toMatchObject([{
       market: "h2h",

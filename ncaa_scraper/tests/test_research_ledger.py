@@ -275,6 +275,16 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(comparisons["spreads"]["direction_result"], "win")
         self.assertEqual(comparisons["totals"]["direction_result"], "pass")
         self.assertAlmostEqual(comparisons["h2h"]["market_home_probability"], 2 / 3)
+        self.assertEqual(comparisons["h2h"]["line_result"], "win")
+        self.assertEqual(comparisons["h2h"]["model_result"], "win")
+        self.assertEqual(comparisons["h2h"]["direction_result"], "win")
+        h2h_metric = next(
+            metric
+            for metric in self.report()["sports"]["football"]["market_metrics"]
+            if metric["market"] == "h2h"
+        )
+        self.assertEqual(h2h_metric["line_results"], {"win": 1})
+        self.assertEqual(h2h_metric["model_results"], {"win": 1})
         self.assertAlmostEqual(comparisons["spreads"]["market_overround"], 2 / 1.91 - 1)
         self.assertAlmostEqual(comparisons["totals"]["market_overround"], 2 / 1.91 - 1)
         self.assertAlmostEqual(comparisons["h2h"]["market_overround"], 0)

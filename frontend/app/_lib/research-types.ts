@@ -21,7 +21,7 @@ export type Comparison = {
   model_absolute_error?: number;
   market_absolute_error?: number;
   /** Settled result of the quoted home/away or over/under side. */
-  line_result?: "win" | "loss" | "push";
+  line_result?: "win" | "loss" | "push" | "pass";
   /** Settled result for the side indicated by the model difference. */
   model_result?: "win" | "loss" | "push" | "pass";
   direction_result?: string;
