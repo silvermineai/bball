@@ -5,12 +5,10 @@ await cp("out", "dist/client", { recursive: true });
 // Keep the generated sitemap reachable when a previous negative cache entry
 // exists for Next's conventional /sitemap.xml key.
 await cp("out/sitemap.xml", "dist/client/sitemap-index.xml");
-// The research ledger is served by the live scorecard API and is also synced
-// into Cloudflare D1. Keep the static build from copying its 40 MiB fallback
-// into Workers Assets, whose per-file limit is 25 MiB. Leaving the file in
-// `out` is useful for local inspection; it must not be part of the deployable
-// asset tree.
-await rm("dist/client/data/research/ledger.json", { force: true });
+// Keep the compact research ledger in Workers Assets as a static fallback for
+// scorecard pages. The current published ledger is below the Workers Assets
+// per-file limit, and retaining it also makes a build self-contained when the
+// live D1 read is temporarily busy.
 await mkdir("dist/client/basketball-shell", { recursive: true });
 await cp(
   "dist/basketball/index.html",
@@ -32,5 +30,5 @@ await writeFile(
   // Match the directory prefix without a trailing slash so archive snapshots
   // stay available to the post-deploy R2 capture without counting toward the
   // Workers static-asset manifest.
-  "blog/game-*\ndata/research/ledger.json\n",
+  "blog/game-*\n",
 );
