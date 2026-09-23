@@ -89,6 +89,25 @@ describe("basketball forecast availability", () => {
     });
   });
 
+  it("does not infer same-edition lineage when the edition match is unknown", () => {
+    expect(forecastAnalysisReadiness({
+      predictionIntegrity: "valid",
+      prediction: { home_margin: 4, total: 140, total_low: 122, total_high: 158, total_half_width: 18 },
+      forecastModelId: "model-2027",
+      matchupFactorsIntegrity: "valid",
+      matchupFactorsModelId: "factor-model",
+      matchupFactorsSameEdition: null,
+      startsAt: "2026-11-02T05:00:00Z",
+      sourceStart: "2026-11-02T05:00:00Z",
+      sourceTimeValid: true,
+      timeTbd: 0,
+    })).toMatchObject({
+      status: "partial",
+      matchup_factors: "unavailable",
+      missing: ["same-edition Four Factor context"],
+    });
+  });
+
   it("marks a partial total interval as invalid instead of treating the total as calibrated", () => {
     expect(forecastAnalysisReadiness({
       predictionIntegrity: "valid",

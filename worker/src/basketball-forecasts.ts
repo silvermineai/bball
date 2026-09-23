@@ -212,9 +212,11 @@ export function forecastAnalysisReadiness(args: {
   const modelEdition = args.forecastModelId ? "matched" : "unavailable";
   const matchupFactors = args.matchupFactorsIntegrity !== "valid" || !args.matchupFactorsModelId
     ? "unavailable"
-    : args.matchupFactorsSameEdition === false
-      ? "other_edition"
-      : "same_edition";
+    : args.matchupFactorsSameEdition === true
+      ? "same_edition"
+      : args.matchupFactorsSameEdition === false
+        ? "other_edition"
+        : "unavailable";
   const schedule = args.sourceTimeValid && args.sourceStart
     ? "source_confirmed"
     : args.timeTbd

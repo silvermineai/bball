@@ -53,7 +53,7 @@ export function basketballEditorialLens(game: BBGame): BasketballEditorialLens |
   const market = marketLens(game);
   if (market) return market;
   const width = prediction.margin_high - prediction.margin_low;
-  const factorSignal = strongestMatchupSignal(game.matchup_factors, game.matchup_factors_same_edition !== false);
+  const factorSignal = strongestMatchupSignal(game.matchup_factors, game.matchup_factors_same_edition === true);
   const factor = factorSignal ? factorLabels[factorSignal.factor] : null;
   const edge = factorSignal?.edge ?? null;
   if (Math.abs(prediction.home_margin) <= 3) {

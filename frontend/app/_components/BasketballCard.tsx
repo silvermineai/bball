@@ -69,14 +69,16 @@ export default function BasketballCard({
   const paceLens = matchupPaceLens(p, homeRating, awayRating);
   const signalContext = forecastSignalContext(p, !!primaryPrediction);
   const confidence = forecastConfidenceSummary(p, !!primaryPrediction);
-  const strongestFactor = strongestMatchupSignal(g.matchup_factors, g.matchup_factors_same_edition !== false);
+  const strongestFactor = strongestMatchupSignal(g.matchup_factors, g.matchup_factors_same_edition === true);
   const unknownTeams = forecastUnknownTeams(p);
   const marketQuotes = (["spreads", "totals", "h2h"] as const)
     .map((market) => latestForecastLabMarketQuote(g.market_comparisons || [], market))
     .filter((quote): quote is NonNullable<typeof quote> => quote !== null);
   const contextLayers = [
     g.matchup_factors
-      ? g.matchup_factors_same_edition === false ? "factor context · other edition" : "four factors"
+      ? g.matchup_factors_same_edition === true
+        ? "four factors"
+        : g.matchup_factors_same_edition === false ? "factor context · other edition" : "factor context · edition unverified"
       : null,
     homeRating && awayRating ? "team ratings" : null,
     homeRoster && awayRoster ? "roster minutes" : null,
@@ -85,7 +87,7 @@ export default function BasketballCard({
   const evidence = forecastEvidenceCoverage({
     primary: !!primaryPrediction,
     scheduled: !!(g.source_time_valid && g.source_start),
-    factors: !!g.matchup_factors && g.matchup_factors_same_edition !== false,
+    factors: !!g.matchup_factors && g.matchup_factors_same_edition === true,
     roster: !!rosterScenario,
     market: marketQuotes.length > 0,
   });
@@ -413,7 +415,7 @@ export default function BasketballCard({
               homeName={g.home_name}
               awayName={g.away_name}
               modelId={g.matchup_factors_model_id}
-              sameEdition={g.matchup_factors_same_edition !== false}
+              sameEdition={g.matchup_factors_same_edition === true}
             />
           )}
           {(homeRoster || awayRoster) && (

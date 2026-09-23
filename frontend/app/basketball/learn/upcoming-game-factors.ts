@@ -56,9 +56,11 @@ export function buildUpcomingFactorStudy(
   return {
     lineage: !factors
       ? "unavailable"
-      : game.matchup_factors_same_edition === false
-        ? "other-edition"
-        : "same-edition",
+      : game.matchup_factors_same_edition === true
+        ? "same-edition"
+        : game.matchup_factors_same_edition === false
+          ? "other-edition"
+          : "unavailable",
     season,
     modelId: game.matchup_factors_model_id || null,
     rows,

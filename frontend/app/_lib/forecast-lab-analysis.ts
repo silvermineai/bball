@@ -149,7 +149,7 @@ export function forecastIntegrity(
   if (!(game.forecast_model_id || publishedModelId)) {
     missing.push("forecast edition");
   }
-  if (game.matchup_factors && game.matchup_factors_same_edition === false) {
+  if (game.matchup_factors && game.matchup_factors_same_edition !== true) {
     missing.push("same-edition factor context");
   }
   if (totalInterval === "invalid") {

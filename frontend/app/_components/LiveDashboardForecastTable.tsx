@@ -60,7 +60,7 @@ const factorLabels: Record<BBFactorKey, string> = {
 
 /** Keep the compact board explainable without turning each row into a card. */
 export function strongestFactorEdge(game: BBGame) {
-  if (game.matchup_factors_same_edition === false) return null;
+  if (game.matchup_factors_same_edition !== true) return null;
   const strongest = matchupFactorEdges(game)
     .map((edge) => [edge.key, edge.value] as [BBFactorKey, number])
     .sort((left, right) => Math.abs(right[1]) - Math.abs(left[1]))[0];
@@ -81,10 +81,11 @@ export function matchupFactorEdges(game: BBGame) {
 export function matchupFactorContextLabel(game: BBGame) {
   const season = game.matchup_factors?.season;
   if (!Number.isInteger(season)) return "Four Factor context unavailable";
+  if (game.matchup_factors_same_edition === true) return `Four Factor context · ${season}`;
   if (game.matchup_factors_same_edition === false) {
     return `Other-edition context · ${game.matchup_factors_model_id || "edition unavailable"} · ${season}`;
   }
-  return `Four Factor context · ${season}`;
+  return `Four Factor context · edition unverified · ${season}`;
 }
 
 /**
@@ -101,7 +102,7 @@ export function forecastBoardEvidence(
   return forecastEvidenceCoverage({
     primary: !!game.prediction,
     scheduled: !!(game.source_time_valid && game.source_start),
-    factors: !!game.matchup_factors && game.matchup_factors_same_edition !== false,
+    factors: !!game.matchup_factors && game.matchup_factors_same_edition === true,
     roster: !!rosterScenario,
     market,
   });

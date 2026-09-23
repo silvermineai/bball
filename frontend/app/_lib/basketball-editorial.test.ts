@@ -36,11 +36,14 @@ describe("basketball editorial lens", () => {
   });
 
   it("prioritizes the strongest adjusted factor when the range is narrower", () => {
-    const lens = basketballEditorialLens(game(9, -2, 20, {
-      season: 2026,
-      factors: {},
-      edges: { efg: 0.031, orb: -0.01 },
-    }));
+    const lens = basketballEditorialLens({
+      ...game(9, -2, 20, {
+        season: 2026,
+        factors: {},
+        edges: { efg: 0.031, orb: -0.01 },
+      }),
+      matchup_factors_same_edition: true,
+    });
     expect(lens?.title).toBe("Home owns the shot-making edge");
     expect(lens?.body).toContain("3.1 percentage points");
     expect(lens?.questions[0]).toContain("shot-making");

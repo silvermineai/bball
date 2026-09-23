@@ -120,6 +120,7 @@ describe("strongestFactorEdge", () => {
   it("returns the largest matchup factor edge with its favored side", () => {
     expect(strongestFactorEdge({
       ...games[0],
+      matchup_factors_same_edition: true,
       matchup_factors: {
         season: 2026,
         factors: {},
@@ -162,6 +163,7 @@ describe("matchupFactorContextLabel", () => {
   it("labels the retained context season instead of implying it is current-season data", () => {
     expect(matchupFactorContextLabel({
       ...games[0],
+      matchup_factors_same_edition: true,
       matchup_factors: { season: 2026, factors: {}, edges: {} },
     })).toBe("Four Factor context · 2026");
     expect(matchupFactorContextLabel({
@@ -170,6 +172,10 @@ describe("matchupFactorContextLabel", () => {
       matchup_factors_model_id: "model-old",
       matchup_factors_same_edition: false,
     })).toBe("Other-edition context · model-old · 2026");
+    expect(matchupFactorContextLabel({
+      ...games[0],
+      matchup_factors: { season: 2026, factors: {}, edges: {} },
+    })).toBe("Four Factor context · edition unverified · 2026");
     expect(matchupFactorContextLabel(games[0])).toBe("Four Factor context unavailable");
   });
 });
