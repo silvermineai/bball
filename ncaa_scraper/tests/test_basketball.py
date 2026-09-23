@@ -18,6 +18,7 @@ from ncaa_scraper.basketball import (
     ncaa_player_box_field_coverage,
     player_index,
     player_box_source_integrity,
+    rank_player_index_rows,
     rank_impact_rows,
     _prior_production,
     publisher_leaders,
@@ -65,6 +66,25 @@ def sample(i, season):
 
 
 class BasketballModelTests(unittest.TestCase):
+    def test_player_index_ranks_use_qualified_cohort_and_share_ties(self):
+        players = [
+            {"id": "top", "team_id": "a", "qualified": True, "ppg": 20.0, "efg": 0.60},
+            {"id": "tie", "team_id": "b", "qualified": True, "ppg": 20.0, "efg": 0.55},
+            {"id": "third", "team_id": "c", "qualified": True, "ppg": 12.0, "efg": 0.50},
+            {"id": "partial", "team_id": "d", "qualified": False, "ppg": 30.0, "efg": 0.90},
+            {"id": "missing", "team_id": "e", "qualified": True, "ppg": None, "efg": 0.40},
+        ]
+
+        rank_player_index_rows(players)
+        by_id = {player["id"]: player for player in players}
+        self.assertEqual(by_id["top"]["ranks"]["ppg"], 1)
+        self.assertEqual(by_id["tie"]["ranks"]["ppg"], 1)
+        self.assertEqual(by_id["third"]["ranks"]["ppg"], 3)
+        self.assertIsNone(by_id["partial"]["ranks"]["ppg"])
+        self.assertIsNone(by_id["missing"]["ranks"]["ppg"])
+        self.assertEqual(by_id["top"]["ranks"]["efg"], 1)
+        self.assertEqual(by_id["tie"]["ranks"]["efg"], 2)
+
     def test_impact_ranks_require_sample_and_share_ties(self):
         rows = rank_impact_rows([
             {"player_id": "a", "rapm_net": "4.0", "off_poss": 600, "def_poss": 600},
@@ -758,7 +778,30 @@ class BasketballIngestTests(unittest.TestCase):
 
     def test_player_index_with_no_games_is_well_formed(self):
         self.assertEqual(
-            player_index(self.conn), {"season": 2026, "players": [], "box_games": 0}
+            player_index(self.conn),
+            {
+                "season": 2026,
+                "players": [],
+                "box_games": 0,
+                "rankings": {
+                    "scope": "qualified complete ESPN-derived player profiles",
+                    "minimum_games": 15,
+                    "minimum_minutes": 400,
+                    "requires_complete_box_games": True,
+                    "tie_method": "competition",
+                    "metrics": [
+                        {"key": "ppg", "label": "Points per game"},
+                        {"key": "rpg", "label": "Rebounds per game"},
+                        {"key": "apg", "label": "Assists per game"},
+                        {"key": "spg", "label": "Steals per game"},
+                        {"key": "bpg", "label": "Blocks per game"},
+                        {"key": "efg", "label": "Effective field-goal percentage"},
+                        {"key": "ts", "label": "True-shooting percentage"},
+                        {"key": "three_pct", "label": "Three-point percentage"},
+                        {"key": "ft_pct", "label": "Free-throw percentage"},
+                    ],
+                },
+            },
         )
 
     def test_roster_observations_attach_recorded_prior_production(self):

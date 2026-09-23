@@ -108,6 +108,61 @@ PUBLISHER_LEADER_SPECS = (
     ),
 )
 
+# These are the player-season fields that can be compared without importing a
+# second identity namespace.  The ranks below are deliberately limited to
+# complete, qualified ESPN-derived box profiles; source-native publisher and
+# NCAA RAPM boards remain separate products with their own denominators.
+PLAYER_INDEX_RANK_SPECS = (
+    ("ppg", "Points per game"),
+    ("rpg", "Rebounds per game"),
+    ("apg", "Assists per game"),
+    ("spg", "Steals per game"),
+    ("bpg", "Blocks per game"),
+    ("efg", "Effective field-goal percentage"),
+    ("ts", "True-shooting percentage"),
+    ("three_pct", "Three-point percentage"),
+    ("ft_pct", "Free-throw percentage"),
+)
+
+
+def rank_player_index_rows(players):
+    """Attach deterministic competition ranks to qualified player profiles.
+
+    Ranks are calculated independently for each field from the full returned
+    season cohort.  An incomplete or below-threshold profile receives ``None``
+    for every board, and equal rounded values share a competition rank.  This
+    makes the published player artifact safe for matchup consumers: they can
+    use a rank without silently comparing partial box rows or recomputing a
+    different denominator after filtering.
+    """
+    rank_fields = {key: label for key, label in PLAYER_INDEX_RANK_SPECS}
+    for player in players:
+        player["ranks"] = {key: None for key in rank_fields}
+
+    for key in rank_fields:
+        eligible = [
+            player
+            for player in players
+            if player.get("qualified")
+            and isinstance(player.get(key), (int, float))
+            and math.isfinite(player[key])
+        ]
+        eligible.sort(
+            key=lambda player: (
+                -player[key],
+                str(player.get("id") or ""),
+                str(player.get("team_id") or ""),
+            )
+        )
+        previous = object()
+        rank = 0
+        for index, player in enumerate(eligible, start=1):
+            if player[key] != previous:
+                rank = index
+                previous = player[key]
+            player["ranks"][key] = rank
+    return players
+
 
 def rank_impact_rows(rows):
     """Normalize and rank NCAA impact rows without treating weak samples as ranked.
@@ -1307,8 +1362,24 @@ def player_index(conn, year=2026):
                 "tov_rate",
             ]:
                 p[k] = None
+    rank_player_index_rows(result)
     result.sort(key=lambda p: (-(p["ppg"] or 0), p["name"]))
-    return {"season": year, "players": result, "box_games": len(observed_games)}
+    return {
+        "season": year,
+        "players": result,
+        "box_games": len(observed_games),
+        "rankings": {
+            "scope": "qualified complete ESPN-derived player profiles",
+            "minimum_games": 15,
+            "minimum_minutes": 400,
+            "requires_complete_box_games": True,
+            "tie_method": "competition",
+            "metrics": [
+                {"key": key, "label": label}
+                for key, label in PLAYER_INDEX_RANK_SPECS
+            ],
+        },
+    }
 
 
 def publisher_leaders(conn, year=2026, limit=10):
