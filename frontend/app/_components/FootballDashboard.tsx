@@ -8,7 +8,7 @@ import LiveFootballDashboardForecastTable from "./LiveFootballDashboardForecastT
 import LiveFootballForecastStatus from "./LiveFootballForecastStatus";
 import LiveFootballMarketStatus from "./LiveFootballMarketStatus";
 import DashboardExportButton from "./DashboardExportButton";
-import { footballDivisionCoverage } from "../_lib/football-coverage";
+import { footballDivisionCoverage, footballDivisionMatchupHref } from "../_lib/football-coverage";
 import {
   aggregateLowerFootballPlayers,
   lowerFootballCategoryDefinition,
@@ -322,6 +322,11 @@ export default function FootballDashboard() {
         <strong>{overview.coverage.forecast_games.toLocaleString()}</strong>
         <span>D1 game forecasts</span>
         <small>D2 and D3 forecasts are published on the exact-division matchup desk.</small>
+        <table className="dashboard-model-table" aria-label="Football forecast coverage by division">
+          <thead><tr><th>Division</th><th className="numeric">Forecasts</th></tr></thead>
+          <tbody>{divisionCoverage.map((row) => <tr key={row.division}><th scope="row"><Link href={footballDivisionMatchupHref(row.division)}>{row.division.toUpperCase()}</Link></th><td className="numeric"><strong>{row.forecast_games.toLocaleString()}</strong><small>of {row.upcoming_games.toLocaleString()} scheduled</small></td></tr>)}</tbody>
+        </table>
+        <small>Division counts are exact-scope rows; cross-division games can appear in both involved divisions.</small>
         <div className="dashboard-model-rule" />
         <div><b>{fmt(overview.model.evaluation.winner_accuracy * 100)}%</b><span>held-out winner accuracy</span></div>
         <div><b>{fmt(overview.model.evaluation.margin_mae)} pts</b><span>held-out margin error</span></div>

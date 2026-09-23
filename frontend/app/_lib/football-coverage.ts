@@ -29,6 +29,14 @@ export type FootballDivisionCoverage = {
   games_without_forecast: number;
 };
 
+/** Keep the hero's division forecast links on the same exact-scope matchup desk. */
+export function footballDivisionMatchupHref(division: string): string {
+  const normalized = canonicalDivision(division);
+  return normalized === "fbs"
+    ? "/football/matchups/"
+    : `/football/matchups/?division=${encodeURIComponent(normalized)}`;
+}
+
 const DIVISION_ALIASES: Record<string, string> = {
   ii: "d2",
   "d-ii": "d2",

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { footballDivisionCoverage } from "./football-coverage";
+import { footballDivisionCoverage, footballDivisionMatchupHref } from "./football-coverage";
+
+describe("football division matchup links", () => {
+  it("keeps every coverage row on its exact division desk", () => {
+    expect(footballDivisionMatchupHref("fbs")).toBe("/football/matchups/");
+    expect(footballDivisionMatchupHref("fcs")).toBe("/football/matchups/?division=fcs");
+    expect(footballDivisionMatchupHref("ii")).toBe("/football/matchups/?division=d2");
+    expect(footballDivisionMatchupHref("division iii")).toBe("/football/matchups/?division=d3");
+  });
+});
 
 describe("football division coverage", () => {
   it("counts cross-division games once for each involved division", () => {
