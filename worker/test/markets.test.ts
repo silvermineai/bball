@@ -600,4 +600,27 @@ describe("market archive metadata", () => {
     expect(sql).toContain("football_markets");
     expect(sql).toContain("audit_markets");
   });
+
+  it("keeps a market filter on both streams of the all-season football archive", async () => {
+    const makePrepare = (row: Record<string, unknown>) => vi.fn((sql: string) => {
+      const bound = {
+        first: vi.fn().mockResolvedValue(sql.includes("count(*)") ? { total: 1 } : null),
+        all: vi.fn().mockResolvedValue({ results: [row] }),
+      };
+      return { bind: vi.fn(() => bound) };
+    });
+    const legacyPrepare = makePrepare({ game_id: "legacy-spread", kickoff: "2025-12-01T00:00:00Z", observed_at: "2025-11-30T00:00:00Z", market: "spreads" });
+    const researchPrepare = makePrepare({ game_id: "ledger-spread", kickoff: "2026-09-20T00:00:00Z", observed_at: "2026-09-19T00:00:00Z", market: "spreads" });
+    const response = await markets.request(
+      "/?sport=football&season=all&market=spreads&page=0",
+      {},
+      { DB: { prepare: legacyPrepare }, RESEARCH_DB: { prepare: researchPrepare } },
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ market: "spreads", total: 2 });
+    const legacySql = legacyPrepare.mock.calls.map(([statement]) => statement).join("\n");
+    const researchSql = researchPrepare.mock.calls.map(([statement]) => statement).join("\n");
+    expect(legacySql).toContain("m.home_spread IS NOT NULL");
+    expect(researchSql).toContain("m.market=?");
+  });
 });

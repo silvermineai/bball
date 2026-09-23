@@ -456,7 +456,10 @@ markets.get("/", zValidator("query", querySchema), async (c) => {
   const withLedgerTiming = (condition: string) => ledgerTimingPredicate ? `${ledgerTimingPredicate} AND ${condition}` : condition;
   const legacyMarketPredicate = market === "all" ? null : market === "spreads" ? "m.home_spread IS NOT NULL" : market === "totals" ? "m.total IS NOT NULL" : "1=0";
   const ledgerMarketPredicate = market === "all" ? null : "m.market=?";
-  const archiveMarketPredicate = useCombinedFootballArchive ? null : football && !useFootballLedger ? legacyMarketPredicate : ledgerMarketPredicate;
+  // The merged football archive applies the legacy and ledger predicates in
+  // their own branches below. Keep the normal predicate explicit as well so
+  // a future branch cannot silently drop a requested market filter.
+  const archiveMarketPredicate = football && !useFootballLedger ? legacyMarketPredicate : ledgerMarketPredicate;
   const withArchiveFilters = (condition: string) => archiveMarketPredicate ? `${withTiming(condition)} AND ${archiveMarketPredicate}` : withTiming(condition);
   const withLegacyFilters = (condition: string) => legacyMarketPredicate ? `${withLegacyTiming(condition)} AND ${legacyMarketPredicate}` : withLegacyTiming(condition);
   const withLedgerFilters = (condition: string) => ledgerMarketPredicate ? `${withLedgerTiming(condition)} AND ${ledgerMarketPredicate}` : withLedgerTiming(condition);
