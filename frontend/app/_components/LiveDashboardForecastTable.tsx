@@ -44,6 +44,7 @@ function modelLabel(game: BBGame) {
 
 export type ForecastBoardSort = "start" | "confidence" | "margin";
 export type ForecastEstimateFilter = "all" | "primary" | "cold-start";
+export type ForecastPacketFilter = "all" | "complete" | "incomplete";
 const signalLabels: Record<MatchupSignal, string> = {
   all: "all model signals",
   "toss-up": "toss-ups under 60%",
@@ -197,6 +198,18 @@ export function matchesEstimateFilter(game: BBGame, filter: ForecastEstimateFilt
   return filter === "primary" ? Boolean(game.prediction) : Boolean(game.fallback_prediction && !game.prediction);
 }
 
+/** Let a coach isolate rows with a complete matchup packet before opening a notebook. */
+export function matchesForecastPacket(
+  game: BBGame,
+  rosterScenario: BBRosterScenario | null | undefined,
+  market: boolean,
+  filter: ForecastPacketFilter,
+) {
+  if (filter === "all") return true;
+  const evidence = forecastBoardEvidence(game, rosterScenario, market);
+  return filter === "complete" ? evidence.complete : !evidence.complete;
+}
+
 export default function LiveDashboardForecastTable({
   initialGames,
   rosterScenarios = [],
@@ -216,6 +229,7 @@ export default function LiveDashboardForecastTable({
   const [sort, setSort] = useState<ForecastBoardSort>("start");
   const [signal, setSignal] = useState<MatchupSignal>("all");
   const [estimate, setEstimate] = useState<ForecastEstimateFilter>("all");
+  const [packet, setPacket] = useState<ForecastPacketFilter>("all");
   const [query, setQuery] = useState("");
   const [rowLimit, setRowLimit] = useState<12 | 24 | 48>(12);
   const [marketComparisons, setMarketComparisons] = useState<Record<string, Comparison[]>>({});
@@ -252,18 +266,24 @@ export default function LiveDashboardForecastTable({
     return () => controller.abort();
   }, [initialGames]);
 
+  const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
   const forecastedGames = games
     .filter((game) => matchesEstimateFilter(game, estimate))
     .filter((game) => `${game.away_name} ${game.home_name}`.toLowerCase().includes(query.trim().toLowerCase()));
   const signalGames = forecastedGames.filter((game) => matchesMatchupSignal(predictionFor(game), signal));
-  const rows = sortForecastBoard(signalGames, sort).slice(0, rowLimit);
-  const rosterByGame = new Map(rosterScenarios.map((scenario) => [scenario.game_id, scenario]));
+  const packetGames = signalGames.filter((game) => matchesForecastPacket(
+    game,
+    matchingRosterScenario(game, rosterByGame.get(game.id), publishedModelId),
+    hasQualifiedMarketComparison(summarizeMarketLines(marketComparisons[game.id] || [])),
+    packet,
+  ));
+  const rows = sortForecastBoard(packetGames, sort).slice(0, rowLimit);
   const ratingById = new Map(ratings.map((rating) => [rating.id, rating]));
   const marketGames = signalGames.filter((game) => {
     const market = summarizeMarketLines(marketComparisons[game.id] || []);
     return hasQualifiedMarketComparison(market);
   }).length;
-  const orderedSignalGames = sortForecastBoard(signalGames, sort);
+  const orderedSignalGames = sortForecastBoard(packetGames, sort);
   const downloadVisibleCsv = () => downloadCsv(
     "basketball-forecast-board.csv",
     toCsv(forecastCsvHeaders, forecastCsvRows(rows, marketComparisons, rosterScenarios, ratings, publishedModelId)),
@@ -305,6 +325,14 @@ export default function LiveDashboardForecastTable({
           </select>
         </label>
         <label className="control">
+          <span>ANALYSIS PACKET</span>
+          <select value={packet} onChange={(event) => setPacket(event.target.value as ForecastPacketFilter)}>
+            <option value="all">All packets</option>
+            <option value="complete">Complete core packet</option>
+            <option value="incomplete">Needs review</option>
+          </select>
+        </label>
+        <label className="control">
           <span>SHOW</span>
           <select value={rowLimit} onChange={(event) => setRowLimit(Number(event.target.value) as 12 | 24 | 48)}>
             <option value={12}>12 games</option>
@@ -313,9 +341,9 @@ export default function LiveDashboardForecastTable({
           </select>
         </label>
         <button className="button secondary" type="button" onClick={downloadVisibleCsv} disabled={!rows.length}>Download visible CSV ↓</button>
-        <button className="button secondary" type="button" onClick={downloadAllCsv} disabled={!signalGames.length}>Download full filtered CSV ↓</button>
+        <button className="button secondary" type="button" onClick={downloadAllCsv} disabled={!packetGames.length}>Download full filtered CSV ↓</button>
         <p className="note" role="status">
-          Showing {rows.length} of {signalGames.length} forecast rows{query.trim() ? ` matching “${query.trim()}”` : ""} · {signalLabels[signal]} · {sort === "start" ? "earliest tips first" : sort === "confidence" ? "most certain outcomes first" : "largest projected edges first"} · {marketGames} with qualifying market lines.
+          Showing {rows.length} of {packetGames.length} forecast rows{query.trim() ? ` matching “${query.trim()}”` : ""} · {signalLabels[signal]} · {packet === "complete" ? "complete core packets" : packet === "incomplete" ? "rows needing review" : "all packet states"} · {marketGames} with qualifying market lines.
         </p>
       </div>
       <div className="dashboard-table-wrap">

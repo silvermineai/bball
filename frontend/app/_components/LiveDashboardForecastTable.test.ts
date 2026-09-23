@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dashboardForecastCalibration, forecastBoardEvidence, forecastCsvRows, matchupFactorContextLabel, matchesEstimateFilter, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
+import { dashboardForecastCalibration, forecastBoardEvidence, forecastCsvRows, matchupFactorContextLabel, matchesEstimateFilter, matchesForecastPacket, matchupFactorEdges, sortForecastBoard, strongestFactorEdge, tipStatus } from "./LiveDashboardForecastTable";
 import type { BBGame } from "../_lib/basketball-types";
 
 const game = (id: string, starts_at: string, home_margin: number, home_win_probability: number): BBGame => ({
@@ -99,6 +99,41 @@ describe("forecastBoardEvidence", () => {
     expect(complete.present).toBe(3);
     expect(complete.missing).toEqual(["same-edition Four Factors"]);
     expect(complete.market).toBe("verified");
+  });
+});
+
+describe("matchesForecastPacket", () => {
+  const completeGame = {
+    ...games[0],
+    source_time_valid: true,
+    source_start: games[0].starts_at,
+    matchup_factors: { season: 2027, factors: {}, edges: {} },
+    matchup_factors_same_edition: true,
+  };
+  const roster = {
+    game_id: games[0].id,
+    home_id: games[0].home_id,
+    away_id: games[0].away_id,
+    primary_model_id: "model",
+    base_margin: 3,
+    roster_margin: 3,
+    margin_delta: 0,
+    home_predicted_net: 110,
+    away_predicted_net: 107,
+    roster_home_win_probability: 0.6,
+    roster_margin_low: -5,
+    roster_margin_high: 11,
+  };
+
+  it("finds complete packets without treating a missing market as a core defect", () => {
+    expect(matchesForecastPacket(completeGame, roster, false, "complete")).toBe(true);
+    expect(matchesForecastPacket(completeGame, roster, false, "incomplete")).toBe(false);
+  });
+
+  it("routes missing matchup evidence to the review queue", () => {
+    expect(matchesForecastPacket(games[0], null, false, "complete")).toBe(false);
+    expect(matchesForecastPacket(games[0], null, false, "incomplete")).toBe(true);
+    expect(matchesForecastPacket(games[0], null, false, "all")).toBe(true);
   });
 });
 
