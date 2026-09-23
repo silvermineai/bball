@@ -11,13 +11,16 @@ import {
   classSnapshotCoverage,
   classSnapshotReceipt,
   currentRecruitingBoardResult,
+  filterRecruitingProductionRows,
   recruitingBoardRequestSearch,
   recruitingExportCsv,
   recruitingPositionOpportunityRows,
   validRecruitingRankDistribution,
   validateRecruitingExportPage,
   type RecruitingBoardResult,
+  type Prospect,
 } from "./RecruitingBoard";
+import type { RecruitingProductionIndex, RecruitingProductionRow } from "../../_lib/recruiting-production-index";
 
 describe("recruiting position opportunity", () => {
   const result = (overrides: Partial<RecruitingBoardResult> = {}): RecruitingBoardResult => ({
@@ -112,6 +115,56 @@ describe("recruiting board ordering", () => {
     };
     expect(recruitingBoardRequestSearch(base)).toBe("season=2027&page=0&committed=all&movement=all");
     expect(recruitingBoardRequestSearch({ ...base, sort: "grade" })).toBe("season=2027&page=0&committed=all&movement=all&sort=grade");
+  });
+});
+
+describe("recruiting production evidence filter", () => {
+  const rows = [
+    { athlete_id: "1", name: "Linked" },
+    { athlete_id: "2", name: "Unavailable" },
+  ] as Prospect[];
+  const linkedProduction: RecruitingProductionRow = {
+    id: "1",
+    team_id: "10",
+    team: "Example",
+    season: 2026,
+    games: 20,
+    mpg: 20,
+    ppg: 10,
+    rpg: 4,
+    apg: 3,
+    spg: 1,
+    bpg: 1,
+    topg: 2,
+    efg: 0.5,
+    ts: 0.55,
+    three_pct: null,
+    ft_pct: 0.7,
+    ft_rate: 0.2,
+    three_rate: 0.4,
+    tov_rate: 0.12,
+    incomplete_box_games: 0,
+    identity_basis: "Exact source ID",
+  };
+  const productionIndex = {
+    season: 2027,
+    edition: "a".repeat(64),
+    reviewedAt: "2026-09-18T00:00:00Z",
+    sourceRows: 1,
+    linkedRows: 1,
+    byAthleteId: new Map([["1", linkedProduction]]),
+  } satisfies RecruitingProductionIndex;
+
+  it("separates exact-ID links from unavailable joins", () => {
+    expect(filterRecruitingProductionRows(rows, productionIndex, "live", "linked").map((row) => row.athlete_id)).toEqual(["1"]);
+    expect(filterRecruitingProductionRows(rows, productionIndex, "live", "unavailable").map((row) => row.athlete_id)).toEqual(["2"]);
+    expect(filterRecruitingProductionRows(rows, productionIndex, "live", "all")).toEqual(rows);
+  });
+
+  it("withholds an evidence-filtered view while the release is unavailable", () => {
+    expect(filterRecruitingProductionRows(rows, null, "checking", "linked")).toEqual([]);
+    expect(filterRecruitingProductionRows(rows, null, "unavailable", "unavailable")).toEqual([]);
+    expect(filterRecruitingProductionRows(rows, null, "unavailable", "all")).toEqual(rows);
   });
 });
 

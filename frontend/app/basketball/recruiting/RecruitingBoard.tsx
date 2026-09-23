@@ -22,7 +22,7 @@ import { prospectSchools, type ProspectProgram } from "../../_lib/prospect-schoo
 import { recordedSchoolPrograms, type RecordedSchoolProgramRow } from "../../_lib/recorded-school-board";
 import { recruitingEvidenceGuide } from "./evidence-guide";
 
-type Prospect = {
+export type Prospect = {
   athlete_id: string;
   name: string;
   position: string | null;
@@ -126,6 +126,7 @@ export function validRecruitingRankDistribution(result: RecruitingBoardResult): 
 }
 type Result = RecruitingBoardResult;
 export type RecruitingSort = "rank" | "grade";
+export type RecruitingProductionFilter = "all" | "linked" | "unavailable";
 type CommitmentDestination = NonNullable<Result["commitment_destinations"]>[number];
 type ClassSnapshot = Pick<Result, "total" | "cohort" | "captured_at" | "position_breakdown" | "commitment_destinations" | "destination_coverage" | "edition" | "source_receipt" | "rank_movement" | "rank_distribution"> & { season: string };
 export type RecruitingBoardLoad = { request: string; result: RecruitingBoardResult };
@@ -740,6 +741,20 @@ const captureLabel = (value: string | null) => value
   ? new Date(value).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
   : "capture date unavailable";
 
+/** Filter only after the exact-ID production release is live. An unavailable
+ * release cannot prove that a prospect lacks production, so it returns no
+ * evidence-filtered rows rather than turning an outage into a claim. */
+export function filterRecruitingProductionRows(
+  rows: Prospect[],
+  productionIndex: RecruitingProductionIndex | null,
+  productionStatus: "checking" | "live" | "unavailable",
+  filter: RecruitingProductionFilter,
+) {
+  if (filter === "all") return rows;
+  if (productionStatus !== "live" || !productionIndex) return [];
+  return rows.filter((row) => (exactRecruitingProduction(productionIndex, row.athlete_id) != null) === (filter === "linked"));
+}
+
 export const recruitingExportHeaders = ["season", "rank", "previous_rank", "rank_change", "previous_captured_at", "name", "position", "grade", "position_rank", "state_rank", "region_rank", "height_inches", "weight_pounds", "committed_team", "committed_team_id", "recorded_school_count", "recorded_schools", "recorded_school_ids", "status", "high_school", "hometown", "athlete_id", "source_edition", "source_captured_at"];
 
 export function recruitingExportCsv(
@@ -774,6 +789,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
   const [committed, setCommitted] = useState("all");
   const [movement, setMovement] = useState("all");
   const [sort, setSort] = useState<RecruitingSort>("rank");
+  const [productionFilter, setProductionFilter] = useState<RecruitingProductionFilter>("all");
   const [destinationLimit, setDestinationLimit] = useState("12");
   const [page, setPage] = useState(0);
   const [loadedResult, setLoadedResult] = useState<RecruitingBoardLoad | null>(null);
@@ -811,6 +827,8 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     if (requestedMovement && ["up", "down", "unchanged", "new", "unavailable"].includes(requestedMovement)) setMovement(requestedMovement);
     const requestedSort = params.get("sort");
     if (requestedSort === "grade") setSort(requestedSort);
+    const requestedProduction = params.get("production");
+    if (requestedProduction === "linked" || requestedProduction === "unavailable") setProductionFilter(requestedProduction);
     const requestedDestinationLimit = params.get("destination_limit");
     if (requestedDestinationLimit && ["12", "50", "200"].includes(requestedDestinationLimit)) setDestinationLimit(requestedDestinationLimit);
     const requestedPage = Number(params.get("page"));
@@ -839,12 +857,13 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     if (committed !== "all") params.set("committed", committed);
     if (movement !== "all") params.set("movement", movement);
     if (sort !== "rank") params.set("sort", sort);
+    if (productionFilter !== "all") params.set("production", productionFilter);
     if (destinationLimit !== "12") params.set("destination_limit", destinationLimit);
     if (page > 0) params.set("page", String(page));
     const search = params.toString();
     window.history.replaceState(window.history.state, "", search ? `${window.location.pathname}?${search}` : window.location.pathname);
     setCopied("");
-  }, [committed, destinationLimit, hydrated, movement, page, position, query, rankMax, season, sort]);
+  }, [committed, destinationLimit, hydrated, movement, page, position, productionFilter, query, rankMax, season, sort]);
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -983,12 +1002,13 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
     return () => controller.abort();
   }, []);
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.page_size)) : 1;
-  const pageProductionRows = result?.rows.flatMap((row) => {
+  const visibleRows = result ? filterRecruitingProductionRows(result.rows, productionIndex, productionStatus, productionFilter) : [];
+  const pageProductionRows = visibleRows.flatMap((row) => {
     const production = exactRecruitingProduction(productionIndex, row.athlete_id);
     return production ? [{ prospect: row, production }] : [];
   }) || [];
   const pageProductionCoverage = productionStatus === "live" && productionIndex && result
-    ? recruitingProductionCoverage(result.rows, productionIndex)
+    ? recruitingProductionCoverage(visibleRows, productionIndex)
     : null;
   const movementEvidence = result?.rank_movement
     ? result.rank_movement.moved_up + result.rank_movement.moved_down + result.rank_movement.unchanged + result.rank_movement.rank_unavailable
@@ -1041,6 +1061,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
         <label className="control"><span>ORDER</span><select value={sort} onChange={(event) => { setSort(event.target.value as RecruitingSort); setPage(0); }}><option value="rank">Recorded rank</option><option value="grade">Recorded grade · high to low</option></select></label>
         <label className="control"><span>STATUS</span><select value={committed} onChange={(event) => { setCommitted(event.target.value); setPage(0); }}><option value="all">All statuses</option><option value="yes">Committed</option><option value="no">Undecided / other</option></select></label>
         <label className="control"><span>RANK MOVEMENT</span><select value={movement} onChange={(event) => { setMovement(event.target.value); setPage(0); }}><option value="all">All movement</option><option value="up">Moved up</option><option value="down">Moved down</option><option value="unchanged">Unchanged</option><option value="new">New to archive</option><option value="unavailable">Rank unavailable</option></select></label>
+        <label className="control"><span>PRODUCTION EVIDENCE</span><select value={productionFilter} disabled={productionStatus !== "live"} onChange={(event) => { setProductionFilter(event.target.value as RecruitingProductionFilter); setPage(0); }}><option value="all">All rows</option><option value="linked">Exact-ID production linked</option><option value="unavailable">No exact-ID link</option></select></label>
         <label className="control"><span>DESTINATIONS</span><select value={destinationLimit} onChange={(event) => { setDestinationLimit(event.target.value); setPage(0); }}><option value="12">Top 12</option><option value="50">Top 50</option><option value="200">All (up to 200)</option></select></label>
         <button className="button secondary" type="button" onClick={downloadShortlist} disabled={!shortlist.length}>Download shortlist ({shortlist.length}) ↓</button>
         <button className="button secondary" type="button" onClick={share}>Copy board link</button>
@@ -1467,11 +1488,13 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
               </tr>)}</tbody>
             </table></div> : <p className="empty">No exact-ID production rows are linked on this page. Open a prospect dossier for its individual bridge check.</p>}
           </section>}
+          {productionFilter !== "all" && productionStatus !== "live" && <p className="note" role="status">The reviewed production release is {productionStatus === "checking" ? "still loading" : "unavailable"}; the evidence filter is withholding rows until an exact-ID comparison is available.</p>}
+          {productionFilter !== "all" && productionStatus === "live" && !visibleRows.length && <p className="empty" role="status">No prospects on this fetched page match the selected production evidence filter. The filter applies to the current ranked page; use the page controls or full export to inspect another cohort.</p>}
           <div className="table-wrap" id="prospect-board-table">
             <table className="data-table">
               <caption className="sr-only">{season} basketball recruiting prospects</caption>
               <thead><tr><th>Rank</th><th>Movement</th><th>Prospect</th><th>Position ranks</th><th>Grade</th><th>Size</th><th>Commitment</th><th>Recorded schools</th><th>Prior college production</th><th>Origin</th><th>Capture</th><th>Shortlist</th></tr></thead>
-              <tbody>{result.rows.map((row) => {
+              <tbody>{visibleRows.map((row) => {
                 const schools = prospectSchools(row.school_ids, programs, row.committed_team_id);
                 const production = exactRecruitingProduction(productionIndex, row.athlete_id);
                 return <tr key={row.athlete_id}>
@@ -1491,7 +1514,7 @@ export default function RecruitingBoard({ programs }: { programs: ProspectProgra
             </table>
           </div>
           <div className="pagination" aria-label="Prospect board pages">
-            <span className="note">{result.total.toLocaleString()} matching prospects · page {page + 1} of {totalPages}</span>
+            <span className="note">{result.total.toLocaleString()} matching prospects · page {page + 1} of {totalPages}{productionFilter !== "all" ? ` · ${visibleRows.length} match the production filter on this page` : ""}</span>
             <button className="button secondary" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Previous</button>
             <button className="button secondary" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>Next</button>
           </div>
