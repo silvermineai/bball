@@ -1,7 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
-import { basketballForecasts, forecastAnalysisReadiness, parseForecastMatchupFactors, parseForecastPrediction } from "../src/basketball-forecasts";
+import { basketballForecasts, forecastAnalysisReadiness, parseForecastMatchupFactors, parseForecastPrediction, rosterLensMatchesGame } from "../src/basketball-forecasts";
 
 describe("basketball forecast availability", () => {
+  it("requires roster scenarios to match the forecast participants and edition", () => {
+    const lens = {
+      game_id: "401",
+      home_id: "1",
+      away_id: "2",
+      primary_model_id: "model-2027",
+    };
+    expect(rosterLensMatchesGame(lens, {
+      game_id: "401",
+      home_id: "1",
+      away_id: "2",
+      model_id: "model-2027",
+    })).toBe(true);
+    expect(rosterLensMatchesGame({ ...lens, away_id: "99" }, {
+      game_id: "401",
+      home_id: "1",
+      away_id: "2",
+      model_id: "model-2027",
+    })).toBe(false);
+    expect(rosterLensMatchesGame({ ...lens, primary_model_id: "model-old" }, {
+      game_id: "401",
+      home_id: "1",
+      away_id: "2",
+      model_id: "model-2027",
+    })).toBe(false);
+  });
+
   it("publishes ready primary analysis when the exact context is present", () => {
     expect(forecastAnalysisReadiness({
       predictionIntegrity: "valid",

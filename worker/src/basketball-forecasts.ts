@@ -66,6 +66,20 @@ type RosterModelArtifact = {
   scenarios?: unknown;
 };
 
+/** Keep a roster scenario attached only to its exact forecast participants. */
+export function rosterLensMatchesGame(
+  lens: Pick<RosterLens, "game_id" | "home_id" | "away_id" | "primary_model_id"> | null | undefined,
+  game: { game_id: string; home_id: string; away_id: string; model_id: string },
+) {
+  return Boolean(
+    lens
+      && lens.game_id === game.game_id
+      && lens.home_id === game.home_id
+      && lens.away_id === game.away_id
+      && lens.primary_model_id === game.model_id,
+  );
+}
+
 function parseRosterLens(value: unknown, expectedModelId: string): RosterLens | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Record<string, unknown>;
@@ -959,7 +973,7 @@ basketballForecasts.get("/", zValidator("query", querySchema), async (c) => {
       ...(roster === "1" ? {
         roster_lens: (() => {
           const lens = rosterArtifact.lenses.get(row.game_id);
-          return lens?.primary_model_id === row.model_id ? lens : null;
+          return rosterLensMatchesGame(lens, row) ? lens : null;
         })(),
       } : {}),
     };
