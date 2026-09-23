@@ -337,6 +337,33 @@ class ImportTests(unittest.TestCase):
         # The advanced name-only release is deliberately not joined or added.
         self.assertEqual(player["production"]["defensive"]["metrics"]["sacks"], 1)
 
+    def test_player_board_reports_retained_team_placeholder_count(self):
+        store_rows(
+            self.conn,
+            "teams",
+            2025,
+            [{"team_id": "11", "division": "fbs", "short_display_name": "Alpha"}],
+            {"fetched_at": "2026-01-01T00:00:00Z"},
+        )
+        store_rows(
+            self.conn,
+            "box",
+            2025,
+            [{
+                "athlete_id": "-7",
+                "athlete_name": " Team",
+                "team_id": "11",
+                "game_id": "g1",
+                "category": "defensive",
+                "totalTackles": "8",
+            }],
+            {"fetched_at": "2026-01-01T00:00:00Z"},
+        )
+
+        board = player_board(self.conn, 2025)
+        self.assertEqual(board["excluded_team_placeholder_entries"], 1)
+        self.assertEqual(board["players"][0]["id"], "-7")
+
     def test_player_board_retains_fcs_box_offense_when_epa_release_is_unavailable(self):
         store_rows(
             self.conn,
